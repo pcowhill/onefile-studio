@@ -24,7 +24,11 @@ export function Toasts() {
         <div key={t.id} className={`ed-toast ed-toast-${t.kind}`}>
           <Icon name={t.kind === 'error' ? 'warning' : t.kind === 'info' ? 'info' : 'check'} size={18} />
           <span>{t.text}</span>
-          <button className="ed-toast-close" aria-label="Dismiss" onClick={() => useToasts.setState((s) => ({ toasts: s.toasts.filter((x) => x.id !== t.id) }))}>
+          <button
+            className="ed-toast-close"
+            aria-label="Dismiss"
+            onClick={() => useToasts.setState((s) => ({ toasts: s.toasts.filter((x) => x.id !== t.id) }))}
+          >
             <Icon name="close" size={14} />
           </button>
         </div>

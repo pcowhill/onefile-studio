@@ -109,7 +109,14 @@ export function CatalogIllustration({ id }: { id: string }) {
         <svg viewBox={v}>
           <rect x="8" y="14" width="48" height="20" rx="10" fill={back ? '#e2ecff' : '#3d8bff'} />
           <rect x={back ? 28 : 16} y="22.25" width="18" height="3.5" rx="1.75" fill={back ? '#3d8bff' : '#fff'} />
-          <path d={back ? 'M24 19 L19 24 L24 29' : 'M40 19 L45 24 L40 29'} fill="none" stroke={back ? '#3d8bff' : '#fff'} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d={back ? 'M24 19 L19 24 L24 29' : 'M40 19 L45 24 L40 29'}
+            fill="none"
+            stroke={back ? '#3d8bff' : '#fff'}
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       );
     }

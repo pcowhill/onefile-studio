@@ -14,7 +14,10 @@ export function Preview() {
   const [run, setRun] = useState(0);
   const [page, setPage] = useState(0);
   const [vars, setVars] = useState<Record<string, number>>({});
-  const startIndex = Math.max(0, project.pages.findIndex((p) => p.id === pageId));
+  const startIndex = Math.max(
+    0,
+    project.pages.findIndex((p) => p.id === pageId),
+  );
 
   useEffect(() => {
     const host = hostRef.current;

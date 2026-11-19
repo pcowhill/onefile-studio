@@ -206,7 +206,10 @@ describe('ready-made components', () => {
   it('gallery stops at the end without looping, and can be advanced by an action', async () => {
     const p = galleryProject(false);
     p.pages[0].elements.push(
-      createElement('button', { id: 'el_b', interactions: [{ id: 'ix', trigger: 'click', conditions: [], actions: [{ id: 'a', type: 'gallery', params: { target: 'el_g', direction: 'prev' } }] }] }),
+      createElement('button', {
+        id: 'el_b',
+        interactions: [{ id: 'ix', trigger: 'click', conditions: [], actions: [{ id: 'a', type: 'gallery', params: { target: 'el_g', direction: 'prev' } }] }],
+      }),
     );
     const { q } = mountPlayer(p);
     const g = q('el_g')!.querySelector<HTMLElement>('.ofs-gallery')!;
@@ -274,5 +277,51 @@ describe('ready-made components', () => {
     expect(q('el_t')!.textContent).toBe('<img src=x onerror=alert(1)>');
     expect(q('el_s')!.querySelector('script')).toBeNull();
     expect(q('el_s')!.querySelector('b')).toBeNull();
+  });
+});
+
+describe('behaviours', () => {
+  it('rigid drag lets viewers move an element without counting as a click', async () => {
+    const p = createProject('slides');
+    const v = createVariable('clicks', 0);
+    p.variables.push(v);
+    p.pages[0].elements.push(
+      createElement('shape', {
+        id: 'el_d',
+        x: 100,
+        y: 100,
+        w: 100,
+        h: 100,
+        rotation: 15,
+        drag: { mode: 'rigid' },
+        interactions: [{ id: 'ix', trigger: 'click', conditions: [], actions: [{ id: 'a', type: 'varAdd', params: { variable: v.id, amount: 1 } }] }],
+      }),
+    );
+    const { q, player } = mountPlayer(p);
+    const node = q('el_d')!;
+    expect(node.classList.contains('ofs-draggable')).toBe(true);
+    const ptr = (type: string, x: number, y: number) => node.dispatchEvent(new MouseEvent(type, { bubbles: true, clientX: x, clientY: y, button: 0 }));
+    ptr('pointerdown', 10, 10);
+    ptr('pointermove', 60, 40);
+    ptr('pointerup', 60, 40);
+    node.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await tick();
+    expect(parseFloat(node.style.left)).toBeGreaterThan(100);
+    expect(parseFloat(node.style.top)).toBeGreaterThan(100);
+    // Rigid: orientation is unchanged.
+    expect(node.style.transform).toBe('rotate(15deg)');
+    expect(player.vars.get(v.id)).toBe(0);
+    // A plain click still works.
+    node.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await tick();
+    expect(player.vars.get(v.id)).toBe(1);
+  });
+
+  it('entrance animations and effects degrade gracefully without the Web Animations API', async () => {
+    const p = example('presentation');
+    const { player, q } = mountPlayer(p, { startPage: 2 });
+    await player.control.setVisible('el_p_idea', true, 'pop');
+    expect(q('el_p_idea')!.classList.contains('ofs-hidden')).toBe(false);
+    await player.control.animate('el_p_bulb', 'shake', {});
   });
 });

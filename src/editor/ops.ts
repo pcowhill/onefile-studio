@@ -30,10 +30,14 @@ export function placeCentered(project: Project, pg: Page, el: SceneElement) {
   }
   let x = Math.round((W - el.w) / 2);
   let y = Math.round((H - el.h) / 2);
-  for (let i = 0; i < 12 && pg.elements.some((e) => Math.abs(e.x - x) < 4 && Math.abs(e.y - y) < 4); i++) {
-    x += 24;
-    y += 24;
+  // Cascade so a new element never lands exactly on top of an existing one.
+  const near = (e: SceneElement) => Math.abs(e.x + e.w / 2 - (x + el.w / 2)) < 30 && Math.abs(e.y + e.h / 2 - (y + el.h / 2)) < 30;
+  for (let i = 0; i < 12 && pg.elements.some(near); i++) {
+    x += 32;
+    y += 32;
   }
+  x = Math.max(0, Math.min(W - el.w, x));
+  y = Math.max(0, Math.min(H - el.h, y));
   el.x = x;
   el.y = y;
 }
@@ -108,16 +112,21 @@ export function insertImage(asset: Asset) {
   const ratio = asset.width && asset.height ? asset.width / asset.height : 4 / 3;
   const w = ratio >= 1 ? max : max * ratio;
   const h = w / ratio;
-  insertBuilt({ element: createElement('image', { w: Math.round(w), h: Math.round(h), props: { assetId: asset.id, alt: asset.name.replace(/\.[a-z0-9]+$/i, '') } }) });
+  insertBuilt({
+    element: createElement('image', { w: Math.round(w), h: Math.round(h), props: { assetId: asset.id, alt: asset.name.replace(/\.[a-z0-9]+$/i, '') } }),
+  });
 }
 
 // ---------------- element editing ----------------
 
 export function updateElement(id: string, recipe: Recipe<SceneElement>, merge?: string) {
-  editor().update((d) => {
-    const f = findEl(d, id);
-    if (f) recipe(f.el);
-  }, merge ? { merge: `${id}:${merge}` } : undefined);
+  editor().update(
+    (d) => {
+      const f = findEl(d, id);
+      if (f) recipe(f.el);
+    },
+    merge ? { merge: `${id}:${merge}` } : undefined,
+  );
 }
 
 export function updateProps(id: string, patch: Record<string, unknown>, merge?: string) {
@@ -126,12 +135,15 @@ export function updateProps(id: string, patch: Record<string, unknown>, merge?: 
 
 export function updateSelected(recipe: Recipe<SceneElement>, merge?: string) {
   const ids = editor().selection;
-  editor().update((d) => {
-    for (const id of ids) {
-      const f = findEl(d, id);
-      if (f) recipe(f.el);
-    }
-  }, merge ? { merge: `sel:${merge}` } : undefined);
+  editor().update(
+    (d) => {
+      for (const id of ids) {
+        const f = findEl(d, id);
+        if (f) recipe(f.el);
+      }
+    },
+    merge ? { merge: `sel:${merge}` } : undefined,
+  );
 }
 
 export function deleteSelection() {
@@ -327,10 +339,13 @@ export function movePage(id: string, toIndex: number) {
 }
 
 export function updatePage(id: string, recipe: Recipe<Page>, merge?: string) {
-  editor().update((d) => {
-    const pg = page(d, id);
-    if (pg) recipe(pg);
-  }, merge ? { merge: `page:${id}:${merge}` } : undefined);
+  editor().update(
+    (d) => {
+      const pg = page(d, id);
+      if (pg) recipe(pg);
+    },
+    merge ? { merge: `page:${id}:${merge}` } : undefined,
+  );
 }
 
 // ---------------- variables ----------------
@@ -385,7 +400,12 @@ export function variableUsage(project: Project, id: string): number {
   const v = project.variables.find((x) => x.id === id);
   for (const pg of project.pages)
     for (const el of pg.elements) {
-      if (v && typeof (el.props as Record<string, unknown>).text === 'string' && ((el.props as Record<string, unknown>).text as string).toLowerCase().includes(`{${v.name.toLowerCase()}}`)) n++;
+      if (
+        v &&
+        typeof (el.props as Record<string, unknown>).text === 'string' &&
+        ((el.props as Record<string, unknown>).text as string).toLowerCase().includes(`{${v.name.toLowerCase()}}`)
+      )
+        n++;
       if ((el.props as Record<string, unknown>).variableId === id) n++;
       for (const ix of el.interactions) {
         n += ix.actions.filter((a) => a.params.variable === id).length;

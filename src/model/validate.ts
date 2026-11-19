@@ -163,7 +163,8 @@ function migrate(raw: Record<string, unknown>, _version: number): Record<string,
 function paint(v: unknown, d: Paint): Paint {
   if (!isObj(v)) return d;
   if (v.kind === 'solid' && isSafeColor(v.color)) return { kind: 'solid', color: v.color };
-  if (v.kind === 'linear' && isSafeColor(v.from) && isSafeColor(v.to)) return { kind: 'linear', from: v.from, to: v.to, angle: finite(v.angle, 135, -360, 360) };
+  if (v.kind === 'linear' && isSafeColor(v.from) && isSafeColor(v.to))
+    return { kind: 'linear', from: v.from, to: v.to, angle: finite(v.angle, 135, -360, 360) };
   return d;
 }
 

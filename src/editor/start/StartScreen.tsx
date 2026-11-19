@@ -78,7 +78,13 @@ export function StartScreen() {
             </h2>
             <div className="st-ex-grid">
               {EXAMPLES.map((ex) => (
-                <button key={ex.id} className="st-ex" onClick={() => openExample(ex.id)} style={{ ['--c' as string]: ex.color }} data-testid={`example-${ex.id}`}>
+                <button
+                  key={ex.id}
+                  className="st-ex"
+                  onClick={() => openExample(ex.id)}
+                  style={{ ['--c' as string]: ex.color }}
+                  data-testid={`example-${ex.id}`}
+                >
                   <ExampleArt id={ex.id} />
                   <strong>{ex.title}</strong>
                   <span>{ex.description}</span>

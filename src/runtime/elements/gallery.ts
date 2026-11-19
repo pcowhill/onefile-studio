@@ -84,9 +84,7 @@ export const galleryDef: RuntimeElementDef<GalleryProps> = {
     };
     const goTo = (i: number, dir = 1) => {
       const n = urls.length;
-      let next = i;
-      if (p.loop) next = ((i % n) + n) % n;
-      else next = Math.max(0, Math.min(n - 1, i));
+      const next = p.loop ? ((i % n) + n) % n : Math.max(0, Math.min(n - 1, i));
       if (next === index) return;
       const from = index;
       index = next;

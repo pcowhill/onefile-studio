@@ -1,7 +1,21 @@
 import type { Page, Project, SceneElement } from '../../model/types';
 import { useEditor, editor } from '../store/store';
 import { Icon } from '../ui/Icon';
-import { ColorPicker, Field, FontPicker, ImageChooser, NumberInput, PaintPicker, Section, Segmented, Select, Slider, TextArea, TextInput, Toggle } from '../ui/controls';
+import {
+  ColorPicker,
+  Field,
+  FontPicker,
+  ImageChooser,
+  NumberInput,
+  PaintPicker,
+  Section,
+  Segmented,
+  Select,
+  Slider,
+  TextArea,
+  TextInput,
+  Toggle,
+} from '../ui/controls';
 import { align, moveLayer, updateElement, updatePage, updateProps, updateSelected } from '../ops';
 import { EDITOR_ELEMENTS } from '../catalog';
 import type { TextProps } from '../../runtime/elements/text';
@@ -92,7 +106,14 @@ function ArrangeSection({ els }: { els: SceneElement[] }) {
       {single && (
         <>
           <Field label="Rotation">
-            <Slider value={single.rotation} min={-180} max={180} unit="°" onChange={(v) => updateElement(single.id, (d) => void (d.rotation = v), 'rotation')} ariaLabel="Rotation" />
+            <Slider
+              value={single.rotation}
+              min={-180}
+              max={180}
+              unit="°"
+              onChange={(v) => updateElement(single.id, (d) => void (d.rotation = v), 'rotation')}
+              ariaLabel="Rotation"
+            />
           </Field>
           <details className="ed-details">
             <summary>Exact size & position</summary>
@@ -100,7 +121,12 @@ function ArrangeSection({ els }: { els: SceneElement[] }) {
               {(['x', 'y', 'w', 'h'] as const).map((k) => (
                 <label key={k} className="ed-mini-field">
                   <span>{{ x: 'X', y: 'Y', w: 'Width', h: 'Height' }[k]}</span>
-                  <NumberInput value={single[k]} min={k === 'w' || k === 'h' ? 4 : undefined} ariaLabel={k} onChange={(v) => updateElement(single.id, (d) => void (d[k] = Math.round(v)), k)} />
+                  <NumberInput
+                    value={single[k]}
+                    min={k === 'w' || k === 'h' ? 4 : undefined}
+                    ariaLabel={k}
+                    onChange={(v) => updateElement(single.id, (d) => void (d[k] = Math.round(v)), k)}
+                  />
                 </label>
               ))}
             </div>
@@ -185,7 +211,13 @@ function TextEditor({ el, set }: P<TextProps>) {
       </Section>
       <Section title="Style" icon="palette" defaultOpen={false}>
         <Field label="Highlight background">
-          <ColorPicker value={p.background} onChange={(c) => set({ background: c, padding: c !== 'transparent' && !p.padding ? 12 : p.padding, radius: c !== 'transparent' && !p.radius ? 12 : p.radius })} allowTransparent />
+          <ColorPicker
+            value={p.background}
+            onChange={(c) =>
+              set({ background: c, padding: c !== 'transparent' && !p.padding ? 12 : p.padding, radius: c !== 'transparent' && !p.radius ? 12 : p.radius })
+            }
+            allowTransparent
+          />
         </Field>
         {p.background !== 'transparent' && (
           <>
@@ -282,7 +314,13 @@ import { SHAPE_PATHS } from '../../runtime/elements/shape';
 function ShapeGlyph({ kind }: { kind: string }) {
   return (
     <svg viewBox="0 0 100 100" width="26" height="26">
-      {kind === 'rect' ? <rect x="8" y="16" width="84" height="68" rx="14" /> : kind === 'ellipse' ? <circle cx="50" cy="50" r="42" /> : <path d={SHAPE_PATHS[kind]} />}
+      {kind === 'rect' ? (
+        <rect x="8" y="16" width="84" height="68" rx="14" />
+      ) : kind === 'ellipse' ? (
+        <circle cx="50" cy="50" r="42" />
+      ) : (
+        <path d={SHAPE_PATHS[kind]} />
+      )}
     </svg>
   );
 }
@@ -299,7 +337,14 @@ function ArrowEditor({ el, set }: P<ArrowProps>) {
         <Slider value={p.width} min={1} max={30} onChange={(v) => set({ width: v }, 'width')} unit="px" />
       </Field>
       <Field label="Curve">
-        <Slider value={p.bend} min={-1} max={1} step={0.05} onChange={(v) => set({ bend: v }, 'bend')} format={(v) => (v === 0 ? 'Straight' : v < 0 ? 'Left' : 'Right')} />
+        <Slider
+          value={p.bend}
+          min={-1}
+          max={1}
+          step={0.05}
+          onChange={(v) => set({ bend: v }, 'bend')}
+          format={(v) => (v === 0 ? 'Straight' : v < 0 ? 'Left' : 'Right')}
+        />
       </Field>
       <div className="ed-grid2">
         <Field label="Tip">
@@ -423,7 +468,10 @@ function ButtonEditor(props: P<ButtonProps>) {
   return (
     <Section title="Button" icon="button">
       <ButtonLook {...props} />
-      <button className="ed-btn ed-btn-soft ed-btn-block" onClick={() => editor().set({ inspectorTab: 'behavior', triggerPickerFor: props.el.interactions.length ? null : props.el.id })}>
+      <button
+        className="ed-btn ed-btn-soft ed-btn-block"
+        onClick={() => editor().set({ inspectorTab: 'behavior', triggerPickerFor: props.el.interactions.length ? null : props.el.id })}
+      >
         <Icon name="bolt" size={16} /> {props.el.interactions.length ? 'Edit what it does' : 'Make it do something'}
       </button>
     </Section>
@@ -547,7 +595,10 @@ function GalleryEditor({ el, set }: P<GalleryProps>) {
           ))}
         </div>
         <div className="ed-row">
-          <button className="ed-btn ed-btn-sm ed-btn-soft" onClick={() => void pickImages(true).then((list) => list.length && set({ images: [...p.images, ...list.map((a) => a.id)] }))}>
+          <button
+            className="ed-btn ed-btn-sm ed-btn-soft"
+            onClick={() => void pickImages(true).then((list) => list.length && set({ images: [...p.images, ...list.map((a) => a.id)] }))}
+          >
             <Icon name="upload" size={14} /> Add images
           </button>
           <AssetLibrary label="From project" onPick={(id) => set({ images: [...p.images, id] })} />
@@ -661,14 +712,22 @@ function ProgressEditor({ el, set, project }: P<ProgressProps>) {
   return (
     <Section title="Progress" icon="progress">
       <Field label="Shows">
-        <Segmented value={p.source} onChange={(v) => set({ source: v, variableId: v === 'variable' && !p.variableId ? (project.variables[0]?.id ?? '') : p.variableId })} options={sources} />
+        <Segmented
+          value={p.source}
+          onChange={(v) => set({ source: v, variableId: v === 'variable' && !p.variableId ? (project.variables[0]?.id ?? '') : p.variableId })}
+          options={sources}
+        />
       </Field>
       {p.source === 'variable' && (
         <>
           {project.variables.length ? (
             <div className="ed-grid2">
               <Field label="Variable">
-                <Select value={p.variableId} onChange={(v) => set({ variableId: v })} options={[{ value: '', label: 'Choose…' }, ...project.variables.map((v) => ({ value: v.id, label: v.name }))]} />
+                <Select
+                  value={p.variableId}
+                  onChange={(v) => set({ variableId: v })}
+                  options={[{ value: '', label: 'Choose…' }, ...project.variables.map((v) => ({ value: v.id, label: v.name }))]}
+                />
               </Field>
               <Field label="Full at">
                 <NumberInput value={p.max} min={1} onChange={(v) => set({ max: v }, 'max')} />
@@ -676,7 +735,11 @@ function ProgressEditor({ el, set, project }: P<ProgressProps>) {
             </div>
           ) : (
             <p className="ed-note">
-              Create a variable in the <button className="ed-link" onClick={() => editor().set({ leftTab: 'variables' })}>Variables</button> panel first.
+              Create a variable in the{' '}
+              <button className="ed-link" onClick={() => editor().set({ leftTab: 'variables' })}>
+                Variables
+              </button>{' '}
+              panel first.
             </p>
           )}
         </>
@@ -699,7 +762,11 @@ function ProgressEditor({ el, set, project }: P<ProgressProps>) {
         <PaintPicker value={p.fill} onChange={(f) => set({ fill: f }, 'fill')} />
       </Field>
       <Field label="Track">
-        <ColorPicker value={p.track} onChange={(c) => set({ track: c })} palette={['rgba(109, 74, 255, 0.14)', '#eeeaf9', '#ffffff', '#1d1b2c', 'rgba(255, 255, 255, 0.25)']} />
+        <ColorPicker
+          value={p.track}
+          onChange={(c) => set({ track: c })}
+          palette={['rgba(109, 74, 255, 0.14)', '#eeeaf9', '#ffffff', '#1d1b2c', 'rgba(255, 255, 255, 0.25)']}
+        />
       </Field>
       <Field label="Label">
         <Select
@@ -769,7 +836,13 @@ export function PageSettings() {
         <Field label="Background">
           <div className="ed-bg-presets">
             {BG_PRESETS.map((p, i) => (
-              <button key={i} className={`ed-bg-preset ${JSON.stringify(p) === JSON.stringify(bg.paint) ? 'is-on' : ''}`} style={{ background: paintToCss(p) }} aria-label={`Background preset ${i + 1}`} onClick={() => updatePage(page.id, (d) => void (d.background.paint = p))} />
+              <button
+                key={i}
+                className={`ed-bg-preset ${JSON.stringify(p) === JSON.stringify(bg.paint) ? 'is-on' : ''}`}
+                style={{ background: paintToCss(p) }}
+                aria-label={`Background preset ${i + 1}`}
+                onClick={() => updatePage(page.id, (d) => void (d.background.paint = p))}
+              />
             ))}
           </div>
         </Field>
@@ -783,7 +856,13 @@ export function PageSettings() {
         {bg.imageId && (
           <>
             <Field label="Darken image">
-              <Slider value={Math.round((bg.imageDim ?? 0) * 100)} min={0} max={80} unit="%" onChange={(v) => updatePage(page.id, (d) => void (d.background.imageDim = v / 100), 'dim')} />
+              <Slider
+                value={Math.round((bg.imageDim ?? 0) * 100)}
+                min={0}
+                max={80}
+                unit="%"
+                onChange={(v) => updatePage(page.id, (d) => void (d.background.imageDim = v / 100), 'dim')}
+              />
             </Field>
             <button className="ed-btn ed-btn-sm ed-btn-ghost" onClick={() => updatePage(page.id, (d) => void delete d.background.imageId)}>
               <Icon name="close" size={14} /> Remove image
@@ -792,7 +871,14 @@ export function PageSettings() {
         )}
         {!slides && (
           <Field label="Height">
-            <Slider value={page.height ?? 560} min={120} max={2400} step={10} unit="px" onChange={(v) => updatePage(page.id, (d) => void (d.height = v), 'height')} />
+            <Slider
+              value={page.height ?? 560}
+              min={120}
+              max={2400}
+              step={10}
+              unit="px"
+              onChange={(v) => updatePage(page.id, (d) => void (d.height = v), 'height')}
+            />
           </Field>
         )}
       </Section>
@@ -820,11 +906,20 @@ function ProjectSettings() {
               ]}
             />
           </Field>
-          <Toggle label="Show slide controls" description="Previous / next buttons and slide number" checked={project.settings.showNavigation} onChange={(v) => upd((d) => void (d.settings.showNavigation = v))} />
+          <Toggle
+            label="Show slide controls"
+            description="Previous / next buttons and slide number"
+            checked={project.settings.showNavigation}
+            onChange={(v) => upd((d) => void (d.settings.showNavigation = v))}
+          />
         </>
       )}
       <Field label={slides ? 'Colour around slides' : 'Page edge colour'}>
-        <ColorPicker value={project.settings.backdrop} onChange={(c) => upd((d) => void (d.settings.backdrop = c))} palette={['#1b1834', '#000000', '#2b2840', '#ffffff', '#f3f0ff', '#fff8ef']} />
+        <ColorPicker
+          value={project.settings.backdrop}
+          onChange={(c) => upd((d) => void (d.settings.backdrop = c))}
+          palette={['#1b1834', '#000000', '#2b2840', '#ffffff', '#f3f0ff', '#fff8ef']}
+        />
       </Field>
     </Section>
   );

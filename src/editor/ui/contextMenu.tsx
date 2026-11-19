@@ -35,8 +35,10 @@ export function ContextMenu() {
   const [pos, setPos] = useState({ x: 0, y: 0 });
   useLayoutEffect(() => {
     if (!menu || !ref.current) return;
-    const r = ref.current.getBoundingClientRect();
-    setPos({ x: Math.min(menu.x, window.innerWidth - r.width - 8), y: Math.min(menu.y, window.innerHeight - r.height - 8) });
+    // offsetWidth/Height ignore the opening animation's transform.
+    const w = ref.current.offsetWidth;
+    const h = ref.current.offsetHeight;
+    setPos({ x: Math.max(8, Math.min(menu.x, window.innerWidth - w - 8)), y: Math.max(8, Math.min(menu.y, window.innerHeight - h - 8)) });
     ref.current.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus({ preventScroll: true });
   }, [menu]);
   useEffect(() => {

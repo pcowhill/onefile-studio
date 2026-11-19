@@ -30,8 +30,38 @@ const wrap = (w: number, h: number, body: string) => `<svg xmlns="http://www.w3.
 /** Valley landscape. `vivid=false` renders the muted, wintry "before" version. */
 export function valley(vivid: boolean): string {
   const c = vivid
-    ? { sky1: '#ff9a8b', sky2: '#ffd3a5', sun: '#fff3b0', far: '#a77bca', mid: '#6d4aff', near: '#2bb673', near2: '#1f9d5f', lake: '#7fd6ff', lake2: '#4fb3ff', tree: '#137a4a', trunk: '#7a4a2a', flower: '#ff5d73', flower2: '#ffd23f', cloud: '#ffffff' }
-    : { sky1: '#c9ccd6', sky2: '#eef0f4', sun: '#f6f7fa', far: '#b3b7c4', mid: '#9196a6', near: '#d9dce3', near2: '#c6cad3', lake: '#aab3c2', lake2: '#99a3b4', tree: '#6f7484', trunk: '#5d6170', flower: '#ffffff', flower2: '#ffffff', cloud: '#f7f8fa' };
+    ? {
+        sky1: '#ff9a8b',
+        sky2: '#ffd3a5',
+        sun: '#fff3b0',
+        far: '#a77bca',
+        mid: '#6d4aff',
+        near: '#2bb673',
+        near2: '#1f9d5f',
+        lake: '#7fd6ff',
+        lake2: '#4fb3ff',
+        tree: '#137a4a',
+        trunk: '#7a4a2a',
+        flower: '#ff5d73',
+        flower2: '#ffd23f',
+        cloud: '#ffffff',
+      }
+    : {
+        sky1: '#c9ccd6',
+        sky2: '#eef0f4',
+        sun: '#f6f7fa',
+        far: '#b3b7c4',
+        mid: '#9196a6',
+        near: '#d9dce3',
+        near2: '#c6cad3',
+        lake: '#aab3c2',
+        lake2: '#99a3b4',
+        tree: '#6f7484',
+        trunk: '#5d6170',
+        flower: '#ffffff',
+        flower2: '#ffffff',
+        cloud: '#f7f8fa',
+      };
   const trees = [140, 210, 1010, 1080, 1150]
     .map((x, i) => {
       const s = 1 + (i % 2) * 0.25;
@@ -73,13 +103,15 @@ export function scene(kind: keyof typeof SCENES): string {
   let body = `<defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${s.sky[0]}"/><stop offset="1" stop-color="${s.sky[1]}"/></linearGradient><linearGradient id="b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${s.sea[0]}"/><stop offset="1" stop-color="${s.sea[1]}"/></linearGradient></defs><rect width="1200" height="800" fill="url(#a)"/>`;
   if (kind === 'ocean') {
     body += `<circle cx="600" cy="420" r="150" fill="${s.sun}"/><rect y="440" width="1200" height="360" fill="url(#b)"/>`;
-    for (let i = 0; i < 7; i++) body += `<path d="M${-100 + i * 40} ${490 + i * 45} q 75 -28 150 0 t 150 0 t 150 0 t 150 0 t 150 0 t 150 0 t 150 0 t 150 0 t 150 0" fill="none" stroke="#ffffff" stroke-opacity="${0.55 - i * 0.05}" stroke-width="7" stroke-linecap="round"/>`;
+    for (let i = 0; i < 7; i++)
+      body += `<path d="M${-100 + i * 40} ${490 + i * 45} q 75 -28 150 0 t 150 0 t 150 0 t 150 0 t 150 0 t 150 0 t 150 0 t 150 0 t 150 0" fill="none" stroke="#ffffff" stroke-opacity="${0.55 - i * 0.05}" stroke-width="7" stroke-linecap="round"/>`;
     body += `<path d="M840 560 l60 -150 l10 150z" fill="#ffffff"/><path d="M800 565 h150 l-25 30 h-100z" fill="#ff5d73"/>`;
   } else if (kind === 'desert') {
     body += `<circle cx="860" cy="260" r="120" fill="${s.sun}"/><path d="M0 520 C250 430 500 470 700 520 C900 570 1050 480 1200 470 V800 H0Z" fill="#f4a261"/><path d="M0 640 C300 560 600 600 800 650 C950 690 1100 620 1200 610 V800 H0Z" fill="url(#b)"/>`;
     body += `<g fill="#2a9d8f" transform="translate(300 420)"><rect x="-22" y="0" width="44" height="230" rx="22"/><rect x="-80" y="60" width="34" height="100" rx="17"/><rect x="-80" y="130" width="80" height="30" rx="15"/><rect x="46" y="30" width="34" height="90" rx="17"/><rect x="0" y="100" width="80" height="30" rx="15"/></g>`;
   } else {
-    for (let i = 0; i < 60; i++) body += `<circle cx="${(i * 197) % 1200}" cy="${(i * 89) % 430}" r="${1.5 + (i % 3)}" fill="#ffffff" opacity="${0.5 + (i % 5) * 0.1}"/>`;
+    for (let i = 0; i < 60; i++)
+      body += `<circle cx="${(i * 197) % 1200}" cy="${(i * 89) % 430}" r="${1.5 + (i % 3)}" fill="#ffffff" opacity="${0.5 + (i % 5) * 0.1}"/>`;
     body += `<path d="M0 300 C200 180 400 380 620 240 C820 120 1000 300 1200 200 L1200 330 C1000 420 820 260 620 370 C400 500 200 300 0 420Z" fill="url(#b)" opacity=".55"/><circle cx="960" cy="140" r="52" fill="${s.sun}"/><circle cx="982" cy="128" r="46" fill="${s.sky[0]}"/>`;
     body += `<path d="M0 640 L120 520 L230 610 L380 470 L520 600 L660 500 L820 620 L960 520 L1100 610 L1200 560 V800 H0Z" fill="#090720"/>`;
   }

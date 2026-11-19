@@ -32,7 +32,12 @@ export function elementMenu(els: SceneElement[]): MenuItem[] {
     { label: 'Bring to front', icon: 'up', onClick: () => moveLayer('front') },
     { label: 'Send to back', icon: 'down', onClick: () => moveLayer('back') },
     { divider: true },
-    { label: allHidden ? 'Show at start' : 'Hide at start', icon: allHidden ? 'eye' : 'eyeOff', title: 'Hidden elements can be revealed by interactions', onClick: () => updateSelected((el) => void (el.hidden = !allHidden)) },
+    {
+      label: allHidden ? 'Show at start' : 'Hide at start',
+      icon: allHidden ? 'eye' : 'eyeOff',
+      title: 'Hidden elements can be revealed by interactions',
+      onClick: () => updateSelected((el) => void (el.hidden = !allHidden)),
+    },
     { label: allLocked ? 'Unlock' : 'Lock', icon: allLocked ? 'unlock' : 'lock', onClick: () => updateSelected((el) => void (el.locked = !allLocked)) },
     { divider: true },
     { label: 'Delete', icon: 'trash', shortcut: 'Del', danger: true, onClick: () => deleteSelection() },

@@ -30,7 +30,15 @@ describe('project schema validation', () => {
     const btn = createElement('button');
     btn.interactions = [
       { id: 'ix1', trigger: 'teleport', conditions: [], actions: [] },
-      { id: 'ix2', trigger: 'click', conditions: [], actions: [{ id: 'a1', type: 'runJavaScript', params: { code: 'alert(1)' } }, { id: 'a2', type: 'navigate', params: { page: 'next' } }] },
+      {
+        id: 'ix2',
+        trigger: 'click',
+        conditions: [],
+        actions: [
+          { id: 'a1', type: 'runJavaScript', params: { code: 'alert(1)' } },
+          { id: 'a2', type: 'navigate', params: { page: 'next' } },
+        ],
+      },
     ];
     p.pages[0].elements.push(btn, { ...createElement('text'), type: 'iframe' });
     const r = validateProject(JSON.parse(JSON.stringify(p)));

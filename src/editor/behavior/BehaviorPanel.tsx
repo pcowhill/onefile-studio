@@ -6,7 +6,17 @@ import { useEditor, editor, findEl } from '../store/store';
 import { Icon } from '../ui/Icon';
 import { Field, NumberInput, Section, Segmented, Select, Slider, Toggle } from '../ui/controls';
 import { updateElement } from '../ops';
-import { ACTIONS, ACTION_CATEGORIES, actionUi, EMPHASIS_PRESETS, ENTRANCE_PRESETS, TRIGGER_CATEGORIES, TRIGGERS, triggerUi, VISIBILITY_EFFECTS } from './catalog';
+import {
+  ACTIONS,
+  ACTION_CATEGORIES,
+  actionUi,
+  EMPHASIS_PRESETS,
+  ENTRANCE_PRESETS,
+  TRIGGER_CATEGORIES,
+  TRIGGERS,
+  triggerUi,
+  VISIBILITY_EFFECTS,
+} from './catalog';
 import { COMPARE_OPS } from '../../runtime/conditions';
 import { EDITOR_ELEMENTS } from '../catalog';
 import { pageTargetOptions } from '../inspector/DesignPanel';
@@ -67,7 +77,15 @@ export function BehaviorPanel({ el }: { el: SceneElement }) {
                 if (t) fn(t);
               }, merge)
             }
-            onDelete={() => setInteractions((list) => void list.splice(list.findIndex((x) => x.id === ix.id), 1))}
+            onDelete={() =>
+              setInteractions(
+                (list) =>
+                  void list.splice(
+                    list.findIndex((x) => x.id === ix.id),
+                    1,
+                  ),
+              )
+            }
             onMove={(d) =>
               setInteractions((list) => {
                 const j = i + d;
@@ -84,7 +102,12 @@ export function BehaviorPanel({ el }: { el: SceneElement }) {
       </Section>
       <EntranceSection el={el} />
       <Section title="Visibility & dragging" icon="eye">
-        <Toggle label="Hidden when the page opens" description="Reveal it later with a “Show” action" checked={el.hidden} onChange={(v) => updateElement(el.id, (d) => void (d.hidden = v))} />
+        <Toggle
+          label="Hidden when the page opens"
+          description="Reveal it later with a “Show” action"
+          checked={el.hidden}
+          onChange={(v) => updateElement(el.id, (d) => void (d.hidden = v))}
+        />
         <Toggle
           label="Viewers can drag it"
           description="It follows the pointer and keeps its angle"
@@ -171,7 +194,12 @@ function TriggerCard({ id, selected, onPick, big }: { id: string; selected: bool
   const t = triggerUi(id)!;
   const cat = TRIGGER_CATEGORIES[t.category];
   return (
-    <button className={`ed-trigger-card ${big ? 'is-big' : ''} ${selected ? 'is-on' : ''}`} style={{ ['--c' as string]: cat.color, ['--s' as string]: cat.soft }} onClick={() => onPick(id)} data-testid={`trigger-${id}`}>
+    <button
+      className={`ed-trigger-card ${big ? 'is-big' : ''} ${selected ? 'is-on' : ''}`}
+      style={{ ['--c' as string]: cat.color, ['--s' as string]: cat.soft }}
+      onClick={() => onPick(id)}
+      data-testid={`trigger-${id}`}
+    >
       <span className="ed-trigger-art-wrap">{t.art}</span>
       <span className="ed-trigger-label">{t.label}</span>
       <span className="ed-trigger-desc">{t.description}</span>
@@ -274,7 +302,11 @@ function InteractionCard({
                 />
               ))}
             </ol>
-            <ActionPicker project={project} el={el} onPick={(type) => onChange((d) => void d.actions.push({ id: uid('ac'), type, params: actionUi(type)!.defaults(project, el.id) }))} />
+            <ActionPicker
+              project={project}
+              el={el}
+              onPick={(type) => onChange((d) => void d.actions.push({ id: uid('ac'), type, params: actionUi(type)!.defaults(project, el.id) }))}
+            />
           </div>
         </>
       )}
@@ -284,15 +316,31 @@ function InteractionCard({
 
 function ConditionsEditor({ ix, project, onChange }: { ix: Interaction; project: Project; onChange(fn: (ix: Interaction) => void, merge?: string): void }) {
   if (!project.variables.length && !ix.conditions.length) return null;
-  const add = () => onChange((d) => void d.conditions.push({ id: uid('cd'), type: 'variable', variableId: project.variables[0]?.id ?? '', op: 'gte', value: 10 }));
+  const add = () =>
+    onChange((d) => void d.conditions.push({ id: uid('cd'), type: 'variable', variableId: project.variables[0]?.id ?? '', op: 'gte', value: 10 }));
   return (
     <div className="ed-ix-if">
       {ix.conditions.map((c, i) => (
         <div key={c.id} className="ed-cond">
           <span className="ed-ix-if-label">{i === 0 ? 'Only if' : 'and'}</span>
-          <Select value={c.variableId} onChange={(v) => onChange((d) => void (d.conditions[i].variableId = v))} options={project.variables.map((v) => ({ value: v.id, label: v.name }))} ariaLabel="Condition variable" />
-          <Select value={c.op} onChange={(v) => onChange((d) => void (d.conditions[i].op = v as Condition['op']))} options={Object.entries(COMPARE_OPS).map(([k, o]) => ({ value: k as Condition['op'], label: o.label }))} ariaLabel="Comparison" />
-          <NumberInput value={c.value} onChange={(v) => onChange((d) => void (d.conditions[i].value = v), `cond:${c.id}`)} ariaLabel="Compare value" width={96} />
+          <Select
+            value={c.variableId}
+            onChange={(v) => onChange((d) => void (d.conditions[i].variableId = v))}
+            options={project.variables.map((v) => ({ value: v.id, label: v.name }))}
+            ariaLabel="Condition variable"
+          />
+          <Select
+            value={c.op}
+            onChange={(v) => onChange((d) => void (d.conditions[i].op = v as Condition['op']))}
+            options={Object.entries(COMPARE_OPS).map(([k, o]) => ({ value: k as Condition['op'], label: o.label }))}
+            ariaLabel="Comparison"
+          />
+          <NumberInput
+            value={c.value}
+            onChange={(v) => onChange((d) => void (d.conditions[i].value = v), `cond:${c.id}`)}
+            ariaLabel="Compare value"
+            width={96}
+          />
           <button className="ed-icon-btn is-xs is-danger" aria-label="Remove condition" onClick={() => onChange((d) => void d.conditions.splice(i, 1))}>
             <Icon name="close" size={14} />
           </button>
@@ -363,7 +411,9 @@ function ActionPicker({ project, el, onPick }: { project: Project; el: SceneElem
               </div>
             );
           })}
-          <p className="ed-action-foot">Actions run in order, top to bottom{el.interactions.length > 1 ? '. Interactions with the same trigger also run in order.' : '.'}</p>
+          <p className="ed-action-foot">
+            Actions run in order, top to bottom{el.interactions.length > 1 ? '. Interactions with the same trigger also run in order.' : '.'}
+          </p>
         </div>
       )}
     </div>
@@ -397,10 +447,16 @@ function ActionRow({
       value={String(p.variable ?? '')}
       onChange={(v) => onParams({ variable: v })}
       ariaLabel="Variable"
-      options={[...(p.variable ? [] : [{ value: '', label: 'Choose…' }]), ...(allowAll ? [{ value: '@all', label: 'All variables' }] : []), ...project.variables.map((v) => ({ value: v.id, label: v.name }))]}
+      options={[
+        ...(p.variable ? [] : [{ value: '', label: 'Choose…' }]),
+        ...(allowAll ? [{ value: '@all', label: 'All variables' }] : []),
+        ...project.variables.map((v) => ({ value: v.id, label: v.name })),
+      ]}
     />
   );
-  const target = (filter?: (e: SceneElement) => boolean, allowSelf = true) => <ElementPicker value={String(p.target ?? '')} el={el} project={project} filter={filter} allowSelf={allowSelf} onChange={(v) => onParams({ target: v })} />;
+  const target = (filter?: (e: SceneElement) => boolean, allowSelf = true) => (
+    <ElementPicker value={String(p.target ?? '')} el={el} project={project} filter={filter} allowSelf={allowSelf} onChange={(v) => onParams({ target: v })} />
+  );
   let body: React.ReactNode;
   switch (action.type) {
     case 'show':
@@ -485,7 +541,15 @@ function ActionRow({
       body = (
         <>
           <span className="ed-w">Wait</span>
-          <NumberInput value={Number(p.seconds ?? 0.5)} step={0.25} min={0} max={60} onChange={(v) => onParams({ seconds: v }, 'sec')} ariaLabel="Seconds" width={96} />
+          <NumberInput
+            value={Number(p.seconds ?? 0.5)}
+            step={0.25}
+            min={0}
+            max={60}
+            onChange={(v) => onParams({ seconds: v }, 'sec')}
+            ariaLabel="Seconds"
+            width={96}
+          />
           <span className="ed-w">seconds</span>
         </>
       );
@@ -517,7 +581,21 @@ function ActionRow({
 }
 
 /** Dropdown for choosing a target element; hovering an option highlights it on the canvas. */
-function ElementPicker({ value, el, project, onChange, filter, allowSelf = true }: { value: string; el: SceneElement; project: Project; onChange(v: string): void; filter?(e: SceneElement): boolean; allowSelf?: boolean }) {
+function ElementPicker({
+  value,
+  el,
+  project,
+  onChange,
+  filter,
+  allowSelf = true,
+}: {
+  value: string;
+  el: SceneElement;
+  project: Project;
+  onChange(v: string): void;
+  filter?(e: SceneElement): boolean;
+  allowSelf?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -590,7 +668,7 @@ function ElementPicker({ value, el, project, onChange, filter, allowSelf = true 
 export function actionSummary(a: Action, project: Project, selfId: string): string {
   const p = a.params;
   const name = (id: unknown) => (id === SELF_TARGET || id === selfId ? 'this' : (typeof id === 'string' && findEl(project, id)?.el.name) || '…');
-  const v = (id: unknown) => (id === '@all' ? 'all variables' : project.variables.find((x) => x.id === id)?.name ?? '…');
+  const v = (id: unknown) => (id === '@all' ? 'all variables' : (project.variables.find((x) => x.id === id)?.name ?? '…'));
   switch (a.type) {
     case 'show':
       return `show ${name(p.target)}`;
@@ -599,7 +677,11 @@ export function actionSummary(a: Action, project: Project, selfId: string): stri
     case 'toggle':
       return `show/hide ${name(p.target)}`;
     case 'navigate':
-      return `go to ${pageTargetOptions(project).find((o) => o.value === p.page)?.label.toLowerCase() ?? '…'}`;
+      return `go to ${
+        pageTargetOptions(project)
+          .find((o) => o.value === p.page)
+          ?.label.toLowerCase() ?? '…'
+      }`;
     case 'varAdd':
       return `add ${p.amount} to ${v(p.variable)}`;
     case 'varSubtract':
@@ -625,23 +707,41 @@ function EntranceSection({ el }: { el: SceneElement }) {
   const a = el.entrance;
   const presets = ENTRANCE_PRESETS.filter((p) => !p.onlyFor || p.onlyFor === el.type);
   const set = (patch: Partial<NonNullable<SceneElement['entrance']>> | null, merge?: string) =>
-    updateElement(el.id, (d) => {
-      if (patch === null) d.entrance = null;
-      else d.entrance = { preset: 'fadeIn', duration: 700, delay: 0, ...(d.entrance ?? {}), ...patch };
-    }, merge);
+    updateElement(
+      el.id,
+      (d) => {
+        if (patch === null) d.entrance = null;
+        else d.entrance = { preset: 'fadeIn', duration: 700, delay: 0, ...(d.entrance ?? {}), ...patch };
+      },
+      merge,
+    );
   const preview = () => {
     const node = document.querySelector<HTMLElement>(`.ed-el[data-id="${el.id}"] .ofs-anim`);
     if (node && a) void playAnimation(node, a.preset, { duration: a.duration, direction: a.direction });
   };
   return (
-    <Section title="Entrance animation" icon="sparkle" aside={a ? <button className="ed-btn ed-btn-xs ed-btn-ghost" onClick={preview}><Icon name="play" size={12} /> Preview</button> : undefined}>
+    <Section
+      title="Entrance animation"
+      icon="sparkle"
+      aside={
+        a ? (
+          <button className="ed-btn ed-btn-xs ed-btn-ghost" onClick={preview}>
+            <Icon name="play" size={12} /> Preview
+          </button>
+        ) : undefined
+      }
+    >
       <div className="ed-anim-grid">
         <button className={`ed-anim-opt ${!a ? 'is-on' : ''}`} onClick={() => set(null)}>
           <Icon name="close" size={18} />
           <span>None</span>
         </button>
         {presets.map((p) => (
-          <button key={p.value} className={`ed-anim-opt ${a?.preset === p.value ? 'is-on' : ''}`} onClick={() => set({ preset: p.value, direction: p.value === 'slideIn' ? (a?.direction ?? 'up') : undefined })}>
+          <button
+            key={p.value}
+            className={`ed-anim-opt ${a?.preset === p.value ? 'is-on' : ''}`}
+            onClick={() => set({ preset: p.value, direction: p.value === 'slideIn' ? (a?.direction ?? 'up') : undefined })}
+          >
             <Icon name={p.icon} size={18} />
             <span>{p.label}</span>
           </button>
@@ -669,7 +769,9 @@ function EntranceSection({ el }: { el: SceneElement }) {
           <Field label="Delay">
             <Slider value={a.delay / 1000} min={0} max={5} step={0.1} unit="s" onChange={(v) => set({ delay: Math.round(v * 1000) }, 'anim-delay')} />
           </Field>
-          <p className="ed-note">{useEditor.getState().project?.kind === 'page' ? 'Plays when the element scrolls into view.' : 'Plays each time the slide appears.'}</p>
+          <p className="ed-note">
+            {useEditor.getState().project?.kind === 'page' ? 'Plays when the element scrolls into view.' : 'Plays each time the slide appears.'}
+          </p>
         </>
       )}
     </Section>

@@ -117,7 +117,10 @@ test('Example B: before & after webpage survives export → file:// → reimport
   // Basic responsive viewing: a phone-sized viewport scales the page with no horizontal scroll.
   await p.setViewportSize({ width: 390, height: 800 });
   await expect.poll(() => p.locator('.ofs-player').evaluate((n) => n.scrollWidth <= n.clientWidth + 1)).toBe(true);
-  const w = await p.locator('.ofs-section-inner').first().evaluate((n) => n.getBoundingClientRect().width);
+  const w = await p
+    .locator('.ofs-section-inner')
+    .first()
+    .evaluate((n) => n.getBoundingClientRect().width);
   expect(w).toBeLessThanOrEqual(391);
 
   expect(ex.requests).toEqual([]);

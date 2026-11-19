@@ -2,7 +2,22 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { editor } from '../../src/editor/store/store';
 import { createProject } from '../../src/model/factory';
 import { CATALOG } from '../../src/editor/catalog';
-import { align, deleteSelection, duplicateSelection, insertCatalogItem, moveLayer, updateProps, addPage, duplicatePage, deletePage, movePage, copySelection, pasteClipboard, addVariable, renameVariable } from '../../src/editor/ops';
+import {
+  align,
+  deleteSelection,
+  duplicateSelection,
+  insertCatalogItem,
+  moveLayer,
+  updateProps,
+  addPage,
+  duplicatePage,
+  deletePage,
+  movePage,
+  copySelection,
+  pasteClipboard,
+  addVariable,
+  renameVariable,
+} from '../../src/editor/ops';
 
 const els = () => editor().project!.pages.find((p) => p.id === editor().pageId)!.elements;
 const insert = (id: string) => insertCatalogItem(CATALOG.find((c) => c.id === id)!);
@@ -16,10 +31,12 @@ describe('editor store and operations', () => {
     expect(els().map((e) => e.type)).toEqual(['text', 'shape']);
     expect(els()[0].name).toBe('Text 1');
     expect(editor().selection).toEqual([els()[1].id]);
-    // Centred on the slide.
-    const s = els()[1];
-    expect(s.x + s.w / 2).toBeCloseTo(640, -1);
-    expect(s.y + s.h / 2).toBeCloseTo(360, -1);
+    // The first lands in the centre of the slide; the next cascades so it doesn't hide it.
+    const [t, s] = els();
+    expect(t.x + t.w / 2).toBeCloseTo(640, -1);
+    expect(t.y + t.h / 2).toBeCloseTo(360, -1);
+    expect(s.x + s.w / 2).toBeCloseTo(672, -1);
+    expect(s.y + s.h / 2).toBeCloseTo(392, -1);
   });
 
   it('component inserts bring their sample assets and variables', () => {

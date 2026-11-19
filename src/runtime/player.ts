@@ -254,7 +254,9 @@ export function createPlayer(container: HTMLElement, project: Project, opts: Pla
       } else {
         const easing = 'cubic-bezier(.22,1,.36,1)';
         anims.push(view.node.animate([{ transform: `translateX(${dir * 100}%)` }, { transform: 'translateX(0)' }], { duration: dur + 100, easing }));
-        anims.push(prev.node.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${-dir * 100}%)` }], { duration: dur + 100, easing, fill: 'forwards' }));
+        anims.push(
+          prev.node.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${-dir * 100}%)` }], { duration: dur + 100, easing, fill: 'forwards' }),
+        );
       }
       outgoing = { view: prev, anims };
       void Promise.all(anims.map((a) => a.finished.catch(() => undefined))).then(() => {

@@ -76,15 +76,28 @@ const presets: AnimationPreset[] = [
         const dash = line.getAttribute('stroke-dasharray');
         if (!dash) {
           out.push(
-            line.animate([{ strokeDasharray: `${len} ${len}`, strokeDashoffset: `${len}` }, { strokeDasharray: `${len} ${len}`, strokeDashoffset: '0' }], {
+            line.animate(
+              [
+                { strokeDasharray: `${len} ${len}`, strokeDashoffset: `${len}` },
+                { strokeDasharray: `${len} ${len}`, strokeDashoffset: '0' },
+              ],
+              {
+                duration: o.duration * 0.8,
+                delay,
+                easing: 'ease-in-out',
+                fill: 'backwards',
+              },
+            ),
+          );
+        } else {
+          out.push(
+            node.animate([{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0 0 0)' }], {
               duration: o.duration * 0.8,
               delay,
               easing: 'ease-in-out',
               fill: 'backwards',
             }),
           );
-        } else {
-          out.push(node.animate([{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0 0 0)' }], { duration: o.duration * 0.8, delay, easing: 'ease-in-out', fill: 'backwards' }));
         }
       }
       heads.forEach((hd) =>
@@ -155,7 +168,13 @@ const presets: AnimationPreset[] = [
     kind: 'emphasis',
     defaultDuration: 800,
     easing: 'ease-in-out',
-    keyframes: () => [{ transform: 'scale(1)' }, { transform: 'scale(1.08)' }, { transform: 'scale(1)' }, { transform: 'scale(1.08)' }, { transform: 'scale(1)' }],
+    keyframes: () => [
+      { transform: 'scale(1)' },
+      { transform: 'scale(1.08)' },
+      { transform: 'scale(1)' },
+      { transform: 'scale(1.08)' },
+      { transform: 'scale(1)' },
+    ],
   },
   {
     id: 'spin',

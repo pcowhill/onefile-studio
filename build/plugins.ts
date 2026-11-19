@@ -61,9 +61,7 @@ export function singleFilePlugin(): Plugin {
     apply: 'build',
     enforce: 'post',
     generateBundle(_options, bundle) {
-      const htmlAsset = Object.values(bundle).find(
-        (f) => f.type === 'asset' && f.fileName.endsWith('.html'),
-      );
+      const htmlAsset = Object.values(bundle).find((f) => f.type === 'asset' && f.fileName.endsWith('.html'));
       if (!htmlAsset || htmlAsset.type !== 'asset') return;
       let html = String(htmlAsset.source);
       for (const [fileName, file] of Object.entries(bundle)) {

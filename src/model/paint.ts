@@ -36,7 +36,11 @@ export function parseHex(c: string): [number, number, number] | null {
   const m = /^#([0-9a-f]{3}|[0-9a-f]{6})([0-9a-f]{2})?$/i.exec(c.trim());
   if (!m) return null;
   let h = m[1];
-  if (h.length === 3) h = h.split('').map((x) => x + x).join('');
+  if (h.length === 3)
+    h = h
+      .split('')
+      .map((x) => x + x)
+      .join('');
   return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
 }
 

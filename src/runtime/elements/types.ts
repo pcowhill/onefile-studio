@@ -49,11 +49,7 @@ export function h<K extends keyof HTMLElementTagNameMap>(
 }
 
 export const SVG_NS = 'http://www.w3.org/2000/svg';
-export function svg<K extends keyof SVGElementTagNameMap>(
-  doc: Document,
-  tag: K,
-  attrs: Record<string, string | number> = {},
-): SVGElementTagNameMap[K] {
+export function svg<K extends keyof SVGElementTagNameMap>(doc: Document, tag: K, attrs: Record<string, string | number> = {}): SVGElementTagNameMap[K] {
   const node = doc.createElementNS(SVG_NS, tag);
   for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, String(v));
   return node;

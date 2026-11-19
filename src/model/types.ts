@@ -47,9 +47,7 @@ export interface ProjectSettings {
   backdrop: string;
 }
 
-export type Paint =
-  | { kind: 'solid'; color: string }
-  | { kind: 'linear'; from: string; to: string; angle: number };
+export type Paint = { kind: 'solid'; color: string } | { kind: 'linear'; from: string; to: string; angle: number };
 
 export interface Background {
   paint: Paint;

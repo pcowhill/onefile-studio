@@ -24,8 +24,7 @@ export const scrollTextDef: RuntimeElementDef<ScrollTextProps> = {
   id: 'scrollText',
   defaults: () => ({
     title: 'A little story',
-    text:
-      'This panel scrolls on its own, so you can fit long passages into a tidy space.\n\nUse a blank line to start a new paragraph. Start a line with "- " for bullet points, or "# " for a heading.\n\n- Readers scroll with a mouse wheel, trackpad or finger\n- The rest of the page stays put\n- Colours and sizes are yours to choose\n\n# Keep going\n\nThere is plenty of room here for instructions, transcripts, poems, credits, terms or anything else that would otherwise crowd your design. **Bold text** works too.\n\nWhen readers reach the end, the fade at the bottom disappears to show there is nothing more to read.',
+    text: 'This panel scrolls on its own, so you can fit long passages into a tidy space.\n\nUse a blank line to start a new paragraph. Start a line with "- " for bullet points, or "# " for a heading.\n\n- Readers scroll with a mouse wheel, trackpad or finger\n- The rest of the page stays put\n- Colours and sizes are yours to choose\n\n# Keep going\n\nThere is plenty of room here for instructions, transcripts, poems, credits, terms or anything else that would otherwise crowd your design. **Bold text** works too.\n\nWhen readers reach the end, the fade at the bottom disappears to show there is nothing more to read.',
     font: 'rounded',
     size: 18,
     color: '#2b2840',

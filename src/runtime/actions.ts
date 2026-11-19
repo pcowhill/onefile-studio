@@ -89,7 +89,10 @@ const defs: ActionDef[] = [
   {
     id: 'animate',
     execute(p, c) {
-      const run = c.player.animate(target(p, c), String(p.preset ?? 'pop'), { duration: n(p.duration, 0) || undefined, direction: String(p.direction ?? 'left') });
+      const run = c.player.animate(target(p, c), String(p.preset ?? 'pop'), {
+        duration: n(p.duration, 0) || undefined,
+        direction: String(p.direction ?? 'left'),
+      });
       return p.wait ? run : undefined;
     },
   },

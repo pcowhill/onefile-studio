@@ -22,7 +22,17 @@ interface View {
 }
 
 type Gesture =
-  | { kind: 'move'; sx: number; sy: number; items: Array<{ id: string; x: number; y: number }>; pageId: string; moved: boolean; clickedId: string; wasSelected: boolean; shift: boolean }
+  | {
+      kind: 'move';
+      sx: number;
+      sy: number;
+      items: Array<{ id: string; x: number; y: number }>;
+      pageId: string;
+      moved: boolean;
+      clickedId: string;
+      wasSelected: boolean;
+      shift: boolean;
+    }
   | { kind: 'resize'; id: string; handle: Handle; sx: number; sy: number; start: Box; rotation: number; keepAspect: boolean }
   | { kind: 'rotate'; id: string; cx: number; cy: number; startAngle: number; startRotation: number }
   | { kind: 'endpoint'; id: string; which: 'start' | 'end'; fixed: { x: number; y: number }; pageTop: number }
@@ -59,7 +69,10 @@ export function Canvas() {
 
   const views: View[] = useMemo(() => {
     if (slides) {
-      const index = Math.max(0, project.pages.findIndex((p) => p.id === pageId));
+      const index = Math.max(
+        0,
+        project.pages.findIndex((p) => p.id === pageId),
+      );
       const page = project.pages[index];
       return [{ page, index, top: 0, height: project.settings.height }];
     }
@@ -72,7 +85,7 @@ export function Canvas() {
   }, [project, pageId, slides]);
   const totalH = views.reduce((s, v) => s + v.height, 0);
 
-  const fit = slides ? Math.min((size.w - PAD * 2) / W, (size.h - PAD * 2) / project.settings.height) : Math.min(1, (size.w - PAD * 2 - 60) / W);
+  const fit = slides ? Math.min((size.w - PAD * 2) / W, (size.h - PAD * 2) / project.settings.height) : Math.min(1, (size.w - PAD * 2) / W);
   const z = Math.max(0.1, zoomSetting ?? fit);
   useEffect(() => {
     if (Math.abs(editor().fitZoom - fit) > 0.001) editor().set({ fitZoom: fit });
@@ -80,7 +93,7 @@ export function Canvas() {
 
   const stageW = W * z;
   const stageH = totalH * z;
-  const innerW = Math.max(size.w, stageW + PAD * 2 + (slides ? 0 : 60));
+  const innerW = Math.max(size.w, stageW + PAD * 2);
   const innerH = Math.max(size.h, stageH + PAD * 2);
   const stageLeft = (innerW - stageW) / 2;
   const stageTop = slides ? Math.max(PAD, (innerH - stageH) / 2) : PAD;
@@ -91,7 +104,14 @@ export function Canvas() {
     (index: number) => {
       const key = `${index}`;
       const cached = envCache.current.get(key);
-      if (cached && cached.project.assets === project.assets && cached.project.variables === project.variables && cached.nav.count === project.pages.length && cached.project.kind === project.kind) return cached;
+      if (
+        cached &&
+        cached.project.assets === project.assets &&
+        cached.project.variables === project.variables &&
+        cached.nav.count === project.pages.length &&
+        cached.project.kind === project.kind
+      )
+        return cached;
       const env = createStaticEnv(project, 'edit', index);
       envCache.current.set(key, env);
       return env;
@@ -109,117 +129,112 @@ export function Canvas() {
   const viewAt = (gy: number) => views.find((v) => gy >= v.top && gy < v.top + v.height) ?? (gy < 0 ? views[0] : views[views.length - 1]);
 
   // ---------- gestures ----------
-  const onWindowMove = useCallback(
-    (e: PointerEvent) => {
-      const g = gesture.current;
-      if (!g) return;
-      const s = editor();
-      const p = s.project!;
-      if (g.kind === 'move') {
-        let dx = (e.clientX - g.sx) / z;
-        let dy = (e.clientY - g.sy) / z;
-        if (!g.moved && Math.hypot(dx * z, dy * z) < 3) return;
-        if (!g.moved) {
-          g.moved = true;
-          s.begin();
-        }
-        const pg = p.pages.find((x) => x.id === g.pageId)!;
-        const sel = g.items.map((it) => ({ it, el: findEl(p, it.id)?.el })).filter((x) => x.el);
-        const bx = Math.min(...sel.map((x) => x.it.x));
-        const by = Math.min(...sel.map((x) => x.it.y));
-        const box = { x: bx + dx, y: by + dy, w: Math.max(...sel.map((x) => x.it.x + x.el!.w)) - bx, h: Math.max(...sel.map((x) => x.it.y + x.el!.h)) - by };
-        if (!e.altKey) {
-          const others = pg.elements.filter((o) => !g.items.some((it) => it.id === o.id) && !o.hidden).map((o) => ({ x: o.x, y: o.y, w: o.w, h: o.h }));
-          const ph = pageHeight(p, pg);
-          const snap = snapBox(box, others, { w: W, h: ph }, 7 / z);
-          dx += snap.dx;
-          dy += snap.dy;
-          const top = pageTop(pg.id);
-          setGuides(snap.guides.map((gd) => ({ ...gd, top, len: gd.axis === 'x' ? ph : W })));
-        } else setGuides([]);
-        s.live((d) => {
-          for (const it of g.items) {
-            const f = findEl(d, it.id);
-            if (f) {
-              f.el.x = Math.round(it.x + dx);
-              f.el.y = Math.round(it.y + dy);
-            }
-          }
-        });
-      } else if (g.kind === 'resize') {
-        const dx = (e.clientX - g.sx) / z;
-        const dy = (e.clientY - g.sy) / z;
-        const keep = e.shiftKey ? !g.keepAspect : g.keepAspect;
-        const b = resizeBox(g.start, g.rotation, g.handle, dx, dy, keep);
-        s.live((d) => {
-          const f = findEl(d, g.id);
-          if (f) Object.assign(f.el, b);
-        });
-      } else if (g.kind === 'rotate') {
-        let a = (Math.atan2(e.clientY - g.cy, e.clientX - g.cx) * 180) / Math.PI;
-        let r = g.startRotation + (a - g.startAngle);
-        r = ((((r + 180) % 360) + 360) % 360) - 180;
-        if (e.shiftKey) r = Math.round(r / 15) * 15;
-        else for (const snapA of [-180, -90, 0, 90, 180]) if (Math.abs(r - snapA) < 4) r = snapA;
-        a = Math.round(r);
-        s.live((d) => {
-          const f = findEl(d, g.id);
-          if (f) f.el.rotation = a === -180 ? 180 : a;
-        });
-      } else if (g.kind === 'endpoint') {
-        const pt = toLogical(e.clientX, e.clientY);
-        const local = { x: pt.x, y: pt.y - g.pageTop };
-        s.live((d) => {
-          const f = findEl(d, g.id);
-          if (!f) return;
-          const props = f.el.props as unknown as ArrowProps;
-          const pad = Math.max(18, (props.width || 6) * 2.2);
-          const a = g.which === 'start' ? local : g.fixed;
-          const b = g.which === 'start' ? g.fixed : local;
-          const minX = Math.min(a.x, b.x) - pad;
-          const minY = Math.min(a.y, b.y) - pad;
-          const w = Math.max(pad * 2, Math.abs(a.x - b.x) + pad * 2);
-          const h = Math.max(pad * 2, Math.abs(a.y - b.y) + pad * 2);
-          f.el.x = Math.round(minX);
-          f.el.y = Math.round(minY);
-          f.el.w = Math.round(w);
-          f.el.h = Math.round(h);
-          f.el.rotation = 0;
-          props.start = { x: round3((a.x - minX) / w), y: round3((a.y - minY) / h) };
-          props.end = { x: round3((b.x - minX) / w), y: round3((b.y - minY) / h) };
-        });
-      } else if (g.kind === 'marquee') {
-        const a = toLogical(g.sx, g.sy);
-        const b = toLogical(e.clientX, e.clientY);
-        const box = { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(a.x - b.x), h: Math.abs(a.y - b.y) };
-        setMarquee(box);
-        const hits: string[] = [];
-        for (const v of views)
-          for (const el of v.page.elements) {
-            if (el.locked) continue;
-            const ey = v.top + el.y;
-            if (el.x < box.x + box.w && el.x + el.w > box.x && ey < box.y + box.h && ey + el.h > box.y) hits.push(el.id);
-          }
-        const next = g.shift ? [...new Set([...g.base, ...hits])] : hits;
-        s.select(next);
-      } else if (g.kind === 'section') {
-        const dy = (e.clientY - g.sy) / z;
-        s.live((d) => {
-          const pg = d.pages.find((x) => x.id === g.pageId);
-          if (pg) pg.height = Math.max(120, Math.round(g.startH + dy));
-        });
+  const onWindowMove = (e: PointerEvent) => {
+    const g = gesture.current;
+    if (!g) return;
+    const s = editor();
+    const p = s.project!;
+    if (g.kind === 'move') {
+      let dx = (e.clientX - g.sx) / z;
+      let dy = (e.clientY - g.sy) / z;
+      if (!g.moved && Math.hypot(dx * z, dy * z) < 3) return;
+      if (!g.moved) {
+        g.moved = true;
+        s.begin();
       }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [z, views, W, pageTop],
-  );
+      const pg = p.pages.find((x) => x.id === g.pageId)!;
+      const sel = g.items.map((it) => ({ it, el: findEl(p, it.id)?.el })).filter((x) => x.el);
+      const bx = Math.min(...sel.map((x) => x.it.x));
+      const by = Math.min(...sel.map((x) => x.it.y));
+      const box = { x: bx + dx, y: by + dy, w: Math.max(...sel.map((x) => x.it.x + x.el!.w)) - bx, h: Math.max(...sel.map((x) => x.it.y + x.el!.h)) - by };
+      if (!e.altKey) {
+        const others = pg.elements.filter((o) => !g.items.some((it) => it.id === o.id) && !o.hidden).map((o) => ({ x: o.x, y: o.y, w: o.w, h: o.h }));
+        const ph = pageHeight(p, pg);
+        const snap = snapBox(box, others, { w: W, h: ph }, 7 / z);
+        dx += snap.dx;
+        dy += snap.dy;
+        const top = pageTop(pg.id);
+        setGuides(snap.guides.map((gd) => ({ ...gd, top, len: gd.axis === 'x' ? ph : W })));
+      } else setGuides([]);
+      s.live((d) => {
+        for (const it of g.items) {
+          const f = findEl(d, it.id);
+          if (f) {
+            f.el.x = Math.round(it.x + dx);
+            f.el.y = Math.round(it.y + dy);
+          }
+        }
+      });
+    } else if (g.kind === 'resize') {
+      const dx = (e.clientX - g.sx) / z;
+      const dy = (e.clientY - g.sy) / z;
+      const keep = e.shiftKey ? !g.keepAspect : g.keepAspect;
+      const b = resizeBox(g.start, g.rotation, g.handle, dx, dy, keep);
+      s.live((d) => {
+        const f = findEl(d, g.id);
+        if (f) Object.assign(f.el, b);
+      });
+    } else if (g.kind === 'rotate') {
+      let a = (Math.atan2(e.clientY - g.cy, e.clientX - g.cx) * 180) / Math.PI;
+      let r = g.startRotation + (a - g.startAngle);
+      r = ((((r + 180) % 360) + 360) % 360) - 180;
+      if (e.shiftKey) r = Math.round(r / 15) * 15;
+      else for (const snapA of [-180, -90, 0, 90, 180]) if (Math.abs(r - snapA) < 4) r = snapA;
+      a = Math.round(r);
+      s.live((d) => {
+        const f = findEl(d, g.id);
+        if (f) f.el.rotation = a === -180 ? 180 : a;
+      });
+    } else if (g.kind === 'endpoint') {
+      const pt = toLogical(e.clientX, e.clientY);
+      const local = { x: pt.x, y: pt.y - g.pageTop };
+      s.live((d) => {
+        const f = findEl(d, g.id);
+        if (!f) return;
+        const props = f.el.props as unknown as ArrowProps;
+        const pad = Math.max(18, (props.width || 6) * 2.2);
+        const a = g.which === 'start' ? local : g.fixed;
+        const b = g.which === 'start' ? g.fixed : local;
+        const minX = Math.min(a.x, b.x) - pad;
+        const minY = Math.min(a.y, b.y) - pad;
+        const w = Math.max(pad * 2, Math.abs(a.x - b.x) + pad * 2);
+        const h = Math.max(pad * 2, Math.abs(a.y - b.y) + pad * 2);
+        f.el.x = Math.round(minX);
+        f.el.y = Math.round(minY);
+        f.el.w = Math.round(w);
+        f.el.h = Math.round(h);
+        f.el.rotation = 0;
+        props.start = { x: round3((a.x - minX) / w), y: round3((a.y - minY) / h) };
+        props.end = { x: round3((b.x - minX) / w), y: round3((b.y - minY) / h) };
+      });
+    } else if (g.kind === 'marquee') {
+      const a = toLogical(g.sx, g.sy);
+      const b = toLogical(e.clientX, e.clientY);
+      const box = { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(a.x - b.x), h: Math.abs(a.y - b.y) };
+      setMarquee(box);
+      const hits: string[] = [];
+      for (const v of views)
+        for (const el of v.page.elements) {
+          if (el.locked) continue;
+          const ey = v.top + el.y;
+          if (el.x < box.x + box.w && el.x + el.w > box.x && ey < box.y + box.h && ey + el.h > box.y) hits.push(el.id);
+        }
+      const next = g.shift ? [...new Set([...g.base, ...hits])] : hits;
+      s.select(next);
+    } else if (g.kind === 'section') {
+      const dy = (e.clientY - g.sy) / z;
+      s.live((d) => {
+        const pg = d.pages.find((x) => x.id === g.pageId);
+        if (pg) pg.height = Math.max(120, Math.round(g.startH + dy));
+      });
+    }
+  };
 
-  const onWindowUp = useCallback(() => {
+  const onWindowUp = () => {
     const g = gesture.current;
     gesture.current = null;
     setGuides([]);
     setMarquee(null);
-    window.removeEventListener('pointermove', onWindowMove);
     if (!g) return;
     const s = editor();
     if (g.kind === 'move') {
@@ -232,22 +247,29 @@ export function Canvas() {
     } else if (g.kind !== 'marquee') {
       s.commit();
     }
-  }, [onWindowMove, slides]);
+  };
 
+  // Window listeners are attached once and dispatch to the latest handlers, so
+  // re-renders during a gesture never detach them.
+  const moveRef = useRef(onWindowMove);
+  const upRef = useRef(onWindowUp);
+  moveRef.current = onWindowMove;
+  upRef.current = onWindowUp;
   useEffect(() => {
-    const up = () => onWindowUp();
+    const move = (e: PointerEvent) => gesture.current && moveRef.current(e);
+    const up = () => gesture.current && upRef.current();
+    window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
     window.addEventListener('pointercancel', up);
     return () => {
+      window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', up);
-      window.removeEventListener('pointermove', onWindowMove);
     };
-  }, [onWindowUp, onWindowMove]);
+  }, []);
 
   const startGesture = (g: Gesture) => {
     gesture.current = g;
-    window.addEventListener('pointermove', onWindowMove);
   };
 
   function reparentAfterMove(ids: string[]) {
@@ -325,7 +347,9 @@ export function Canvas() {
       const f = findEl(s.project!, id);
       if (f && f.page.id !== s.pageId) s.setPage(f.page.id);
       if (!editor().selection.includes(id)) s.select([id]);
-      const els = editor().selection.map((x) => findEl(s.project!, x)?.el).filter((x): x is SceneElement => !!x);
+      const els = editor()
+        .selection.map((x) => findEl(s.project!, x)?.el)
+        .filter((x): x is SceneElement => !!x);
       openContextMenu(e.clientX, e.clientY, elementMenu(els), els.length > 1 ? `${els.length} elements` : els[0]?.name);
     } else {
       if (!slides && stageRef.current) {
@@ -401,7 +425,15 @@ export function Canvas() {
         <div ref={stageRef} className="ed-stage" style={{ left: stageLeft, top: stageTop, width: stageW, height: stageH }}>
           <div className="ed-stage-scale ofs-editing" style={{ width: W, height: totalH, transform: `scale(${z})`, ['--z' as string]: z }}>
             {views.map((v) => (
-              <PageBackground key={v.page.id + ':bg'} project={project} page={v.page} top={v.top} height={v.height} active={v.page.id === pageId} slides={slides} />
+              <PageBackground
+                key={v.page.id + ':bg'}
+                project={project}
+                page={v.page}
+                top={v.top}
+                height={v.height}
+                active={v.page.id === pageId}
+                slides={slides}
+              />
             ))}
             {views.map((v) =>
               v.page.elements.map((el) => (
@@ -445,7 +477,16 @@ export function Canvas() {
                 onHandle={(h, e) => {
                   e.stopPropagation();
                   editor().begin();
-                  startGesture({ kind: 'resize', id: el.id, handle: h, sx: e.clientX, sy: e.clientY, start: { x: el.x, y: el.y, w: el.w, h: el.h }, rotation: el.rotation, keepAspect: !!EDITOR_ELEMENTS[el.type]?.keepAspect });
+                  startGesture({
+                    kind: 'resize',
+                    id: el.id,
+                    handle: h,
+                    sx: e.clientX,
+                    sy: e.clientY,
+                    start: { x: el.x, y: el.y, w: el.w, h: el.h },
+                    rotation: el.rotation,
+                    keepAspect: !!EDITOR_ELEMENTS[el.type]?.keepAspect,
+                  });
                 }}
                 onRotate={(e) => {
                   e.stopPropagation();
@@ -453,7 +494,14 @@ export function Canvas() {
                   const cx = r.left + (el.x + el.w / 2) * z;
                   const cy = r.top + (pageTop(page.id) + el.y + el.h / 2) * z;
                   editor().begin();
-                  startGesture({ kind: 'rotate', id: el.id, cx, cy, startAngle: (Math.atan2(e.clientY - cy, e.clientX - cx) * 180) / Math.PI, startRotation: el.rotation });
+                  startGesture({
+                    kind: 'rotate',
+                    id: el.id,
+                    cx,
+                    cy,
+                    startAngle: (Math.atan2(e.clientY - cy, e.clientX - cx) * 180) / Math.PI,
+                    startRotation: el.rotation,
+                  });
                 }}
                 onEndpoint={(which, e) => {
                   e.stopPropagation();
@@ -519,11 +567,25 @@ function SelectionBox({
       className={`ed-selbox ${el.locked ? 'is-locked' : ''}`}
       style={{ left: el.x * z, top: (top + el.y) * z, width: el.w * z, height: el.h * z, transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined }}
     >
-      {showHandles && !isArrow && HANDLES.map((h) => <div key={h} className={`ed-handle ed-handle-${h}`} onPointerDown={(e) => onHandle(h, e)} data-handle={h} />)}
+      {showHandles &&
+        !isArrow &&
+        HANDLES.map((h) => <div key={h} className={`ed-handle ed-handle-${h}`} onPointerDown={(e) => onHandle(h, e)} data-handle={h} />)}
       {showHandles && isArrow && (
         <>
-          <div className="ed-handle ed-handle-end" style={{ left: p.start.x * el.w * z, top: p.start.y * el.h * z }} onPointerDown={(e) => onEndpoint('start', e)} data-handle="start" title="Drag to move the start" />
-          <div className="ed-handle ed-handle-end is-head" style={{ left: p.end.x * el.w * z, top: p.end.y * el.h * z }} onPointerDown={(e) => onEndpoint('end', e)} data-handle="end" title="Drag to move the tip" />
+          <div
+            className="ed-handle ed-handle-end"
+            style={{ left: p.start.x * el.w * z, top: p.start.y * el.h * z }}
+            onPointerDown={(e) => onEndpoint('start', e)}
+            data-handle="start"
+            title="Drag to move the start"
+          />
+          <div
+            className="ed-handle ed-handle-end is-head"
+            style={{ left: p.end.x * el.w * z, top: p.end.y * el.h * z }}
+            onPointerDown={(e) => onEndpoint('end', e)}
+            data-handle="end"
+            title="Drag to move the tip"
+          />
         </>
       )}
       {showHandles && !isArrow && (
@@ -541,7 +603,21 @@ function SelectionBox({
 }
 
 /** Page background layer (also handles the active-section highlight). */
-function PageBackground({ project, page, top, height, active, slides }: { project: Project; page: Page; top: number; height: number; active: boolean; slides: boolean }) {
+function PageBackground({
+  project,
+  page,
+  top,
+  height,
+  active,
+  slides,
+}: {
+  project: Project;
+  page: Page;
+  top: number;
+  height: number;
+  active: boolean;
+  slides: boolean;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const node = ref.current;

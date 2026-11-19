@@ -67,7 +67,11 @@ export async function importFile(file: File): Promise<boolean> {
     const existing = (await listDrafts()).some((d) => d.id === project.id);
     if (existing) project.id = uid('prj');
     open(project);
-    toast(`Imported “${project.meta.title}”.${warnings.length ? ` (${warnings.length} item${warnings.length > 1 ? 's' : ''} skipped: ${warnings[0]})` : ''}`, warnings.length ? 'info' : 'success', 6000);
+    toast(
+      `Imported “${project.meta.title}”.${warnings.length ? ` (${warnings.length} item${warnings.length > 1 ? 's' : ''} skipped: ${warnings[0]})` : ''}`,
+      warnings.length ? 'info' : 'success',
+      6000,
+    );
     return true;
   } catch (err) {
     toast((err as Error).message, 'error', 7000);

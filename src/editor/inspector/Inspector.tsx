@@ -38,7 +38,12 @@ export function Inspector() {
         </span>
         <div className="ed-insp-title">
           {single ? (
-            <input className="ed-name-input" value={single.name} aria-label="Element name" onChange={(e) => updateElement(single.id, (d) => void (d.name = e.target.value.slice(0, 80)), 'name')} />
+            <input
+              className="ed-name-input"
+              value={single.name}
+              aria-label="Element name"
+              onChange={(e) => updateElement(single.id, (d) => void (d.name = e.target.value.slice(0, 80)), 'name')}
+            />
           ) : (
             <strong>{els.length} elements</strong>
           )}
@@ -47,10 +52,22 @@ export function Inspector() {
       </div>
       {single && (
         <div className="ed-tabs" role="tablist">
-          <button role="tab" aria-selected={tab === 'design'} className={tab === 'design' ? 'is-on' : ''} onClick={() => editor().set({ inspectorTab: 'design' })} data-testid="tab-design">
+          <button
+            role="tab"
+            aria-selected={tab === 'design'}
+            className={tab === 'design' ? 'is-on' : ''}
+            onClick={() => editor().set({ inspectorTab: 'design' })}
+            data-testid="tab-design"
+          >
             <Icon name="palette" size={16} /> Design
           </button>
-          <button role="tab" aria-selected={tab === 'behavior'} className={tab === 'behavior' ? 'is-on' : ''} onClick={() => editor().set({ inspectorTab: 'behavior' })} data-testid="tab-behavior">
+          <button
+            role="tab"
+            aria-selected={tab === 'behavior'}
+            className={tab === 'behavior' ? 'is-on' : ''}
+            onClick={() => editor().set({ inspectorTab: 'behavior' })}
+            data-testid="tab-behavior"
+          >
             <Icon name="bolt" size={16} /> Behavior
             {single.interactions.length > 0 && <span className="ed-tab-badge">{single.interactions.length}</span>}
           </button>

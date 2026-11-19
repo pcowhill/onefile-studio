@@ -38,6 +38,7 @@ export const ElementView = memo(function ElementView({ el, env, top, editing, hi
     <div
       className={`ofs-el ed-el ${el.hidden ? 'is-hidden-start' : ''} ${el.locked ? 'is-locked' : ''} ${highlighted ? 'is-highlight' : ''}`}
       data-id={el.id}
+      data-name={el.name}
       style={{
         left: el.x,
         top: top + el.y,
@@ -66,7 +67,17 @@ function InlineTextEditor({ el }: { el: SceneElement }) {
   }, []);
   const finish = () => useEditor.getState().set({ editingTextId: null });
   const style: React.CSSProperties = isButton
-    ? { fontFamily: fontStack(p.font), fontSize: Number(p.size) || 20, fontWeight: 800, textAlign: 'center', lineHeight: `${el.h}px`, padding: 0, color: '#1d1b2c', background: 'rgba(255,255,255,.95)', borderRadius: 12 }
+    ? {
+        fontFamily: fontStack(p.font),
+        fontSize: Number(p.size) || 20,
+        fontWeight: 800,
+        textAlign: 'center',
+        lineHeight: `${el.h}px`,
+        padding: 0,
+        color: '#1d1b2c',
+        background: 'rgba(255,255,255,.95)',
+        borderRadius: 12,
+      }
     : {
         fontFamily: fontStack(p.font),
         fontSize: Number(p.size) || 24,

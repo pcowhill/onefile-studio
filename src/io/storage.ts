@@ -65,9 +65,7 @@ export async function loadDraft(id: string): Promise<Project | null> {
 export async function listDrafts(): Promise<DraftSummary[]> {
   try {
     const all = (await tx('readonly', (s) => s.getAll())) as DraftRecord[];
-    return all
-      .map(({ id, title, kind, updatedAt, pages }) => ({ id, title, kind, updatedAt, pages }))
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    return all.map(({ id, title, kind, updatedAt, pages }) => ({ id, title, kind, updatedAt, pages })).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   } catch {
     return [];
   }

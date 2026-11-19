@@ -25,8 +25,21 @@ export const EDITOR_ELEMENTS: Record<string, EditorElementDef> = {
   shape: { type: 'shape', label: 'Shape', icon: 'shape', color: '#ff7a59' },
   arrow: { type: 'arrow', label: 'Arrow', icon: 'arrow', color: '#ff5d73' },
   button: { type: 'button', label: 'Button', icon: 'button', color: '#3d8bff', inlineText: 'label' },
-  navButton: { type: 'navButton', label: 'Navigation button', icon: 'next', color: '#3d8bff', inlineText: 'label', builtIn: 'Goes to another slide or section when clicked.' },
-  beforeAfter: { type: 'beforeAfter', label: 'Before & After', icon: 'compare', color: '#f39c12', builtIn: 'Viewers drag the divider to compare the two images.' },
+  navButton: {
+    type: 'navButton',
+    label: 'Navigation button',
+    icon: 'next',
+    color: '#3d8bff',
+    inlineText: 'label',
+    builtIn: 'Goes to another slide or section when clicked.',
+  },
+  beforeAfter: {
+    type: 'beforeAfter',
+    label: 'Before & After',
+    icon: 'compare',
+    color: '#f39c12',
+    builtIn: 'Viewers drag the divider to compare the two images.',
+  },
   gallery: { type: 'gallery', label: 'Gallery', icon: 'gallery', color: '#e84393', builtIn: 'Click the gallery to show the next image.' },
   scrollText: { type: 'scrollText', label: 'Scrolling text', icon: 'scroll', color: '#0abde3', builtIn: 'Readers can scroll inside this panel.' },
   progress: { type: 'progress', label: 'Progress', icon: 'progress', color: '#8e44ad', builtIn: 'Fills up automatically as viewers progress.' },
@@ -114,7 +127,17 @@ export const CATALOG: CatalogItem[] = [
       element: createElement('text', {
         w: 160,
         h: 40,
-        props: { text: 'NEW', size: 16, weight: 800, align: 'center', valign: 'middle', color: '#d63384', background: '#ffe3f1', radius: 999, letterSpacing: 0.08 },
+        props: {
+          text: 'NEW',
+          size: 16,
+          weight: 800,
+          align: 'center',
+          valign: 'middle',
+          color: '#d63384',
+          background: '#ffe3f1',
+          radius: 999,
+          letterSpacing: 0.08,
+        },
       }),
     }),
   },
@@ -140,7 +163,9 @@ export const CATALOG: CatalogItem[] = [
     icon: 'arrow',
     color: '#ff5d73',
     group: 'shapes',
-    build: () => ({ element: createElement('arrow', { w: 280, h: 140, props: { bend: -0.45, start: { x: 0.05, y: 0.8 }, end: { x: 0.95, y: 0.7 }, color: '#6d4aff' } }) }),
+    build: () => ({
+      element: createElement('arrow', { w: 280, h: 140, props: { bend: -0.45, start: { x: 0.05, y: 0.8 }, end: { x: 0.95, y: 0.7 }, color: '#6d4aff' } }),
+    }),
   },
   {
     id: 'image',
@@ -169,7 +194,11 @@ export const CATALOG: CatalogItem[] = [
     color: '#3d8bff',
     group: 'interactive',
     build: ({ project }) => ({
-      element: createElement('navButton', { w: 190, h: 60, props: { label: project.kind === 'page' ? 'Keep reading' : 'Next', icon: project.kind === 'page' ? 'chevron-down' : 'arrow-right' } }),
+      element: createElement('navButton', {
+        w: 190,
+        h: 60,
+        props: { label: project.kind === 'page' ? 'Keep reading' : 'Next', icon: project.kind === 'page' ? 'chevron-down' : 'arrow-right' },
+      }),
     }),
   },
   {
@@ -179,7 +208,13 @@ export const CATALOG: CatalogItem[] = [
     icon: 'next',
     color: '#3d8bff',
     group: 'interactive',
-    build: () => ({ element: createElement('navButton', { w: 170, h: 60, props: { label: 'Back', icon: 'arrow-left', iconSide: 'left', variant: 'soft', target: 'prev', shadow: false } }) }),
+    build: () => ({
+      element: createElement('navButton', {
+        w: 170,
+        h: 60,
+        props: { label: 'Back', icon: 'arrow-left', iconSide: 'left', variant: 'soft', target: 'prev', shadow: false },
+      }),
+    }),
   },
   {
     id: 'beforeAfter',
@@ -190,7 +225,10 @@ export const CATALOG: CatalogItem[] = [
     group: 'interactive',
     build: () => {
       const s = sampleAssets();
-      return { element: createElement('beforeAfter', { w: 600, h: 400, props: { before: SAMPLE_IDS.before, after: SAMPLE_IDS.after } }), assets: [s[SAMPLE_IDS.before], s[SAMPLE_IDS.after]] };
+      return {
+        element: createElement('beforeAfter', { w: 600, h: 400, props: { before: SAMPLE_IDS.before, after: SAMPLE_IDS.after } }),
+        assets: [s[SAMPLE_IDS.before], s[SAMPLE_IDS.after]],
+      };
     },
   },
   {
@@ -240,7 +278,17 @@ export const CATALOG: CatalogItem[] = [
         element: createElement('text', {
           w: 280,
           h: 64,
-          props: { text: `${v.name}: {${v.name}}`, size: 36, weight: 800, align: 'center', valign: 'middle', color: '#ffffff', background: '#6d4aff', radius: 18, padding: 8 },
+          props: {
+            text: `${v.name}: {${v.name}}`,
+            size: 36,
+            weight: 800,
+            align: 'center',
+            valign: 'middle',
+            color: '#ffffff',
+            background: '#6d4aff',
+            radius: 18,
+            padding: 8,
+          },
         }),
         variables: existing ? [] : [v],
       };
@@ -290,7 +338,12 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
       elements: [
         createElement('shape', { x: 96, y: 96, w: 72, h: 10, props: { fill: linear('#ff7eb3', '#6d4aff', 90), radius: 6, shadow: 'none' } }),
         T('Slide title', 96, 130, 1000, 80, { size: 56, weight: 800 }),
-        T('Add your main points here.\nKeep each one short and sweet.\nDouble-click any text to edit it.', 96, 250, 900, 260, { size: 30, weight: 500, lineHeight: 1.6, color: '#4b4766' }),
+        T('Add your main points here.\nKeep each one short and sweet.\nDouble-click any text to edit it.', 96, 250, 900, 260, {
+          size: 30,
+          weight: 500,
+          lineHeight: 1.6,
+          color: '#4b4766',
+        }),
       ],
     }),
   },
@@ -303,7 +356,12 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
       elements: [
         createElement('image', { x: 80, y: 110, w: 520, h: 500, props: { radius: 28 } }),
         T('Tell the story', 680, 200, 520, 80, { size: 52, weight: 800 }),
-        T('Pair a picture with a few words. Select the image and choose "Replace image" to use your own.', 680, 300, 500, 200, { size: 26, weight: 500, lineHeight: 1.5, color: '#5b5570' }),
+        T('Pair a picture with a few words. Select the image and choose "Replace image" to use your own.', 680, 300, 500, 200, {
+          size: 26,
+          weight: 500,
+          lineHeight: 1.5,
+          color: '#5b5570',
+        }),
       ],
     }),
   },
@@ -313,7 +371,16 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     kind: 'slides',
     build: () => ({
       background: { paint: linear('#1b1834', '#3a2a7a', 160) },
-      elements: [T('“One sentence that everyone will remember.”', 140, 230, 1000, 260, { size: 64, weight: 800, color: '#ffffff', align: 'center', valign: 'middle', lineHeight: 1.2 })],
+      elements: [
+        T('“One sentence that everyone will remember.”', 140, 230, 1000, 260, {
+          size: 64,
+          weight: 800,
+          color: '#ffffff',
+          align: 'center',
+          valign: 'middle',
+          lineHeight: 1.2,
+        }),
+      ],
     }),
   },
   { id: 'blank-section', label: 'Blank', kind: 'page', build: (p) => ({ background: { paint: solid('#ffffff') }, elements: [], height: p.settings.height }) },
@@ -326,7 +393,13 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
       background: { paint: linear('#6d4aff', '#ff7eb3', 135) },
       elements: [
         T('Welcome to my page', 100, 150, 800, 90, { size: 68, weight: 900, color: '#ffffff', align: 'center', letterSpacing: -0.02 }),
-        T('A short introduction that makes people want to scroll.', 150, 260, 700, 70, { size: 26, weight: 600, color: '#f4eeff', align: 'center', lineHeight: 1.4 }),
+        T('A short introduction that makes people want to scroll.', 150, 260, 700, 70, {
+          size: 26,
+          weight: 600,
+          color: '#f4eeff',
+          align: 'center',
+          lineHeight: 1.4,
+        }),
         createElement('navButton', { x: 390, y: 380, w: 220, h: 62, props: { label: 'Keep reading', icon: 'chevron-down', color: '#ffffff' } }),
       ],
     }),
@@ -340,7 +413,12 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
       background: { paint: solid('#ffffff') },
       elements: [
         T('A section title', 60, 130, 420, 70, { size: 44, weight: 800 }),
-        T('Explain one idea per section. Short paragraphs and generous spacing make pages easy to read.', 60, 220, 400, 160, { size: 21, weight: 500, lineHeight: 1.6, color: '#5b5570' }),
+        T('Explain one idea per section. Short paragraphs and generous spacing make pages easy to read.', 60, 220, 400, 160, {
+          size: 21,
+          weight: 500,
+          lineHeight: 1.6,
+          color: '#5b5570',
+        }),
         createElement('image', { x: 520, y: 80, w: 420, h: 360, props: { radius: 24 } }),
       ],
     }),

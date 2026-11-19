@@ -12,6 +12,8 @@ import { toast } from '../ui/toast';
 
 type Quality = 'original' | 'optimized';
 
+const plural = (n: number, word: string) => (n === 1 ? word : `${word}s`);
+
 export async function buildExport(project: Project, quality: Quality): Promise<{ html: string; project: Project }> {
   let p = pruneUnusedAssets(project);
   if (quality === 'optimized') p = await optimizeAssets(p);
@@ -77,25 +79,33 @@ export function ExportDialog() {
         </div>
         <div>
           <h2>Export one HTML file</h2>
-          <p>Everything — pictures, interactions and the player — is packed into a single file that works offline. Email it, put it on a USB stick, or double-click to open it in any browser.</p>
+          <p>
+            Everything — pictures, interactions and the player — is packed into a single file that works offline. Email it, put it on a USB stick, or
+            double-click to open it in any browser.
+          </p>
         </div>
       </div>
       <ul className="ed-export-facts">
         <li>
-          <b>{project.pages.length}</b> {project.kind === 'slides' ? 'slides' : 'sections'}
+          <b>{project.pages.length}</b> {plural(project.pages.length, project.kind === 'slides' ? 'slide' : 'section')}
         </li>
         <li>
-          <b>{stats.elements}</b> elements
+          <b>{stats.elements}</b> {plural(stats.elements, 'element')}
         </li>
         <li>
-          <b>{stats.interactions}</b> interactions
+          <b>{stats.interactions}</b> {plural(stats.interactions, 'interaction')}
         </li>
         <li>
-          <b>{images}</b> images ({formatBytes(totalAssetBytes(pruned))})
+          <b>{images}</b> {plural(images, 'image')} ({formatBytes(totalAssetBytes(pruned))})
         </li>
       </ul>
       <div className="ed-quality" role="radiogroup" aria-label="Image quality">
-        <button role="radio" aria-checked={quality === 'original'} className={`ed-quality-card ${quality === 'original' ? 'is-on' : ''}`} onClick={() => setQuality('original')}>
+        <button
+          role="radio"
+          aria-checked={quality === 'original'}
+          className={`ed-quality-card ${quality === 'original' ? 'is-on' : ''}`}
+          onClick={() => setQuality('original')}
+        >
           <strong>Original quality</strong>
           <span>Images exactly as you added them.</span>
           <em>{sizes.original ? formatBytes(sizes.original) : 'Calculating…'}</em>
@@ -115,11 +125,13 @@ export function ExportDialog() {
       </div>
       {quality === 'optimized' && (
         <p className="ed-export-warn">
-          <Icon name="info" size={16} /> The compressed images are what you'll get back when you re-open this file for editing. Keep your original pictures if you may need full quality later.
+          <Icon name="info" size={16} /> The compressed images are what you'll get back when you re-open this file for editing. Keep your original pictures if
+          you may need full quality later.
         </p>
       )}
       <div className="ed-export-editable">
-        <Icon name="check" size={16} stroke={3} /> Always editable: the full project is embedded, so you can import this file into OneFile Studio and keep working.
+        <Icon name="check" size={16} stroke={3} /> Always editable: the full project is embedded, so you can import this file into OneFile Studio and keep
+        working.
       </div>
       <div className="ed-modal-actions">
         <button className="ed-btn ed-btn-ghost" onClick={close}>

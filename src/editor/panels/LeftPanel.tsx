@@ -5,7 +5,22 @@ import { Icon } from '../ui/Icon';
 import { PageThumb } from './PageThumb';
 import { CATALOG, CATALOG_GROUPS, templatesFor } from '../catalog';
 import type { CatalogItem } from '../catalog';
-import { addImageFiles, addPage, addVariable, assetUsage, deleteAsset, deletePage, deleteVariable, duplicatePage, insertCatalogItem, insertImage, movePage, pickImages, renameVariable, variableUsage } from '../ops';
+import {
+  addImageFiles,
+  addPage,
+  addVariable,
+  assetUsage,
+  deleteAsset,
+  deletePage,
+  deleteVariable,
+  duplicatePage,
+  insertCatalogItem,
+  insertImage,
+  movePage,
+  pickImages,
+  renameVariable,
+  variableUsage,
+} from '../ops';
 import { openContextMenu } from '../ui/contextMenu';
 import { Popover, NumberInput } from '../ui/controls';
 import { formatBytes } from '../../io/exportHtml';
@@ -25,7 +40,13 @@ export function LeftPanel() {
     <aside className="ed-left" aria-label="Project panel">
       <nav className="ed-rail" aria-label="Panels">
         {TABS.map((t) => (
-          <button key={t.id} className={`ed-rail-btn ${tab === t.id ? 'is-on' : ''}`} onClick={() => editor().set({ leftTab: t.id })} aria-pressed={tab === t.id} data-testid={`tab-${t.id}`}>
+          <button
+            key={t.id}
+            className={`ed-rail-btn ${tab === t.id ? 'is-on' : ''}`}
+            onClick={() => editor().set({ leftTab: t.id })}
+            aria-pressed={tab === t.id}
+            data-testid={`tab-${t.id}`}
+          >
             <Icon name={t.id === 'pages' && kind === 'page' ? 'page' : t.icon} size={21} />
             <span>{t.id === 'pages' ? (kind === 'slides' ? 'Slides' : 'Sections') : t.label}</span>
           </button>
@@ -182,7 +203,9 @@ function InsertPanel() {
     <div className="ed-panel">
       <PanelHead title="Insert" />
       <div className="ed-panel-scroll">
-        <p className="ed-panel-hint">Click to add to the {useEditor((s) => (s.project?.kind === 'slides' ? 'slide' : 'section'))}. Everything starts with good-looking defaults.</p>
+        <p className="ed-panel-hint">
+          Click to add to the {useEditor((s) => (s.project?.kind === 'slides' ? 'slide' : 'section'))}. Everything starts with good-looking defaults.
+        </p>
         {CATALOG_GROUPS.map((g) => (
           <div key={g.id} className="ed-cat-group">
             <h3>{g.label}</h3>
@@ -200,7 +223,13 @@ function InsertPanel() {
 
 function CatalogCard({ item }: { item: CatalogItem }) {
   return (
-    <button className="ed-cat-card" onClick={() => insertCatalogItem(item)} title={item.hint} data-testid={`insert-${item.id}`} style={{ ['--cat' as string]: item.color }}>
+    <button
+      className="ed-cat-card"
+      onClick={() => insertCatalogItem(item)}
+      title={item.hint}
+      data-testid={`insert-${item.id}`}
+      style={{ ['--cat' as string]: item.color }}
+    >
       <span className="ed-cat-art">
         <CatalogIllustration id={item.id} />
       </span>
@@ -289,7 +318,8 @@ function VariablesPanel() {
       </PanelHead>
       <div className="ed-panel-scroll">
         <p className="ed-panel-hint">
-          Variables are numbers your project remembers — like a score or a counter. Change them with interactions, show them in text by typing <code>{'{Name}'}</code>, or connect a progress bar.
+          Variables are numbers your project remembers — like a score or a counter. Change them with interactions, show them in text by typing{' '}
+          <code>{'{Name}'}</code>, or connect a progress bar.
         </p>
         {project.variables.length === 0 && (
           <div className="ed-empty">
@@ -306,7 +336,12 @@ function VariablesPanel() {
           <div key={v.id} className="ed-var">
             <div className="ed-var-top">
               <span className="ed-var-badge">#</span>
-              <input className="ed-input ed-var-name" value={v.name} aria-label="Variable name" onChange={(e) => renameVariable(v.id, e.target.value.replace(/[{}]/g, '').slice(0, 40))} />
+              <input
+                className="ed-input ed-var-name"
+                value={v.name}
+                aria-label="Variable name"
+                onChange={(e) => renameVariable(v.id, e.target.value.replace(/[{}]/g, '').slice(0, 40))}
+              />
               <button
                 className="ed-icon-btn is-danger"
                 aria-label={`Delete ${v.name}`}

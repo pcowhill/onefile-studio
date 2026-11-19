@@ -11,7 +11,8 @@ export const APP_VERSION = '0.1.0';
  * may only be inline, images/fonts only embedded data: URLs, and no network
  * connections at all. This guarantees the document works (and stays) offline.
  */
-export const EXPORT_CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; base-uri 'none'; form-action 'none'";
+export const EXPORT_CSP =
+  "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; base-uri 'none'; form-action 'none'";
 
 /** Removes assets that nothing references. Returns a new project. */
 export function pruneUnusedAssets(project: Project): Project {

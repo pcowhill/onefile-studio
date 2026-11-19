@@ -45,7 +45,12 @@ function ZoomControls() {
       <button className="ed-icon-btn" aria-label="Zoom in" onClick={() => editor().set({ zoom: Math.min(4, z * 1.2) })}>
         <Icon name="plus" size={16} />
       </button>
-      <button className={`ed-icon-btn ${zoom === null ? 'is-on' : ''}`} aria-label="Fit to screen" title="Fit to screen" onClick={() => editor().set({ zoom: null })}>
+      <button
+        className={`ed-icon-btn ${zoom === null ? 'is-on' : ''}`}
+        aria-label="Fit to screen"
+        title="Fit to screen"
+        onClick={() => editor().set({ zoom: null })}
+      >
         <Icon name="fit" size={16} />
       </button>
     </div>

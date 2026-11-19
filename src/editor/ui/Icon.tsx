@@ -26,14 +26,16 @@ const P: Record<string, string> = {
   close: 'M6 6l12 12M18 6L6 18',
   check: 'M5 12.5l4.5 4.5L19 7.5',
   bolt: 'M13.5 3L5 13.5h6l-1 7.5 8.5-10.5h-6z',
-  palette: 'M12 3.5a8.5 8.5 0 1 0 0 17c1.2 0 1.8-.8 1.8-1.7 0-1.2-1-1.6-1-2.6 0-1 .8-1.7 1.9-1.7h2.2a3.6 3.6 0 0 0 3.6-3.6C20.5 6.9 16.7 3.5 12 3.5zM7.5 11.5h.01M9.5 7.5h.01M14.5 7.5h.01',
+  palette:
+    'M12 3.5a8.5 8.5 0 1 0 0 17c1.2 0 1.8-.8 1.8-1.7 0-1.2-1-1.6-1-2.6 0-1 .8-1.7 1.9-1.7h2.2a3.6 3.6 0 0 0 3.6-3.6C20.5 6.9 16.7 3.5 12 3.5zM7.5 11.5h.01M9.5 7.5h.01M14.5 7.5h.01',
   layers: 'M12 4l8.5 4.5L12 13 3.5 8.5zM3.5 12.5L12 17l8.5-4.5M3.5 16.5L12 21l8.5-4.5',
   slides: 'M3.5 5.5h17v11h-17zM8 20h8M12 16.5V20',
   page: 'M6 3.5h12v17H6zM9 8h6M9 11.5h6M9 15h3.5',
   grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   variable: 'M8 4.5C5.5 4.5 6 9 4 12c2 3 1.5 7.5 4 7.5M16 4.5c2.5 0 2 4.5 4 7.5-2 3-1.5 7.5-4 7.5M9.5 9l5 6M14.5 9l-5 6',
   eye: 'M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
-  eyeOff: 'M4 4l16 16M10 6c.6-.2 1.3-.3 2-.3 6 0 9.5 6.3 9.5 6.3a17 17 0 0 1-2.8 3.5M6.5 7.6A16 16 0 0 0 2.5 12S6 18.3 12 18.3c1.6 0 3-.4 4.3-1M9.9 9.9a3 3 0 0 0 4.2 4.2',
+  eyeOff:
+    'M4 4l16 16M10 6c.6-.2 1.3-.3 2-.3 6 0 9.5 6.3 9.5 6.3a17 17 0 0 1-2.8 3.5M6.5 7.6A16 16 0 0 0 2.5 12S6 18.3 12 18.3c1.6 0 3-.4 4.3-1M9.9 9.9a3 3 0 0 0 4.2 4.2',
   lock: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3',
   unlock: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 6.8-1.2',
   home: 'M4 11l8-7 8 7M6 9.5V20h12V9.5',
@@ -60,7 +62,8 @@ const P: Record<string, string> = {
   progress: 'M3.5 9.5h17v5h-17zM3.5 12h10',
   next: 'M4.5 6.5h11a4.5 4.5 0 0 1 0 9h-11zM9 9l3 2-3 2',
   score: 'M4.5 5.5h15v13h-15zM9 9.5v5M7.5 10.5l1.5-1M12.5 9.5h3v2.5h-3v2.5h3',
-  settings: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM19.4 13.5l1.6 1.2-2 3.4-1.9-.7a7 7 0 0 1-2.3 1.3l-.3 2h-4l-.3-2a7 7 0 0 1-2.3-1.3l-1.9.7-2-3.4 1.6-1.2a7 7 0 0 1 0-3L2.6 9.3l2-3.4 1.9.7A7 7 0 0 1 8.8 5.3l.3-2h4l.3 2a7 7 0 0 1 2.3 1.3l1.9-.7 2 3.4-1.6 1.2a7 7 0 0 1 0 3z',
+  settings:
+    'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM19.4 13.5l1.6 1.2-2 3.4-1.9-.7a7 7 0 0 1-2.3 1.3l-.3 2h-4l-.3-2a7 7 0 0 1-2.3-1.3l-1.9.7-2-3.4 1.6-1.2a7 7 0 0 1 0-3L2.6 9.3l2-3.4 1.9.7A7 7 0 0 1 8.8 5.3l.3-2h4l.3 2a7 7 0 0 1 2.3 1.3l1.9-.7 2 3.4-1.6 1.2a7 7 0 0 1 0 3z',
   edit: 'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4',
   drag: 'M9 5.5h.01M15 5.5h.01M9 12h.01M15 12h.01M9 18.5h.01M15 18.5h.01',
   file: 'M6 3.5h8l4 4v13H6zM14 3.5v4h4',
@@ -79,7 +82,21 @@ const P: Record<string, string> = {
 
 export type IconName = keyof typeof P;
 
-export function Icon({ name, size = 20, stroke = 2, style, className, fill }: { name: string; size?: number; stroke?: number; style?: CSSProperties; className?: string; fill?: string }) {
+export function Icon({
+  name,
+  size = 20,
+  stroke = 2,
+  style,
+  className,
+  fill,
+}: {
+  name: string;
+  size?: number;
+  stroke?: number;
+  style?: CSSProperties;
+  className?: string;
+  fill?: string;
+}) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" className={'ed-icon ' + (className ?? '')} style={style}>
       <path d={P[name] ?? P.sparkle} fill={fill ?? 'none'} stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" />

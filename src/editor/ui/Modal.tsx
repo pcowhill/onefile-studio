@@ -3,7 +3,19 @@ import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from './Icon';
 
-export function Modal({ children, onClose, label, className = '', wide }: { children: ReactNode; onClose(): void; label: string; className?: string; wide?: boolean }) {
+export function Modal({
+  children,
+  onClose,
+  label,
+  className = '',
+  wide,
+}: {
+  children: ReactNode;
+  onClose(): void;
+  label: string;
+  className?: string;
+  wide?: boolean;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;

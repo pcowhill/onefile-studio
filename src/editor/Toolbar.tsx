@@ -56,7 +56,13 @@ export function Toolbar() {
         </div>
         <div className="ed-tb-group">
           {QUICK.map((q) => (
-            <button key={q.id} className="ed-tool has-label" onClick={() => insertCatalogItem(CATALOG.find((c) => c.id === q.id)!)} title={`Add ${q.label.toLowerCase()}`} data-testid={`quick-${q.id}`}>
+            <button
+              key={q.id}
+              className="ed-tool has-label"
+              onClick={() => insertCatalogItem(CATALOG.find((c) => c.id === q.id)!)}
+              title={`Add ${q.label.toLowerCase()}`}
+              data-testid={`quick-${q.id}`}
+            >
               <Icon name={q.icon} />
               <span>{q.label}</span>
             </button>
@@ -68,17 +74,31 @@ export function Toolbar() {
         </div>
       </div>
       <div className="ed-tb-right">
-        <button className={`ed-save is-${saveState}`} onClick={() => void persist()} title="Your work is saved automatically in this browser. Export to get a file.">
+        <button
+          className={`ed-save is-${saveState}`}
+          onClick={() => void persist()}
+          title="Your work is saved automatically in this browser. Export to get a file."
+        >
           <Icon name={saveState === 'error' ? 'warning' : saveState === 'saved' ? 'check' : 'clock'} size={15} />
           {saveState === 'saved' ? 'Saved' : saveState === 'saving' ? 'Saving…' : saveState === 'error' ? 'Not saved' : 'Unsaved'}
         </button>
         <button className="ed-tool" onClick={pickAndImport} title="Open an exported HTML file" aria-label="Open file">
           <Icon name="folder" />
         </button>
-        <button className="ed-btn ed-btn-play" onClick={() => editor().set({ previewOpen: true, editingTextId: null })} title={`Preview (${mod}Enter)`} data-testid="preview">
+        <button
+          className="ed-btn ed-btn-play"
+          onClick={() => editor().set({ previewOpen: true, editingTextId: null })}
+          title={`Preview (${mod}Enter)`}
+          data-testid="preview"
+        >
           <Icon name="play" size={16} fill="currentColor" /> Preview
         </button>
-        <button className="ed-btn ed-btn-primary" onClick={() => editor().set({ exportOpen: true, editingTextId: null })} title={`Export (${mod}E)`} data-testid="export">
+        <button
+          className="ed-btn ed-btn-primary"
+          onClick={() => editor().set({ exportOpen: true, editingTextId: null })}
+          title={`Export (${mod}E)`}
+          data-testid="export"
+        >
           <Icon name="download" size={17} /> Export
         </button>
       </div>

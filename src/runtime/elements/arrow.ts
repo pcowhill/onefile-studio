@@ -117,9 +117,28 @@ export const arrowDef: RuntimeElementDef<ArrowProps> = {
       if (d.kind === 'dot') {
         s.appendChild(svg(doc, 'circle', { cx: d.cx!, cy: d.cy!, r: d.r!, fill: p.color, class: 'ofs-arrow-head' }));
       } else if (d.kind === 'triangle') {
-        s.appendChild(svg(doc, 'path', { d: d.d!, fill: p.color, stroke: p.color, 'stroke-width': Math.max(1, sw * 0.35), 'stroke-linejoin': 'round', class: 'ofs-arrow-head' }));
+        s.appendChild(
+          svg(doc, 'path', {
+            d: d.d!,
+            fill: p.color,
+            stroke: p.color,
+            'stroke-width': Math.max(1, sw * 0.35),
+            'stroke-linejoin': 'round',
+            class: 'ofs-arrow-head',
+          }),
+        );
       } else {
-        s.appendChild(svg(doc, 'path', { d: d.d!, fill: 'none', stroke: p.color, 'stroke-width': sw, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', class: 'ofs-arrow-head' }));
+        s.appendChild(
+          svg(doc, 'path', {
+            d: d.d!,
+            fill: 'none',
+            stroke: p.color,
+            'stroke-width': sw,
+            'stroke-linecap': 'round',
+            'stroke-linejoin': 'round',
+            class: 'ofs-arrow-head',
+          }),
+        );
       }
     };
     if (g.head) addEnd(g.head);
