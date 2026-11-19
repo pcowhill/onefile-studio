@@ -118,10 +118,26 @@ export const quizDef: RuntimeElementDef<QuizProps> = {
     const play = env.mode === 'play';
     const radius = Math.max(0, num(p.radius, 0));
 
-    // Typography scales with the box and the number of rows, so the defaults fit and long content still reads well.
+    // Typography scales with the box: estimate the content height (question,
+    // answers and the feedback line that appears later) and shrink until it fits.
+    // Content that still does not fit scrolls inside the panel.
     const rows = layout === 'grid' ? Math.ceil(choices.length / 2) : layout === 'pills' ? Math.ceil(choices.length / 3) : choices.length;
+    const rowEm = layout === 'grid' ? 3.75 : 3.15;
     const qLen = String(p.question ?? '').length;
-    const base = Math.max(12, Math.min(30, el.w / 26, el.h / (rows * 2.75 + 5 + Math.min(4, qLen / 60))));
+    const fbLen = Math.max(String(p.feedbackCorrect ?? '').length, String(p.feedbackIncorrect ?? '').length);
+    const padFor = (b: number) => Math.max(12, Math.min(radius * 0.7, b * 1.6), b * 1.1);
+    const heightFor = (b: number) => {
+      const inner = Math.max(40, el.w - 2 * padFor(b));
+      const lines = (chars: number, em: number) => Math.max(1, Math.ceil((chars * em * 0.52 * b) / inner));
+      const em = lines(qLen, 1.3) * 1.625 + rows * rowEm + 0.85 + Math.max(lines(fbLen, 1) * 1.35, 2.1) + 0.85;
+      return em * b + 2 * padFor(b);
+    };
+    let base = Math.min(30, el.w / 26);
+    for (let i = 0; i < 4 && base > 12; i++) {
+      const need = heightFor(base);
+      if (need <= el.h) break;
+      base = Math.max(12, base * Math.max(0.6, el.h / need));
+    }
 
     const node = h(doc, 'div', `ofs-quiz ofs-quiz-${layout}${p.showLetters ? '' : ' ofs-quiz-noletters'}`, {
       fontFamily: fontStack(p.font),
@@ -144,7 +160,7 @@ export const quizDef: RuntimeElementDef<QuizProps> = {
     s.setProperty('--q-on-danger', contrastText(p.danger));
     s.setProperty('--q-on-accent', contrastText(p.accent));
     s.setProperty('--q-radius', `${Math.min(radius, base * 1.1)}px`);
-    s.setProperty('--q-pad', `${Math.max(12, Math.min(radius * 0.7, base * 1.6), base * 1.1)}px`);
+    s.setProperty('--q-pad', `${padFor(base)}px`);
 
     const question = h(doc, 'h3', 'ofs-quiz-q', { fontFamily: fontStack(p.headingFont) });
     question.textContent = p.question;
@@ -245,6 +261,12 @@ export const quizDef: RuntimeElementDef<QuizProps> = {
       const rec: QuizAward = { variable: scoreVar };
       env.state.set(quizAwardKey(el.id), rec);
     };
+    /** Scrolls the panel (never the page) so the feedback line is visible. */
+    const showFooter = () => {
+      if (footer.hidden) return;
+      const over = footer.offsetTop + footer.offsetHeight - (node.scrollTop + node.clientHeight);
+      if (over > 0) node.scrollTop += over + 4;
+    };
     const choose = (i: number) => {
       const st = read();
       if (st.answer !== null) return;
@@ -253,6 +275,7 @@ export const quizDef: RuntimeElementDef<QuizProps> = {
       const right = i === correct;
       if (right && scoreVar && (!p.firstTryOnly || attempts === 1)) award();
       paint(true);
+      showFooter();
       emit(node, COMPONENT_EVENTS.quizAnswer, { correct: right, choice: i });
     };
     const retryNow = () => {
@@ -284,7 +307,7 @@ export const quizDef: RuntimeElementDef<QuizProps> = {
     return { node, api: { reset } };
   },
   css: `
-.ofs-quiz{width:100%;height:100%;display:flex;flex-direction:column;gap:.85em;padding:var(--q-pad);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--q-border) transparent;line-height:1.35;overflow-wrap:break-word;word-break:break-word}
+.ofs-quiz{width:100%;height:100%;display:flex;flex-direction:column;gap:.85em;padding:var(--q-pad);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:var(--q-border) transparent;line-height:1.35;overflow-wrap:break-word;word-break:break-word}
 .ofs-quiz>*{flex:none}
 .ofs-quiz-q{margin:0;font-size:1.3em;line-height:1.25;font-weight:800;letter-spacing:-.005em;white-space:pre-wrap}
 .ofs-quiz-choices{display:flex;flex-direction:column;gap:.55em}
@@ -334,6 +357,6 @@ export const quizDef: RuntimeElementDef<QuizProps> = {
 .ofs-quiz-retry:hover{background:var(--q-accent);color:var(--q-on-accent)}
 .ofs-quiz-retry:focus-visible{outline:3px solid var(--q-accent);outline-offset:2px}
 .ofs-editing .ofs-quiz-choice,.ofs-editing .ofs-quiz-retry{pointer-events:none;transition:none}
-@media (prefers-reduced-motion:reduce){.ofs-quiz-choice.ofs-pop,.ofs-quiz-choice.ofs-shake{animation:none}.ofs-quiz-choice,.ofs-quiz-letter,.ofs-quiz-retry{transition:none}}
+@media (prefers-reduced-motion:reduce){.ofs-quiz{scroll-behavior:auto}.ofs-quiz-choice.ofs-pop,.ofs-quiz-choice.ofs-shake{animation:none}.ofs-quiz-choice,.ofs-quiz-letter,.ofs-quiz-retry{transition:none}}
 `,
 };
