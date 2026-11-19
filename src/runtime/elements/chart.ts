@@ -269,7 +269,7 @@ export const chartDef: RuntimeElementDef<ChartProps> = {
     const grid = p.gridColor || '#e4e0f5';
     const surface = p.background && p.background !== 'transparent' ? p.background : '';
 
-    const node = h(doc, 'div', `ofs-chart ofs-chart-${type} ofs-chart-${preset}`, {
+    const node = h(doc, 'div', `ofs-chart ofs-chart-is-${type} ofs-chart-${preset}`, {
       fontFamily: fontStack(p.font),
       color: textColor,
       background: p.background,

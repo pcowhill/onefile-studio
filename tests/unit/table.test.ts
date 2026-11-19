@@ -20,7 +20,12 @@ const ROWS = [
 ];
 
 function table(props: Partial<TableProps> = {}) {
-  return createElement<TableProps>('table', { id: 'el_table', w: 600, h: 300, props: { rows: ROWS, columnAlign: ['auto', 'auto', 'auto', 'auto'], ...props } });
+  return createElement<TableProps>('table', {
+    id: 'el_table',
+    w: 600,
+    h: 300,
+    props: { rows: ROWS, columnAlign: ['auto', 'auto', 'auto', 'auto'], ...props },
+  }) as unknown as SceneElement;
 }
 function play(el: SceneElement) {
   const p = createProject('slides');
@@ -180,6 +185,6 @@ describe('table props validation', () => {
     expect(out.preset).toBe('lined');
     expect(out.size).toBe(18);
     expect(out.headerBg).toBe('#6d4aff');
-    expect(() => render(createElement('table', { props: out }))).not.toThrow();
+    expect(() => render(createElement('table', { props: out as unknown as Record<string, unknown> }))).not.toThrow();
   });
 });

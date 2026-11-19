@@ -12,7 +12,7 @@ import { MAX_CHART_POINTS, MAX_CHART_SERIES } from '../../src/model/propSchemas'
 import type { SceneElement } from '../../src/model/types';
 
 function chart(props: Partial<ChartProps> = {}, init: Partial<SceneElement> = {}) {
-  return createElement<ChartProps>('chart', { id: 'el_chart', w: 640, h: 400, ...init, props });
+  return createElement<ChartProps>('chart', { id: 'el_chart', w: 640, h: 400, ...init, props }) as unknown as SceneElement;
 }
 
 function play(el: SceneElement) {
@@ -254,7 +254,7 @@ describe('chart props validation', () => {
     expect(out.title).toBe('Monthly visitors');
     expect(out.showLegend).toBe(true);
     // And it still renders.
-    expect(() => render(createElement('chart', { props: out }))).not.toThrow();
+    expect(() => render(createElement('chart', { props: out as unknown as Record<string, unknown> }))).not.toThrow();
   });
 
   it('pads short series to the number of labels', () => {
