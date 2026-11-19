@@ -5,10 +5,32 @@ import { EXAMPLES } from '../../examples';
 import { importFile, openDraft, openExample, pickAndImport, startNew } from '../session';
 import { Icon } from '../ui/Icon';
 import { Logo } from '../ui/Logo';
+import { ThemeGrid } from '../theme/ThemePicker';
+import type { ThemeId } from '../../model/types';
+import { DEFAULT_THEME, isThemeId } from '../../model/theme';
+
+const THEME_KEY = 'ofs:start-theme';
+function initialTheme(): ThemeId {
+  try {
+    const v = localStorage.getItem(THEME_KEY);
+    return isThemeId(v) ? v : DEFAULT_THEME;
+  } catch {
+    return DEFAULT_THEME;
+  }
+}
 
 export function StartScreen() {
   const [drafts, setDrafts] = useState<DraftSummary[]>([]);
   const [over, setOver] = useState(false);
+  const [theme, setTheme] = useState<ThemeId>(initialTheme);
+  const pickTheme = (id: ThemeId) => {
+    setTheme(id);
+    try {
+      localStorage.setItem(THEME_KEY, id);
+    } catch {
+      /* storage unavailable */
+    }
+  };
   useEffect(() => {
     void listDrafts().then(setDrafts);
   }, []);
@@ -49,8 +71,14 @@ export function StartScreen() {
           </h1>
           <p>Build interactive slides and webpages without code — then share them as a single HTML file that works anywhere, even offline.</p>
         </section>
+        <section className="st-themes" aria-label="Choose a style">
+          <h2>
+            <Icon name="palette" size={18} /> Pick a style <small>— you can change it any time</small>
+          </h2>
+          <ThemeGrid value={theme} onPick={pickTheme} compact />
+        </section>
         <section className="st-create" aria-label="Create a new project">
-          <button className="st-card st-card-slides" onClick={() => startNew('slides')} data-testid="new-slides">
+          <button className="st-card st-card-slides" onClick={() => startNew('slides', theme)} data-testid="new-slides">
             <SlidesArt />
             <span className="st-card-text">
               <strong>Slide presentation</strong>
@@ -60,7 +88,7 @@ export function StartScreen() {
               <Icon name="right" size={20} />
             </span>
           </button>
-          <button className="st-card st-card-page" onClick={() => startNew('page')} data-testid="new-page">
+          <button className="st-card st-card-page" onClick={() => startNew('page', theme)} data-testid="new-page">
             <PageArt />
             <span className="st-card-text">
               <strong>Scrolling webpage</strong>
@@ -205,6 +233,68 @@ function PageArt() {
 }
 
 function ExampleArt({ id }: { id: string }) {
+  if (id === 'release')
+    return (
+      <svg viewBox="0 0 160 90" className="st-ex-art" aria-hidden="true">
+        <defs>
+          <linearGradient id="ear" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#0b1f44" />
+            <stop offset="1" stopColor="#1e3a8a" />
+          </linearGradient>
+        </defs>
+        <rect width="160" height="90" rx="8" fill="url(#ear)" />
+        <rect x="12" y="18" width="34" height="7" rx="3.5" fill="#e8effd" />
+        <rect x="12" y="31" width="50" height="10" rx="3" fill="#fff" />
+        <rect x="12" y="46" width="42" height="4" rx="2" fill="#cbd5e1" />
+        <rect x="12" y="62" width="30" height="10" rx="3" fill="#fff" />
+        <rect x="76" y="16" width="72" height="56" rx="6" fill="#fff" />
+        <rect x="76" y="16" width="72" height="8" rx="4" fill="#f1f5f9" />
+        <circle cx="112" cy="46" r="10" fill="#2563eb" />
+        <path d="M109 41.5v9l7.5-4.5z" fill="#fff" />
+        <rect x="82" y="64" width="60" height="3" rx="1.5" fill="#e2e8f0" />
+        <rect x="82" y="64" width="26" height="3" rx="1.5" fill="#2563eb" />
+      </svg>
+    );
+  if (id === 'event')
+    return (
+      <svg viewBox="0 0 160 90" className="st-ex-art" aria-hidden="true">
+        <rect width="160" height="90" rx="8" fill="#fbf7f1" />
+        <rect x="0" y="0" width="160" height="40" rx="8" fill="#5a3426" />
+        <rect x="0" y="32" width="160" height="8" fill="#5a3426" />
+        <text x="80" y="27" textAnchor="middle" fontSize="13" fontWeight="600" fill="#fff8f0" fontFamily="'OFS Fraunces', Georgia, serif">
+          The Autumn Social
+        </text>
+        {[40, 64, 88, 112].map((x, i) => (
+          <g key={x}>
+            <rect x={x - 10} y="50" width="20" height="24" rx="4" fill="#2b2320" />
+            <text x={x} y="66" textAnchor="middle" fontSize="10" fontWeight="700" fill="#fff8f0" fontFamily="system-ui">
+              {['02', '14', '37', '05'][i]}
+            </text>
+          </g>
+        ))}
+        <circle cx="140" cy="62" r="3" fill="#d99a3d" />
+        <circle cx="20" cy="58" r="2.5" fill="#b5532c" />
+        <rect x="134" y="74" width="5" height="3" fill="#6f8f5c" transform="rotate(30 136 75)" />
+      </svg>
+    );
+  if (id === 'knowledge')
+    return (
+      <svg viewBox="0 0 160 90" className="st-ex-art" aria-hidden="true">
+        <rect width="160" height="90" rx="8" fill="#0b1220" />
+        <rect x="12" y="14" width="80" height="8" rx="4" fill="#e6edf7" />
+        {[30, 46, 62].map((y, i) => (
+          <g key={y}>
+            <rect x="12" y={y} width="86" height="12" rx="3" fill={i === 1 ? 'rgba(52,211,153,.18)' : '#16233a'} stroke={i === 1 ? '#34d399' : '#22385a'} />
+            <circle cx="19" cy={y + 6} r="3" fill={i === 1 ? '#34d399' : '#64779a'} />
+          </g>
+        ))}
+        <circle cx="128" cy="44" r="18" fill="none" stroke="rgba(148,163,184,.25)" strokeWidth="6" />
+        <path d="M128 26 a18 18 0 1 1 -15.6 27" fill="none" stroke="#22d3ee" strokeWidth="6" strokeLinecap="round" />
+        <text x="128" y="48" textAnchor="middle" fontSize="11" fontWeight="700" fill="#e6edf7" fontFamily="system-ui">
+          2/3
+        </text>
+      </svg>
+    );
   if (id === 'presentation')
     return (
       <svg viewBox="0 0 160 90" className="st-ex-art" aria-hidden="true">

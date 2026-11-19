@@ -1,12 +1,28 @@
-import type { Asset, Page, Project, SceneElement, Variable } from '../model/types';
+import type { Asset, AssetKind, Page, Project, SceneElement, Variable } from '../model/types';
+import { assetKind } from '../model/types';
 import { SELF_TARGET } from '../model/types';
+import { ASSET_REFS } from '../model/propSchemas';
+import type { VideoProps } from '../runtime/elements/video';
+import { videoFrameExtra } from '../runtime/elements/video';
+import { AUDIO_STYLE_HEIGHT } from '../runtime/elements/audio';
 import { cloneElement, clonePage, createElement, createPage, createVariable } from '../model/factory';
 import { pageHeight } from '../runtime/mount';
 import { editor, findEl, useEditor } from './store/store';
 import type { Built, CatalogItem, PageTemplate } from './catalog';
 import { nameFor } from './catalog';
-import { addAssetDedup, fileToAsset } from '../io/assets';
+import { acceptAttribute, addAssetDedup, fileToAsset, formatMegabytes, LARGE_FILE_BYTES, normalizeMime } from '../io/assets';
 import { toast } from './ui/toast';
+import {
+  applyThemeToElement,
+  defaultRole,
+  getTheme,
+  inferBackgroundRole,
+  markExplicit,
+  resetElementToTheme,
+  setElementRole,
+  themeNewBackground,
+  themeNewElement,
+} from '../model/theme';
 
 export type Recipe<T> = (draft: T) => void;
 
@@ -42,10 +58,33 @@ export function placeCentered(project: Project, pg: Page, el: SceneElement) {
   el.y = y;
 }
 
-export function insertBuilt(built: Built, opts: { keepPosition?: boolean } = {}) {
+const ON_DARK: Record<string, string> = {
+  heading: 'display',
+  subheading: 'displaySub',
+  body: 'displaySub',
+  caption: 'displaySub',
+  primary: 'hero',
+  secondary: 'heroGhost',
+};
+
+/** Dark (hero/dark/accent theme background, or a dark custom colour) pages get light text by default. */
+function isDarkPage(pg: Page): boolean {
+  const bg = pg.background;
+  if (bg.themed && bg.role) return bg.role === 'hero' || bg.role === 'dark' || bg.role === 'accent';
+  return inferBackgroundRole(bg) !== 'base';
+}
+
+export function insertBuilt(built: Built, opts: { keepPosition?: boolean; keepStyle?: boolean } = {}) {
   const s = editor();
   if (!s.project) return;
   const el = built.element;
+  // New elements follow the project theme (every themeable prop is "themed"),
+  // using the "on dark" styles when the page has a dark background.
+  if (!opts.keepStyle) {
+    const pg = page(s.project, s.pageId);
+    const role = pg && isDarkPage(pg) ? ON_DARK[el.role ?? defaultRole(el.type)] : undefined;
+    themeNewElement(el, getTheme(s.project.settings.theme), role ?? el.role);
+  }
   s.update((d) => {
     const pg = page(d, s.pageId);
     if (!pg) return;
@@ -77,44 +116,107 @@ export function insertCatalogItem(item: CatalogItem) {
 
 /** Opens the OS file picker for images and adds them to the project's assets. */
 export function pickImages(multiple = true): Promise<Asset[]> {
+  return pickMedia(['image'], multiple);
+}
+
+const ALL_KINDS: AssetKind[] = ['image', 'video', 'audio'];
+
+/**
+ * Opens the OS file picker for the given kinds of media (images, GIFs, videos,
+ * sounds) and adds the chosen files to the project's assets.
+ * Resolves with the added (or de-duplicated) assets; [] when cancelled.
+ */
+export function pickMedia(kinds: AssetKind[] = ALL_KINDS, multiple = true): Promise<Asset[]> {
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/png,image/jpeg,image/gif,image/webp,image/svg+xml,image/avif';
+    input.accept = acceptAttribute(kinds);
     input.multiple = multiple;
-    input.onchange = async () => resolve(await addImageFiles([...(input.files ?? [])]));
+    input.onchange = async () => resolve(await addMediaFiles([...(input.files ?? [])], kinds));
+    input.addEventListener('cancel', () => resolve([]));
     input.click();
   });
 }
 
-export async function addImageFiles(files: File[]): Promise<Asset[]> {
+/** Adds image files (kept for existing callers: any supported media is accepted). */
+export function addImageFiles(files: File[]): Promise<Asset[]> {
+  return addMediaFiles(files);
+}
+
+const KIND_LABEL: Record<AssetKind, string> = { image: 'an image', video: 'a video', audio: 'a sound file' };
+
+/**
+ * Embeds local files as project assets (de-duplicated by content). Shows a
+ * friendly error per rejected file and a heads-up for files that will make
+ * the export large.
+ */
+export async function addMediaFiles(files: File[], kinds: AssetKind[] = ALL_KINDS): Promise<Asset[]> {
   const out: Asset[] = [];
   for (const f of files) {
     try {
+      const mime = normalizeMime(f.type, f.name);
+      if (mime && !kinds.includes(assetKind(mime))) {
+        toast(`“${f.name}” is ${KIND_LABEL[assetKind(mime)]}. Please choose ${kinds.map((k) => KIND_LABEL[k]).join(' or ')}.`, 'error');
+        continue;
+      }
+      if (f.size > 8 * 1024 * 1024) toast(`Adding “${f.name}” (${formatMegabytes(f.size)})…`, 'info', 2500);
       const asset = await fileToAsset(f);
       let id = asset.id;
       editor().update((d) => {
         id = addAssetDedup(d.assets, asset);
       });
       const stored = editor().project?.assets[id];
-      if (stored) out.push(stored);
+      if (!stored) continue;
+      out.push(stored);
+      if (stored.bytes > LARGE_FILE_BYTES)
+        toast(
+          `“${stored.name}” is ${formatMegabytes(stored.bytes)}. It is embedded in your file, so the export will be at least ${formatMegabytes(stored.bytes * 1.34)}.`,
+          'info',
+          7000,
+        );
     } catch (err) {
-      toast((err as Error).message, 'error');
+      toast((err as Error).message, 'error', 7000);
     }
   }
   return out;
 }
 
-export function insertImage(asset: Asset) {
+/** Places an asset on the current page as the matching element (image, video or audio). */
+export function insertImage(asset: Asset): string | undefined {
+  if (assetKind(asset.mime) !== 'image') return insertMedia(asset);
   const s = editor();
   if (!s.project) return;
   const max = Math.min(520, s.project.settings.width * 0.5);
   const ratio = asset.width && asset.height ? asset.width / asset.height : 4 / 3;
   const w = ratio >= 1 ? max : max * ratio;
   const h = w / ratio;
-  insertBuilt({
-    element: createElement('image', { w: Math.round(w), h: Math.round(h), props: { assetId: asset.id, alt: asset.name.replace(/\.[a-z0-9]+$/i, '') } }),
+  return insertBuilt({
+    element: createElement('image', { w: Math.round(w), h: Math.round(h), props: { assetId: asset.id, alt: stripExt(asset.name) } }),
   });
+}
+
+const stripExt = (name: string) => name.replace(/\.[a-z0-9]+$/i, '');
+
+/** Element size that shows a video at its own aspect ratio with the given frame. */
+export function videoSize(asset: Asset | undefined, width: number, frame: VideoProps['frame']): { w: number; h: number } {
+  const ratio = asset && asset.width > 0 && asset.height > 0 ? asset.width / asset.height : 16 / 9;
+  const extra = videoFrameExtra(frame);
+  return { w: Math.round(width), h: Math.round((width - extra.w) / ratio + extra.h) };
+}
+
+/** Places a video, sound or image from the asset library on the current page. */
+export function insertMedia(asset: Asset): string | undefined {
+  const kind = assetKind(asset.mime);
+  if (kind === 'image') return insertImage(asset);
+  const s = editor();
+  if (!s.project) return;
+  if (kind === 'video') {
+    const W = s.project.settings.width;
+    const portrait = asset.height > asset.width;
+    const size = videoSize(asset, portrait ? Math.min(320, W * 0.4) : Math.min(640, W * 0.6), 'none');
+    return insertBuilt({ element: createElement('video', { ...size, props: { assetId: asset.id, alt: stripExt(asset.name) } }) });
+  }
+  return insertBuilt({ element: createElement('audio', { w: 420, h: AUDIO_STYLE_HEIGHT.player, props: { assetId: asset.id } }) });
 }
 
 // ---------------- element editing ----------------
@@ -129,8 +231,38 @@ export function updateElement(id: string, recipe: Recipe<SceneElement>, merge?: 
   );
 }
 
+/**
+ * Author edits to props. Any edited key becomes an explicit choice that theme
+ * changes will no longer touch (see src/model/theme/apply.ts).
+ */
 export function updateProps(id: string, patch: Record<string, unknown>, merge?: string) {
-  updateElement(id, (el) => Object.assign(el.props as Record<string, unknown>, patch), merge ?? Object.keys(patch).join(','));
+  updateElement(
+    id,
+    (el) => {
+      Object.assign(el.props as Record<string, unknown>, patch);
+      markExplicit(el, Object.keys(patch));
+    },
+    merge ?? Object.keys(patch).join(','),
+  );
+}
+
+/** Restores theme styling on elements (all their themeable props). */
+export function resetToTheme(ids: string[] = editor().selection) {
+  editor().update((d) => {
+    const t = getTheme(d.settings.theme);
+    for (const id of ids) {
+      const f = findEl(d, id);
+      if (f) resetElementToTheme(f.el, t);
+    }
+  });
+}
+
+/** Changes an element's theme style role (e.g. paragraph → heading). */
+export function setRole(id: string, role: string) {
+  editor().update((d) => {
+    const f = findEl(d, id);
+    if (f) setElementRole(f.el, role, getTheme(d.settings.theme));
+  });
 }
 
 export function updateSelected(recipe: Recipe<SceneElement>, merge?: string) {
@@ -195,8 +327,11 @@ export function pasteClipboard() {
     const pg = page(d, s.pageId);
     if (!pg) return;
     for (const a of clipAssets) if (!d.assets[a.id]) d.assets[a.id] = a;
+    const theme = getTheme(d.settings.theme);
     for (const src of s.clipboard) {
       const copy = cloneElement(src);
+      // Pasting into a project with another theme: themed props adopt this project's theme.
+      applyThemeToElement(copy, theme);
       const sameSpot = pg.elements.some((e) => e.x === copy.x && e.y === copy.y);
       if (sameSpot) {
         copy.x += 24;
@@ -283,9 +418,10 @@ export function addPage(template?: PageTemplate, afterId?: string) {
   s.update((d) => {
     const pg = createPage(d);
     if (template) {
+      const theme = getTheme(d.settings.theme);
       const t = template.build(d);
-      pg.background = t.background;
-      pg.elements = t.elements.map((el) => ({ ...el, name: el.name }));
+      pg.background = themeNewBackground(theme, t.backgroundRole);
+      pg.elements = t.elements.map((el) => themeNewElement(el, theme));
       if (d.kind === 'page' && t.height) pg.height = t.height;
       for (const el of pg.elements) {
         el.name = nameFor({ ...d, pages: [...d.pages, pg] }, el.type);
@@ -422,6 +558,7 @@ export function assetUsage(project: Project, id: string): number {
   return json.split(`"${id}"`).length - 1;
 }
 
+/** Removes an asset and clears every reference to it (elements fall back to their empty state). */
 export function deleteAsset(id: string) {
   editor().update((d) => {
     delete d.assets[id];
@@ -429,7 +566,8 @@ export function deleteAsset(id: string) {
       if (pg.background.imageId === id) delete pg.background.imageId;
       for (const el of pg.elements) {
         const p = el.props as Record<string, unknown>;
-        for (const k of ['assetId', 'before', 'after']) if (p[k] === id) p[k] = '';
+        const keys = new Set(['assetId', 'before', 'after', 'posterId', ...Object.keys(ASSET_REFS[el.type] ?? {})]);
+        for (const k of keys) if (p[k] === id) p[k] = '';
         if (Array.isArray(p.images)) p.images = (p.images as string[]).filter((x) => x !== id);
       }
     }

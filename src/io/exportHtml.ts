@@ -1,10 +1,10 @@
 import type { Project } from '../model/types';
 import { escapeHtml, jsonForScript } from './escape';
-import { NUNITO_FONT_CSS, projectUsesEmbeddedFont } from './fonts';
+import { fontCssForProject } from './fonts';
 import { isSafeColor } from '../model/paint';
 
 export const GENERATOR = 'OneFile Studio';
-export const APP_VERSION = '0.1.0';
+export const APP_VERSION = '0.2.0';
 
 /**
  * Restrictive Content-Security-Policy for exported files: scripts and styles
@@ -31,7 +31,7 @@ export function buildStandaloneHtml(project: Project, runtime: string): string {
   const data: Project = { ...project, meta: { ...project.meta, updatedAt: new Date().toISOString() } };
   const title = escapeHtml(project.meta.title || 'Untitled');
   const backdrop = isSafeColor(project.settings.backdrop) ? project.settings.backdrop : '#ffffff';
-  const fontCss = projectUsesEmbeddedFont(project) ? NUNITO_FONT_CSS : '';
+  const fontCss = fontCssForProject(project);
   return `<!DOCTYPE html>
 <!--
   Made with ${GENERATOR}. This single file contains everything it needs and works offline.

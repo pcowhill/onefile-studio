@@ -9,6 +9,8 @@ export interface TriggerDef {
   id: string;
   /** Makes the element look clickable (pointer cursor, keyboard focus). */
   clickable?: boolean;
+  /** Only meaningful on these element types (component events). */
+  forTypes?: string[];
   bind(node: HTMLElement, fire: (e: Event) => void): () => void;
 }
 
@@ -59,4 +61,46 @@ triggerRegistry.register({
 triggerRegistry.register({
   id: 'hover',
   bind: (node, fire) => listen(node, 'pointerenter', fire),
+});
+
+/**
+ * Component events. Elements announce them by dispatching a bubbling DOM
+ * event from their content node (see `emit`); the trigger listens on the
+ * element wrapper like any other trigger.
+ */
+export const COMPONENT_EVENTS = {
+  countdownDone: 'ofs-countdown-done',
+  quizAnswer: 'ofs-quiz-answer',
+  mediaEnded: 'ofs-media-ended',
+} as const;
+
+export function emit(node: HTMLElement, type: string, detail: Record<string, unknown> = {}) {
+  const Ev = node.ownerDocument.defaultView?.CustomEvent ?? CustomEvent;
+  node.dispatchEvent(new Ev(type, { bubbles: true, detail }));
+}
+
+triggerRegistry.register({
+  id: 'countdownDone',
+  forTypes: ['countdown'],
+  bind: (node, fire) => listen(node, COMPONENT_EVENTS.countdownDone, fire),
+});
+
+const quizTrigger = (id: string, want: boolean | null) =>
+  triggerRegistry.register({
+    id,
+    forTypes: ['quiz'],
+    bind: (node, fire) =>
+      listen(node, COMPONENT_EVENTS.quizAnswer, (e) => {
+        const correct = !!(e as CustomEvent<{ correct?: boolean }>).detail?.correct;
+        if (want === null || correct === want) fire(e);
+      }),
+  });
+quizTrigger('quizCorrect', true);
+quizTrigger('quizIncorrect', false);
+quizTrigger('quizAnswered', null);
+
+triggerRegistry.register({
+  id: 'mediaEnded',
+  forTypes: ['video', 'audio'],
+  bind: (node, fire) => listen(node, COMPONENT_EVENTS.mediaEnded, fire),
 });

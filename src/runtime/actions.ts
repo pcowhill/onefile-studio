@@ -12,6 +12,8 @@ export interface PlayerControl {
   setVisible(id: string, visible: boolean, effect?: string): Promise<void> | void;
   navigate(target: string): void;
   api(id: string): ElementApi | undefined;
+  /** Forgets an element's per-session state (e.g. a quiz answer), even when it is on another slide. */
+  clearState?(id: string): void;
   animate(id: string, preset: string, opts: { duration?: number; direction?: string }): Promise<void>;
 }
 
@@ -94,6 +96,17 @@ const defs: ActionDef[] = [
         direction: String(p.direction ?? 'left'),
       });
       return p.wait ? run : undefined;
+    },
+  },
+  { id: 'mediaPlay', execute: (p, c) => c.player.api(target(p, c))?.play?.() },
+  { id: 'mediaPause', execute: (p, c) => c.player.api(target(p, c))?.pause?.() },
+  { id: 'mediaRestart', execute: (p, c) => c.player.api(target(p, c))?.restart?.() },
+  {
+    id: 'quizReset',
+    execute(p, c) {
+      const id = target(p, c);
+      c.player.clearState?.(id);
+      c.player.api(id)?.reset?.();
     },
   },
   {

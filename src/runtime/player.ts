@@ -98,6 +98,7 @@ export function createPlayer(container: HTMLElement, project: Project, opts: Pla
     },
     navigate: (t) => goTo(t),
     api: (id) => mounted.get(id)?.content.api,
+    clearState: (id) => void elementState.delete(id),
     animate(id, preset, o) {
       const m = mounted.get(id);
       if (!m || m.wrapper.classList.contains('ofs-hidden')) return Promise.resolve();

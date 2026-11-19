@@ -1,11 +1,16 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { Paint } from '../../model/types';
+import type { Asset, AssetKind, Paint } from '../../model/types';
+import { assetKind } from '../../model/types';
 import { paintToCss } from '../../model/paint';
 import { FONT_PRESETS } from '../../runtime/fonts';
 import { Icon } from './Icon';
 import { useEditor } from '../store/store';
-import { pickImages } from '../ops';
+import { pickImages, pickMedia } from '../ops';
+import { getTheme } from '../../model/theme';
+import { formatTime } from '../../runtime/elements/mediaShared';
+import { formatBytes } from '../../io/exportHtml';
+import '../../styles/media.css';
 
 export const PALETTE = [
   '#1d1b2c',
@@ -167,6 +172,14 @@ export function Toggle({ checked, onChange, label, description }: { checked: boo
   );
 }
 
+/** Colours of the open project's theme (shown first in colour pickers). */
+function useThemeSwatches(): string[] {
+  const id = useEditor((s) => s.project?.settings.theme);
+  const t = getTheme(id);
+  const c = t.colors;
+  return [...new Set([c.text, c.muted, c.accent, c.accent2, c.bg, c.surfaceAlt, ...t.chart.slice(2, 4)])].filter((x) => x.startsWith('#')).slice(0, 8);
+}
+
 export function ColorPicker({
   value,
   onChange,
@@ -178,9 +191,25 @@ export function ColorPicker({
   allowTransparent?: boolean;
   palette?: string[];
 }) {
-  const isCustom = !palette.includes(value) && value !== 'transparent';
+  const themeSwatches = useThemeSwatches();
+  const isCustom = !palette.includes(value) && !themeSwatches.includes(value) && value !== 'transparent';
   return (
     <div className="ed-swatches">
+      {palette === PALETTE && (
+        <>
+          {themeSwatches.map((c) => (
+            <button
+              key={`t${c}`}
+              className={`ed-swatch is-theme ${value.toLowerCase() === c ? 'is-on' : ''}`}
+              style={{ background: c }}
+              title={`Theme colour ${c}`}
+              aria-label={`Theme colour ${c}`}
+              onClick={() => onChange(c)}
+            />
+          ))}
+          <span className="ed-swatch-sep" aria-hidden="true" />
+        </>
+      )}
       {allowTransparent && (
         <button
           className={`ed-swatch ed-swatch-none ${value === 'transparent' ? 'is-on' : ''}`}
@@ -429,9 +458,23 @@ export function Popover({
 }
 
 /** Choose an image: upload a new one or pick from images already in the project. */
-export function ImageChooser({ value, onChange, label = 'Image', compact }: { value: string; onChange(id: string): void; label?: string; compact?: boolean }) {
+export function ImageChooser({
+  value,
+  onChange,
+  label = 'Image',
+  compact,
+  onClear,
+}: {
+  value: string;
+  onChange(id: string): void;
+  label?: string;
+  compact?: boolean;
+  /** Shows a "Remove" button when an image is chosen. */
+  onClear?(): void;
+}) {
   const assets = useEditor((s) => s.project?.assets ?? {});
-  const a = assets[value];
+  const found = assets[value];
+  const a = found && assetKind(found.mime) === 'image' ? found : undefined;
   return (
     <div className={`ed-imgchoose ${compact ? 'is-compact' : ''}`}>
       <div className="ed-imgchoose-thumb" style={a ? { backgroundImage: `url("${a.data}")` } : undefined}>
@@ -451,15 +494,42 @@ export function ImageChooser({ value, onChange, label = 'Image', compact }: { va
             <Icon name="upload" size={14} /> Upload
           </button>
           <AssetLibrary onPick={onChange} />
+          {a && onClear && (
+            <button className="ed-icon-btn is-danger" onClick={onClear} aria-label={`Remove ${label.toLowerCase()}`} title="Remove">
+              <Icon name="trash" size={15} />
+            </button>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-export function AssetLibrary({ onPick, label = 'Library' }: { onPick(id: string): void; label?: string }) {
+const KIND_ICON: Record<AssetKind, string> = { image: 'image', video: 'video', audio: 'audio' };
+const KIND_NOUN: Record<AssetKind, string> = { image: 'image', video: 'video', audio: 'sound' };
+
+/** Library tile for any asset: picture thumbnail, or an icon with the duration for video/audio. */
+export function AssetTile({ asset, className = '' }: { asset: Asset; className?: string }) {
+  const kind = assetKind(asset.mime);
+  if (kind === 'image')
+    return (
+      <span className={`ed-media-tile ${className}`} style={{ backgroundImage: `url("${asset.data}")` }}>
+        {asset.animated && <span className="ed-media-badge">GIF</span>}
+      </span>
+    );
+  return (
+    <span className={`ed-media-tile is-${kind} ${className}`}>
+      <Icon name={KIND_ICON[kind]} size={22} />
+      {asset.duration ? <span className="ed-media-duration">{formatTime(asset.duration)}</span> : null}
+    </span>
+  );
+}
+
+/** Pick an asset of one kind (default: images) that is already in the project. */
+export function AssetLibrary({ onPick, label = 'Library', kind = 'image' }: { onPick(id: string): void; label?: string; kind?: AssetKind }) {
   const assets = useEditor((s) => s.project?.assets ?? {});
-  const list = Object.values(assets);
+  const list = Object.values(assets).filter((a) => assetKind(a.mime) === kind);
+  const noun = KIND_NOUN[kind];
   return (
     <Popover
       width={268}
@@ -469,28 +539,105 @@ export function AssetLibrary({ onPick, label = 'Library' }: { onPick(id: string)
           className="ed-btn ed-btn-sm ed-btn-ghost"
           onClick={toggle}
           disabled={!list.length}
-          title={list.length ? 'Choose an image already in this project' : 'No images in this project yet'}
+          title={list.length ? `Choose ${kind === 'image' ? 'an' : 'a'} ${noun} already in this project` : `No ${noun}s in this project yet`}
+          data-testid={`library-${kind}`}
         >
           <Icon name="grid" size={14} /> {label}
         </button>
       )}
     >
       {(close) => (
-        <div className="ed-lib">
-          {list.map((a) => (
-            <button
-              key={a.id}
-              className="ed-lib-item"
-              title={a.name}
-              style={{ backgroundImage: `url("${a.data}")` }}
-              onClick={() => {
-                onPick(a.id);
-                close();
-              }}
-            />
-          ))}
+        <div className={`ed-lib ${kind === 'image' ? '' : 'is-media'}`}>
+          {list.map((a) =>
+            kind === 'image' ? (
+              <button
+                key={a.id}
+                className="ed-lib-item"
+                title={a.name}
+                style={{ backgroundImage: `url("${a.data}")` }}
+                onClick={() => {
+                  onPick(a.id);
+                  close();
+                }}
+              />
+            ) : (
+              <button
+                key={a.id}
+                className="ed-lib-row"
+                title={a.name}
+                onClick={() => {
+                  onPick(a.id);
+                  close();
+                }}
+              >
+                <AssetTile asset={a} />
+                <span>
+                  <strong>{a.name}</strong>
+                  <small>
+                    {a.duration ? `${formatTime(a.duration)} · ` : ''}
+                    {formatBytes(a.bytes)}
+                  </small>
+                </span>
+              </button>
+            ),
+          )}
         </div>
       )}
     </Popover>
+  );
+}
+
+/**
+ * Choose a video or sound file: a big, inviting button while empty, then a
+ * file card (duration, size) with Replace and Library.
+ */
+export function MediaChooser({ kind, value, onChange }: { kind: 'video' | 'audio'; value: string; onChange(asset: Asset): void }) {
+  const assets = useEditor((s) => s.project?.assets ?? {});
+  const found = assets[value];
+  const a = found && assetKind(found.mime) === kind ? found : undefined;
+  const noun = KIND_NOUN[kind];
+  const pick = () =>
+    void pickMedia([kind], false).then((list) => {
+      if (list[0]) onChange(list[0]);
+    });
+  const fromLibrary = (id: string) => {
+    const x = useEditor.getState().project?.assets[id];
+    if (x) onChange(x);
+  };
+  const hasLibrary = Object.values(assets).some((x) => assetKind(x.mime) === kind);
+  if (!a)
+    return (
+      <div className="ed-media-choose">
+        <button className={`ed-media-big is-${kind}`} onClick={pick} data-testid={`choose-${kind}`}>
+          <span className="ed-media-big-icon">
+            <Icon name={KIND_ICON[kind]} size={26} />
+          </span>
+          <strong>Choose {noun} file</strong>
+          <small>{kind === 'video' ? 'MP4 or WebM, up to 150 MB' : 'MP3, WAV, OGG or M4A'}</small>
+        </button>
+        {hasLibrary && (
+          <div className="ed-media-or">
+            or use one already in this project <AssetLibrary kind={kind} label="Library" onPick={fromLibrary} />
+          </div>
+        )}
+      </div>
+    );
+  const facts = [a.duration ? formatTime(a.duration) : '', formatBytes(a.bytes), kind === 'video' && a.width ? `${a.width}×${a.height}` : '']
+    .filter(Boolean)
+    .join(' · ');
+  return (
+    <div className="ed-media-card" data-testid={`chosen-${kind}`}>
+      <AssetTile asset={a} className="is-lg" />
+      <div className="ed-media-card-side">
+        <strong title={a.name}>{a.name}</strong>
+        <small>{facts}</small>
+        <div className="ed-row">
+          <button className="ed-btn ed-btn-sm ed-btn-soft" onClick={pick}>
+            <Icon name="upload" size={14} /> Replace
+          </button>
+          <AssetLibrary kind={kind} label="Library" onPick={fromLibrary} />
+        </div>
+      </div>
+    </div>
   );
 }

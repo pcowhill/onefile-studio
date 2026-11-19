@@ -3,6 +3,7 @@ import { SELF_TARGET } from '../model/types';
 import { createElement, createProject } from '../model/factory';
 import { linear, solid } from '../model/paint';
 import { bulb, puff, rocket, sampleAssets, SAMPLE_IDS, svgAsset } from './art';
+import { eventAnnouncement, featureRelease, knowledgeCheck } from './v2';
 
 /**
  * Example projects. They are ordinary projects built with the same factories
@@ -566,6 +567,30 @@ function clicker(): Project {
 }
 
 export const EXAMPLES: ExampleDef[] = [
+  {
+    id: 'release',
+    title: 'Feature release walkthrough',
+    description: 'A professional update deck with an embedded video, a chart and a sortable table.',
+    kind: 'slides',
+    color: '#2563eb',
+    build: featureRelease,
+  },
+  {
+    id: 'event',
+    title: 'Event announcement',
+    description: 'An editorial invitation page with a live countdown, an animated GIF and a programme.',
+    kind: 'page',
+    color: '#b5532c',
+    build: eventAnnouncement,
+  },
+  {
+    id: 'knowledge',
+    title: 'Interactive knowledge check',
+    description: 'Explain, then quiz: three questions, a live score and a satisfying finish.',
+    kind: 'slides',
+    color: '#0891b2',
+    build: knowledgeCheck,
+  },
   {
     id: 'presentation',
     title: 'Interactive presentation',

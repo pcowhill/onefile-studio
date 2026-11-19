@@ -5,6 +5,8 @@ import { goHome, pickAndImport, persist } from './session';
 import { CATALOG } from './catalog';
 import { insertCatalogItem } from './ops';
 import { Logo } from './ui/Logo';
+import { ThemeDots } from './theme/ThemePicker';
+import { getTheme } from '../model/theme';
 
 const QUICK = [
   { id: 'heading', label: 'Text', icon: 'text' },
@@ -43,6 +45,15 @@ export function Toolbar() {
           <span className={`ed-kind ${slides ? 'is-slides' : 'is-page'}`}>
             <Icon name={slides ? 'slides' : 'page'} size={13} /> {slides ? 'Slides' : 'Webpage'}
           </span>
+          <button
+            className="ed-theme-btn"
+            onClick={() => editor().set({ themeOpen: true, editingTextId: null })}
+            title="Change the look of the whole project"
+            data-testid="theme-button"
+          >
+            <ThemeDots id={project.settings.theme} />
+            <span>{getTheme(project.settings.theme).label}</span>
+          </button>
         </div>
       </div>
       <div className="ed-tb-center">

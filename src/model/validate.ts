@@ -8,13 +8,46 @@ import { actionRegistry } from '../runtime/actions';
 import { animationRegistry } from '../runtime/animations';
 import { dragRegistry } from '../runtime/drag';
 import { COMPARE_OPS } from '../runtime/conditions';
+import { BACKGROUND_ROLES, DEFAULT_THEME, isThemeId } from './theme/tokens';
+import { ASSET_REFS, assetOfKind, PROP_SANITIZERS } from './propSchemas';
+import type { SanitizeCtx } from './propSchemas';
 
 export type ValidationResult = { ok: true; project: Project; warnings: string[] } | { ok: false; errors: string[] };
 
 export class ProjectError extends Error {}
 
-const DATA_URL = /^data:image\/(png|jpeg|jpg|gif|webp|svg\+xml|avif|bmp);base64,[A-Za-z0-9+/]+={0,2}$/;
-const COLOR_KEYS = new Set(['color', 'stroke', 'borderColor', 'accent', 'track', 'labelColor', 'background', 'textColor']);
+/** Embedded asset MIME types accepted on import. */
+const DATA_URL_HEAD = /^data:(image\/(?:png|jpeg|jpg|gif|webp|svg\+xml|avif|bmp)|video\/(?:mp4|webm|ogg)|audio\/(?:mpeg|wav|ogg|mp4|aac|webm|flac));base64,/;
+const B64_BODY = /[A-Za-z0-9+/]*={0,2}$/y;
+const COLOR_KEYS = new Set([
+  'color',
+  'stroke',
+  'borderColor',
+  'accent',
+  'track',
+  'labelColor',
+  'background',
+  'textColor',
+  'mutedColor',
+  'gridColor',
+  'headerBg',
+  'headerText',
+  'stripe',
+  'cardBg',
+  'cardText',
+  'choiceBg',
+  'success',
+  'danger',
+]);
+
+/** True for a well-formed base64 data: URL of a supported media type (checked without copying large strings). */
+export function isEmbeddedDataUrl(data: unknown): data is string {
+  if (typeof data !== 'string') return false;
+  const m = DATA_URL_HEAD.exec(data.slice(0, 64));
+  if (!m) return false;
+  B64_BODY.lastIndex = m[0].length;
+  return B64_BODY.test(data);
+}
 const MAX_TEXT = 100_000;
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -44,6 +77,7 @@ export function validateProject(raw: unknown): ValidationResult {
     if (!kind) throw new ProjectError('Unknown project type.');
 
     const meta = isObj(migrated.meta) ? migrated.meta : {};
+    const ctx: SanitizeCtx = { project: null as unknown as Project, varIds: new Set() };
     const s = isObj(migrated.settings) ? migrated.settings : {};
     const isSlides = kind === 'slides';
     const project: Project = {
@@ -62,6 +96,8 @@ export function validateProject(raw: unknown): ValidationResult {
         transition: s.transition === 'none' || s.transition === 'slide' ? s.transition : 'fade',
         showNavigation: bool(s.showNavigation, true),
         backdrop: isSafeColor(s.backdrop) ? s.backdrop : isSlides ? '#1b1834' : '#ffffff',
+        theme: isThemeId(s.theme) ? s.theme : DEFAULT_THEME,
+        ...(s.backdropThemed === true ? { backdropThemed: true } : {}),
       },
       pages: [],
       variables: [],
@@ -71,13 +107,13 @@ export function validateProject(raw: unknown): ValidationResult {
     // Assets
     if (isObj(migrated.assets)) {
       for (const [key, a] of Object.entries(migrated.assets)) {
-        if (!isObj(a) || !SAFE_ID.test(key)) {
+        if (!isObj(a) || !SAFE_ID.test(key) || RESERVED_KEYS.has(key)) {
           warnings.push(`Skipped an invalid asset entry.`);
           continue;
         }
         const data = typeof a.data === 'string' ? a.data : '';
-        if (!DATA_URL.test(data)) {
-          warnings.push(`Skipped asset "${str(a.name, key, 60)}" (not an embedded image).`);
+        if (!isEmbeddedDataUrl(data)) {
+          warnings.push(`Skipped asset "${str(a.name, key, 60)}" (not a supported embedded image, video or audio file).`);
           continue;
         }
         const asset: Asset = {
@@ -90,6 +126,9 @@ export function validateProject(raw: unknown): ValidationResult {
           bytes: finite(a.bytes, Math.round((data.length - data.indexOf(',') - 1) * 0.75), 0, 1e10),
           hash: str(a.hash, key, 128),
         };
+        const duration = finite(a.duration, 0, 0, 1e7);
+        if (duration > 0) asset.duration = duration;
+        if (a.animated === true) asset.animated = true;
         project.assets[key] = asset;
       }
     }
@@ -107,6 +146,8 @@ export function validateProject(raw: unknown): ValidationResult {
         project.variables.push(variable);
       }
     }
+    ctx.project = project;
+    ctx.varIds = varIds;
 
     // Pages
     if (!Array.isArray(migrated.pages) || migrated.pages.length === 0) throw new ProjectError('The project has no pages.');
@@ -129,7 +170,7 @@ export function validateProject(raw: unknown): ValidationResult {
       if (!isSlides) page.height = finite(rp.height, project.settings.height, 80, 20000);
       if (Array.isArray(rp.elements)) {
         for (const re of rp.elements.slice(0, 2000)) {
-          const el = element(re, project, elIds, warnings);
+          const el = element(re, ctx, elIds, warnings);
           if (el) page.elements.push(el);
         }
       }
@@ -155,9 +196,21 @@ export function validateProject(raw: unknown): ValidationResult {
   }
 }
 
-/** Schema migrations: upgrade older versions step by step. (v1 is the first version.) */
-function migrate(raw: Record<string, unknown>, _version: number): Record<string, unknown> {
-  return raw;
+/**
+ * Schema migrations: upgrade older versions step by step. Migrations never
+ * change how a project looks.
+ *
+ * v1 → v2: adds the project theme. v1 projects become "playful" (the original
+ * look) and every element/background keeps its stored values as explicit
+ * author choices (no `themed` keys), so nothing changes appearance.
+ */
+export function migrate(raw: Record<string, unknown>, version: number): Record<string, unknown> {
+  let out = raw;
+  if (version < 2) {
+    const settings = isObj(out.settings) ? out.settings : {};
+    out = { ...out, version: 2, settings: { ...settings, theme: DEFAULT_THEME, backdropThemed: false } };
+  }
+  return out;
 }
 
 function paint(v: unknown, d: Paint): Paint {
@@ -168,14 +221,20 @@ function paint(v: unknown, d: Paint): Paint {
   return d;
 }
 
+const ROLE = /^[a-zA-Z0-9]{1,24}$/;
+/** Keys that would touch Object.prototype if used on a plain object. */
+const RESERVED_KEYS = new Set(['__proto__', 'constructor', 'prototype', 'hasOwnProperty', 'toString', 'valueOf']);
+
 function background(v: unknown, project: Project): Background {
   const b = isObj(v) ? v : {};
   const out: Background = { paint: paint(b.paint, { kind: 'solid', color: '#ffffff' }) };
-  if (typeof b.imageId === 'string' && project.assets[b.imageId]) {
+  if (typeof b.imageId === 'string' && assetOfKind(project, b.imageId, 'image')) {
     out.imageId = b.imageId;
     out.imageFit = b.imageFit === 'contain' ? 'contain' : 'cover';
     out.imageDim = finite(b.imageDim, 0, 0, 0.9);
   }
+  if (typeof b.role === 'string' && (BACKGROUND_ROLES as string[]).includes(b.role)) out.role = b.role;
+  if (b.themed === true) out.themed = true;
   return out;
 }
 
@@ -189,8 +248,9 @@ function sanitizeProp(key: string, value: unknown, def: unknown, project: Projec
   if (typeof def === 'number') return finite(value, def);
   if (typeof def === 'boolean') return bool(value, def);
   if (Array.isArray(def)) {
+    // Generic arrays are asset lists (gallery images); structured arrays use PROP_SANITIZERS.
     if (!Array.isArray(value)) return def;
-    return value.filter((x) => typeof x === 'string' && project.assets[x]).slice(0, 200);
+    return value.filter((x) => assetOfKind(project, x, 'image')).slice(0, 200);
   }
   if (isObj(def)) {
     if ('kind' in def) return paint(value, def as Paint);
@@ -202,7 +262,8 @@ function sanitizeProp(key: string, value: unknown, def: unknown, project: Projec
   return def;
 }
 
-function element(raw: unknown, project: Project, ids: Set<string>, warnings: string[]): SceneElement | null {
+function element(raw: unknown, ctx: SanitizeCtx, ids: Set<string>, warnings: string[]): SceneElement | null {
+  const project = ctx.project;
   if (!isObj(raw)) return null;
   const type = typeof raw.type === 'string' ? raw.type : '';
   const def = elementRegistry.get(type);
@@ -216,13 +277,17 @@ function element(raw: unknown, project: Project, ids: Set<string>, warnings: str
   const defaults = def.defaults() as Record<string, unknown>;
   const rp = isObj(raw.props) ? raw.props : {};
   const props: Record<string, unknown> = {};
+  const special = PROP_SANITIZERS[type] ?? {};
   for (const [k, d] of Object.entries(defaults)) {
-    props[k] = k in rp ? sanitizeProp(k, rp[k], d, project) : d;
+    if (!(k in rp)) props[k] = d;
+    else if (special[k]) props[k] = special[k](rp[k], d, ctx);
+    else props[k] = sanitizeProp(k, rp[k], d, project);
   }
-  for (const k of ['assetId', 'before', 'after']) {
-    if (k in props && typeof props[k] === 'string' && props[k] && !project.assets[props[k] as string]) props[k] = '';
+  for (const [k, kind] of Object.entries(ASSET_REFS[type] ?? {})) {
+    if (typeof props[k] === 'string' && props[k] && !assetOfKind(project, props[k], kind)) props[k] = '';
   }
-  return {
+  fixupProps(type, props);
+  const out: SceneElement = {
     id,
     type,
     name: str(raw.name, type, 80) || type,
@@ -238,6 +303,32 @@ function element(raw: unknown, project: Project, ids: Set<string>, warnings: str
     entrance: animationRef(raw.entrance),
     drag: isObj(raw.drag) && typeof raw.drag.mode === 'string' && dragRegistry.has(raw.drag.mode) ? { mode: raw.drag.mode } : null,
   };
+  if (typeof raw.role === 'string' && ROLE.test(raw.role)) out.role = raw.role;
+  if (Array.isArray(raw.themed)) {
+    const keys = [...new Set(raw.themed.filter((k): k is string => typeof k === 'string' && k in defaults))];
+    if (keys.length) out.themed = keys;
+  }
+  return out;
+}
+
+/** Cross-field consistency for structured props (after each field was sanitised). */
+function fixupProps(type: string, props: Record<string, unknown>) {
+  if (type === 'quiz') {
+    const n = (props.choices as unknown[]).length;
+    props.correct = Math.max(0, Math.min(n - 1, Math.round(Number(props.correct) || 0)));
+  }
+  if (type === 'chart') {
+    const n = (props.labels as unknown[]).length;
+    props.series = (props.series as Array<{ name: string; values: number[] }>).map((s) => ({
+      name: s.name,
+      values: Array.from({ length: n }, (_, i) => s.values[i] ?? 0),
+    }));
+  }
+  if (type === 'table') {
+    const cols = Math.max(1, ...(props.rows as string[][]).map((r) => r.length));
+    const align = props.columnAlign as string[];
+    props.columnAlign = Array.from({ length: cols }, (_, i) => align[i] ?? 'auto');
+  }
 }
 
 function animationRef(v: unknown): AnimationRef | null {

@@ -1,5 +1,7 @@
+import { elementRegistry } from './elements';
+
 /** Playback stylesheet. Shared verbatim by the editor canvas, Preview and exported files. */
-export const RUNTIME_CSS = `
+const BASE_CSS = `
 .ofs-player,.ofs-page-static,.ofs-el{box-sizing:border-box}
 .ofs-player *,.ofs-page-static *,.ofs-el *{box-sizing:border-box}
 .ofs-player{position:relative;width:100%;height:100%;overflow:hidden;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
@@ -116,6 +118,14 @@ export const RUNTIME_CSS = `
 .ofs-error{font:16px/1.5 system-ui,sans-serif;padding:40px;color:#b42318}
 @media (prefers-reduced-motion:reduce){.ofs-gallery-item,.ofs-progress-fill,.ofs-progress-arc{transition:none}.ofs-scrolltext-hint{animation:none}}
 `;
+
+/** Base styles plus each registered element type's own CSS. */
+export const RUNTIME_CSS =
+  BASE_CSS +
+  elementRegistry
+    .all()
+    .map((d) => d.css ?? '')
+    .join('\n');
 
 export const STYLE_ID = 'ofs-runtime-styles';
 
