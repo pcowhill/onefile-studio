@@ -76,7 +76,8 @@
   font-size: 9.5px;
   padding: 0 4px;
 }
-.ed-lib-row .ed-media-duration {
+.ed-lib-row .ed-media-duration,
+.ed-media-card .ed-media-duration {
   display: none;
 }
 .ed-media-badge {

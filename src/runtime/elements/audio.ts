@@ -79,7 +79,7 @@ export const audioDef: RuntimeElementDef<AudioProps> = {
       text.appendChild(strong);
       if (!play && style !== 'compact') {
         const sub = h(doc, 'small');
-        sub.textContent = 'MP3, WAV, OGG or M4A · choose a file on the right';
+        sub.textContent = 'MP3, WAV, OGG or M4A file';
         text.appendChild(sub);
       }
       node.append(ic, text);
@@ -94,6 +94,8 @@ export const audioDef: RuntimeElementDef<AudioProps> = {
       a.controls = true;
       a.src = url;
       a.setAttribute('aria-label', title);
+      // Dark cards get the browser's dark controls.
+      a.style.colorScheme = parseHex(p.background) && contrastText(p.background) === '#ffffff' ? 'dark' : 'light';
       node.appendChild(a);
       if (!play) {
         a.tabIndex = -1;
