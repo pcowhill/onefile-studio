@@ -210,7 +210,7 @@ test('scrolling webpage: sections, templates and components', async ({ page, bro
   await page.getByTestId('new-page').click();
   await expect(page.locator('.ed-section-frame')).toHaveCount(1);
   await page.getByTestId('add-page').click();
-  await page.getByRole('button', { name: 'Hero' }).click();
+  await page.getByRole('button', { name: 'Hero', exact: true }).click();
   await expect(page.locator('.ed-section-frame')).toHaveCount(2);
   await page.getByTestId('tab-insert').click();
   await page.getByTestId('insert-scrollText').click();
