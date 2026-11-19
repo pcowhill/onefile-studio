@@ -1,0 +1,259 @@
+import { useEffect, useState } from 'react';
+import { listDrafts, deleteDraft } from '../../io/storage';
+import type { DraftSummary } from '../../io/storage';
+import { EXAMPLES } from '../../examples';
+import { importFile, openDraft, openExample, pickAndImport, startNew } from '../session';
+import { Icon } from '../ui/Icon';
+import { Logo } from '../ui/Logo';
+
+export function StartScreen() {
+  const [drafts, setDrafts] = useState<DraftSummary[]>([]);
+  const [over, setOver] = useState(false);
+  useEffect(() => {
+    void listDrafts().then(setDrafts);
+  }, []);
+  return (
+    <div
+      className={`st ${over ? 'is-over' : ''}`}
+      onDragOver={(e) => {
+        if ([...e.dataTransfer.types].includes('Files')) {
+          e.preventDefault();
+          setOver(true);
+        }
+      }}
+      onDragLeave={(e) => {
+        if (e.currentTarget === e.target) setOver(false);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        setOver(false);
+        const f = e.dataTransfer.files[0];
+        if (f) void importFile(f);
+      }}
+    >
+      <header className="st-head">
+        <div className="st-brand">
+          <Logo size={40} />
+          <span>
+            OneFile <b>Studio</b>
+          </span>
+        </div>
+        <button className="ed-btn ed-btn-ghost" onClick={pickAndImport} data-testid="open-file">
+          <Icon name="folder" size={18} /> Open a file
+        </button>
+      </header>
+      <main className="st-main">
+        <section className="st-hero">
+          <h1>
+            What will you <span>make</span> today?
+          </h1>
+          <p>Build interactive slides and webpages without code — then share them as a single HTML file that works anywhere, even offline.</p>
+        </section>
+        <section className="st-create" aria-label="Create a new project">
+          <button className="st-card st-card-slides" onClick={() => startNew('slides')} data-testid="new-slides">
+            <SlidesArt />
+            <span className="st-card-text">
+              <strong>Slide presentation</strong>
+              <span>16:9 slides that scale to any screen, with buttons, reveals and animations.</span>
+            </span>
+            <span className="st-card-go">
+              <Icon name="right" size={20} />
+            </span>
+          </button>
+          <button className="st-card st-card-page" onClick={() => startNew('page')} data-testid="new-page">
+            <PageArt />
+            <span className="st-card-text">
+              <strong>Scrolling webpage</strong>
+              <span>A tall page of stacked sections — great for stories, portfolios and guides.</span>
+            </span>
+            <span className="st-card-go">
+              <Icon name="right" size={20} />
+            </span>
+          </button>
+        </section>
+        <div className="st-columns">
+          <section className="st-examples" aria-label="Examples">
+            <h2>
+              <Icon name="sparkle" size={18} /> Open an example
+            </h2>
+            <div className="st-ex-grid">
+              {EXAMPLES.map((ex) => (
+                <button
+                  key={ex.id}
+                  className="st-ex"
+                  onClick={() => openExample(ex.id)}
+                  style={{ ['--c' as string]: ex.color }}
+                  data-testid={`example-${ex.id}`}
+                >
+                  <ExampleArt id={ex.id} />
+                  <strong>{ex.title}</strong>
+                  <span>{ex.description}</span>
+                  <em>
+                    <Icon name={ex.kind === 'slides' ? 'slides' : 'page'} size={13} /> {ex.kind === 'slides' ? 'Slides' : 'Webpage'}
+                  </em>
+                </button>
+              ))}
+            </div>
+          </section>
+          <aside className="st-side">
+            <section className="st-import">
+              <h2>
+                <Icon name="upload" size={18} /> Keep editing a file
+              </h2>
+              <button className="st-drop" onClick={pickAndImport}>
+                <Icon name="file" size={28} />
+                <strong>Drop an exported .html file here</strong>
+                <span>or click to browse — every OneFile export can be re-opened.</span>
+              </button>
+            </section>
+            {drafts.length > 0 && (
+              <section className="st-recent">
+                <h2>
+                  <Icon name="clock" size={18} /> Recent drafts
+                </h2>
+                <ul>
+                  {drafts.slice(0, 6).map((d) => (
+                    <li key={d.id}>
+                      <button className="st-draft" onClick={() => void openDraft(d.id)}>
+                        <span className={`st-draft-icon ${d.kind === 'slides' ? 'is-slides' : 'is-page'}`}>
+                          <Icon name={d.kind === 'slides' ? 'slides' : 'page'} size={16} />
+                        </span>
+                        <span className="st-draft-text">
+                          <strong>{d.title}</strong>
+                          <small>
+                            {d.pages} {d.kind === 'slides' ? 'slides' : 'sections'} · {timeAgo(d.updatedAt)}
+                          </small>
+                        </span>
+                      </button>
+                      <button
+                        className="ed-icon-btn is-xs"
+                        aria-label={`Delete draft ${d.title}`}
+                        title="Delete draft"
+                        onClick={async () => {
+                          if (!confirm(`Delete the draft “${d.title}” from this browser?`)) return;
+                          await deleteDraft(d.id);
+                          setDrafts(await listDrafts());
+                        }}
+                      >
+                        <Icon name="trash" size={14} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <p className="st-note">Drafts live in this browser only. Export to keep a copy.</p>
+              </section>
+            )}
+          </aside>
+        </div>
+      </main>
+      {over && (
+        <div className="st-dropzone">
+          <Icon name="upload" size={40} />
+          <strong>Drop to open</strong>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function timeAgo(iso: string) {
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+function SlidesArt() {
+  return (
+    <svg viewBox="0 0 220 150" className="st-art" aria-hidden="true">
+      <defs>
+        <linearGradient id="sa1" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#8b6cff" />
+          <stop offset="1" stopColor="#5b3df5" />
+        </linearGradient>
+      </defs>
+      <rect x="46" y="16" width="150" height="86" rx="10" fill="#d9d0ff" transform="rotate(6 121 59)" />
+      <rect x="30" y="26" width="150" height="86" rx="10" fill="url(#sa1)" />
+      <rect x="44" y="44" width="70" height="10" rx="5" fill="#fff" />
+      <rect x="44" y="60" width="50" height="6" rx="3" fill="#cfc4ff" />
+      <circle cx="148" cy="68" r="20" fill="#ffd23f" />
+      <path d="M140 68 l6 6 l11 -12" stroke="#2a2340" strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="44" y="88" width="40" height="12" rx="6" fill="#ff7eb3" />
+      <rect x="30" y="122" width="150" height="6" rx="3" fill="#ece6ff" />
+      <rect x="30" y="122" width="90" height="6" rx="3" fill="#ff7eb3" />
+    </svg>
+  );
+}
+
+function PageArt() {
+  return (
+    <svg viewBox="0 0 220 150" className="st-art" aria-hidden="true">
+      <rect x="60" y="6" width="100" height="140" rx="10" fill="#fff" stroke="#e7e1fb" strokeWidth="2" />
+      <path d="M60 16 a10 10 0 0 1 10 -10 h80 a10 10 0 0 1 10 10 v34 h-100z" fill="#2bb673" />
+      <rect x="76" y="20" width="56" height="8" rx="4" fill="#fff" />
+      <rect x="84" y="33" width="40" height="5" rx="2.5" fill="#b6f5d8" />
+      <rect x="72" y="60" width="76" height="30" rx="6" fill="#ffb27a" />
+      <path d="M72 66 a6 6 0 0 1 6 -6 h32 v30 h-32 a6 6 0 0 1 -6 -6z" fill="#c9ccd6" />
+      <rect x="109" y="58" width="3" height="34" rx="1.5" fill="#fff" />
+      <rect x="72" y="100" width="50" height="5" rx="2.5" fill="#d6d1e8" />
+      <rect x="72" y="110" width="70" height="5" rx="2.5" fill="#d6d1e8" />
+      <rect x="72" y="120" width="40" height="5" rx="2.5" fill="#d6d1e8" />
+      <path d="M176 60 v40 M170 92 l6 8 6 -8" stroke="#6d4aff" strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ExampleArt({ id }: { id: string }) {
+  if (id === 'presentation')
+    return (
+      <svg viewBox="0 0 160 90" className="st-ex-art" aria-hidden="true">
+        <defs>
+          <linearGradient id="ea1" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#2b1b6b" />
+            <stop offset="1" stopColor="#6d4aff" />
+          </linearGradient>
+        </defs>
+        <rect width="160" height="90" rx="8" fill="url(#ea1)" />
+        <rect x="12" y="28" width="56" height="10" rx="3" fill="#fff" />
+        <rect x="12" y="42" width="40" height="10" rx="3" fill="#fff" />
+        <rect x="12" y="58" width="50" height="4" rx="2" fill="#cfc4ff" />
+        <circle cx="118" cy="45" r="28" fill="#ff7eb3" opacity=".8" />
+        <path d="M110 60 l20 -32 l4 26z" fill="#fff" />
+        <rect x="0" y="86" width="160" height="4" fill="#ffd23f" />
+      </svg>
+    );
+  if (id === 'before-after')
+    return (
+      <svg viewBox="0 0 160 90" className="st-ex-art" aria-hidden="true">
+        <rect width="160" height="90" rx="8" fill="#ffd3a5" />
+        <path d="M0 60 L40 30 L70 50 L100 25 L130 48 L160 35 V90 H0Z" fill="#2bb673" />
+        <path d="M0 8 a8 8 0 0 1 8 -8 H80 V90 H8 a8 8 0 0 1 -8 -8Z" fill="#c9ccd6" />
+        <path d="M0 60 L40 30 L70 50 L80 45 V90 H8 a8 8 0 0 1 -8 -8Z" fill="#9196a6" />
+        <rect x="78.5" y="0" width="3" height="90" fill="#fff" />
+        <circle cx="80" cy="45" r="10" fill="#fff" />
+        <path d="M76 41 l-4 4 4 4 M84 41 l4 4 -4 4" stroke="#1f9d5f" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      </svg>
+    );
+  return (
+    <svg viewBox="0 0 160 90" className="st-ex-art" aria-hidden="true">
+      <defs>
+        <radialGradient id="ea3" cx=".4" cy=".35" r=".7">
+          <stop offset="0" stopColor="#ffb6e1" />
+          <stop offset="1" stopColor="#c2338a" />
+        </radialGradient>
+      </defs>
+      <rect width="160" height="90" rx="8" fill="#2a1757" />
+      <circle cx="110" cy="46" r="26" fill="url(#ea3)" />
+      <ellipse cx="110" cy="50" rx="38" ry="9" fill="none" stroke="#ffd23f" strokeWidth="3.5" transform="rotate(-12 110 50)" />
+      <circle cx="102" cy="44" r="3" fill="#2a1840" />
+      <circle cx="118" cy="44" r="3" fill="#2a1840" />
+      <path d="M104 53 q6 5 12 0" stroke="#2a1840" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+      <rect x="14" y="22" width="48" height="18" rx="6" fill="#ffd23f" />
+      <rect x="14" y="50" width="48" height="6" rx="3" fill="rgba(255,255,255,.2)" />
+      <rect x="14" y="50" width="30" height="6" rx="3" fill="#ff7eb3" />
+      <circle cx="20" cy="74" r="2.5" fill="#fff" />
+      <circle cx="148" cy="12" r="2" fill="#fff" />
+    </svg>
+  );
+}
