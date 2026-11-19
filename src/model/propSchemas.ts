@@ -60,6 +60,15 @@ const tableRows: Sanitizer = (v, def) => {
   return rows.length ? rows.map((r) => [...r, ...Array(cols - r.length).fill('')]) : def;
 };
 
+const oneOf =
+  (values: string[]): Sanitizer =>
+  (v, def) =>
+    typeof v === 'string' && values.includes(v) ? v : def;
+const shortText =
+  (max: number): Sanitizer =>
+  (v, def) =>
+    typeof v === 'string' ? v.slice(0, max) : def;
+
 const ALIGNS = new Set(['auto', 'left', 'center', 'right']);
 const alignList: Sanitizer = (v, def) =>
   Array.isArray(v) ? v.slice(0, MAX_TABLE_COLS).map((a) => (typeof a === 'string' && ALIGNS.has(a) ? a : 'auto')) : def;
@@ -89,8 +98,15 @@ export const PROP_SANITIZERS: Record<string, Record<string, Sanitizer>> = {
     labels: stringList(MAX_CHART_POINTS, 60),
     series: chartSeries,
     palette: colorList,
+    chartType: oneOf(['bar', 'line']),
+    preset: oneOf(['clean', 'soft', 'bold']),
+    title: shortText(200),
+    xLabel: shortText(80),
+    yLabel: shortText(80),
+    valuePrefix: shortText(12),
+    valueSuffix: shortText(12),
   },
-  table: { rows: tableRows, columnAlign: alignList },
+  table: { rows: tableRows, columnAlign: alignList, preset: oneOf(['lined', 'boxed', 'minimal']) },
   countdown: { target: isoInstant, timezone: timeZone },
   quiz: {
     choices: (v, def, ctx) => {
