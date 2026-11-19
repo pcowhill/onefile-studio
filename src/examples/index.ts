@@ -447,7 +447,7 @@ function clicker(): Project {
   p.assets.as_puff = svgAsset('as_puff', 'Puff', puff(), 600, 600);
   p.variables = [{ id: 'var_score', name: 'Score', type: 'number', initial: 0 }];
   const stars = [
-    [80, 90, 34],
+    [36, 40, 30],
     [1150, 70, 26],
     [620, 40, 20],
     [1180, 610, 40],

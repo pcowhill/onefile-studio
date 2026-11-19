@@ -26,6 +26,23 @@ export const ElementView = memo(function ElementView({ el, env, top, editing, hi
     if (!host) return;
     const c = renderContent(el, env, document);
     host.appendChild(c.node);
+    // Text boxes grow to fit their content (e.g. after a font-size change).
+    if (el.type === 'text') {
+      const body = c.node.querySelector<HTMLElement>('.ofs-text-body');
+      const pad = Number((el.props as { padding?: number }).padding) || 0;
+      const needed = body ? Math.ceil(body.offsetHeight + pad * 2) : 0;
+      if (needed > el.h + 1) {
+        const id = el.id;
+        queueMicrotask(() =>
+          useEditor.getState().amend((d) => {
+            for (const pg of d.pages) {
+              const t = pg.elements.find((x) => x.id === id);
+              if (t && t.h < needed) t.h = needed;
+            }
+          }),
+        );
+      }
+    }
     return () => {
       c.destroy();
       c.node.remove();

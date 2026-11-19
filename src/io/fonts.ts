@@ -9,7 +9,7 @@ export function projectUsesEmbeddedFont(project: Project): boolean {
   for (const page of project.pages) {
     for (const el of page.elements) {
       const p = el.props as Record<string, unknown>;
-      if (p.font === 'rounded') return true;
+      if (p.font === 'rounded' || p.font === 'hand') return true;
       if (el.type === 'progress' && p.label !== 'none') return true;
     }
   }

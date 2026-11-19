@@ -12,7 +12,7 @@ export const FONT_PRESETS: FontPreset[] = [
   { id: 'sans', label: 'Clean', stack: "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" },
   { id: 'serif', label: 'Classic', stack: "'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif" },
   { id: 'mono', label: 'Code', stack: "ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" },
-  { id: 'hand', label: 'Playful', stack: "'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', 'Marker Felt', cursive" },
+  { id: 'hand', label: 'Playful', stack: "'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', 'OFS Nunito', cursive", embedded: true },
 ];
 
 export function fontStack(id: unknown): string {
