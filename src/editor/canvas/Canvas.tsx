@@ -6,7 +6,7 @@ import { applyBackground, pageHeight } from '../../runtime/mount';
 import type { ArrowProps } from '../../runtime/elements/arrow';
 import { editor, findEl, useEditor } from '../store/store';
 import { ElementView } from './ElementView';
-import { resizeBox, snapBox } from './snap';
+import { resizeBox, snapBox, snapResize } from './snap';
 import type { Box, Guide, Handle } from './snap';
 import { EDITOR_ELEMENTS } from '../catalog';
 import { addImageFiles, insertImage } from '../ops';
@@ -169,7 +169,18 @@ export function Canvas() {
       const dx = (e.clientX - g.sx) / z;
       const dy = (e.clientY - g.sy) / z;
       const keep = e.shiftKey ? !g.keepAspect : g.keepAspect;
-      const b = resizeBox(g.start, g.rotation, g.handle, dx, dy, keep);
+      let b = resizeBox(g.start, g.rotation, g.handle, dx, dy, keep);
+      const f0 = findEl(p, g.id);
+      // Snap the moving edges like moving does (unrotated boxes only; Alt disables it).
+      if (f0 && !e.altKey && g.rotation % 360 === 0) {
+        const pg = f0.page;
+        const others = pg.elements.filter((o) => o.id !== g.id && !o.hidden).map((o) => ({ x: o.x, y: o.y, w: o.w, h: o.h }));
+        const ph = pageHeight(p, pg);
+        const snap = snapResize(g.start, b, g.handle, keep, others, { w: W, h: ph }, 7 / z);
+        b = snap.box;
+        const top = pageTop(pg.id);
+        setGuides(snap.guides.map((gd) => ({ ...gd, top, len: gd.axis === 'x' ? ph : W })));
+      } else setGuides([]);
       s.live((d) => {
         const f = findEl(d, g.id);
         if (f) Object.assign(f.el, b);
@@ -233,6 +244,7 @@ export function Canvas() {
   const onWindowUp = () => {
     const g = gesture.current;
     gesture.current = null;
+    document.body.classList.remove('ed-gesturing');
     setGuides([]);
     setMarquee(null);
     if (!g) return;
@@ -265,11 +277,15 @@ export function Canvas() {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', up);
+      document.body.classList.remove('ed-gesturing');
     };
   }, []);
 
   const startGesture = (g: Gesture) => {
     gesture.current = g;
+    // Dragging across text must never select it (in the canvas or elsewhere).
+    window.getSelection()?.removeAllRanges();
+    document.body.classList.add('ed-gesturing');
   };
 
   function reparentAfterMove(ids: string[]) {

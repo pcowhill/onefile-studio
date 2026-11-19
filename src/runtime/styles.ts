@@ -20,9 +20,12 @@ export const RUNTIME_CSS = `
 .ofs-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#f3f0ff;color:#8a7fc0;border:2px dashed #cbc2f2;border-radius:inherit;font:600 14px system-ui,sans-serif;text-align:center;padding:8px;overflow:hidden}
 .ofs-shape-svg svg,.ofs-arrow svg{display:block;overflow:visible}
 .ofs-button-wrap{width:100%;height:100%}
-.ofs-button{width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:.45em;border:0;padding:0 .9em;margin:0;font-weight:800;cursor:pointer;line-height:1.1;white-space:nowrap;overflow:hidden;transition:transform .12s ease,filter .15s ease,box-shadow .12s ease;letter-spacing:.01em}
-.ofs-button:hover{filter:brightness(1.07) saturate(1.05);transform:translateY(-1px)}
-.ofs-button:active{transform:translateY(3px);filter:brightness(.97)}
+.ofs-button{position:relative;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:.45em;border:0;padding:0 .9em;margin:0;font-weight:800;cursor:pointer;line-height:1.1;white-space:nowrap;overflow:hidden;transition:top .12s ease,box-shadow .12s ease;letter-spacing:.01em}
+.ofs-button::after{content:'';position:absolute;inset:0;border-radius:inherit;background:rgba(255,255,255,0);pointer-events:none;transition:background-color .15s ease}
+.ofs-button:hover{top:-1px}
+.ofs-button:hover::after{background:rgba(255,255,255,.08)}
+.ofs-button:active{top:3px}
+.ofs-button:active::after{background:rgba(0,0,0,.04)}
 .ofs-button-solid:active{box-shadow:0 2px 0 rgba(0,0,0,.15)!important}
 .ofs-button-ghost:hover{background:rgba(127,127,127,.12)!important}
 .ofs-button:focus-visible{outline:3px solid var(--ofs-btn);outline-offset:3px}

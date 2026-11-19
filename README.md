@@ -49,7 +49,7 @@ Node 22+ is recommended. No network access is needed at runtime.
 5. **Preview** (`Ctrl/⌘+Enter`) to try it, **Export** (`Ctrl/⌘+E`) to download the HTML file.
 6. To continue editing an exported file, use **Open a file** (start screen or folder icon) or drop it on the start screen.
 
-Shortcuts: `Ctrl/⌘+Z` / `Shift+Ctrl/⌘+Z` undo/redo · `Ctrl/⌘+D` duplicate · `Ctrl/⌘+C/V/X` · `Delete` · arrows nudge (`Shift` = 10px) · `Ctrl/⌘+[ / ]` layer · `Enter` edit text · `Esc` deselect · `Ctrl/⌘+wheel` zoom · `Alt` while dragging disables snapping · `Shift` while resizing toggles aspect lock.
+Shortcuts: `Ctrl/⌘+Z` / `Shift+Ctrl/⌘+Z` undo/redo · `Ctrl/⌘+D` duplicate · `Ctrl/⌘+C/V/X` · `Delete` · arrows nudge (`Shift` = 10px) · `Ctrl/⌘+[ / ]` layer · `Enter` edit text · `Esc` deselect · `Ctrl/⌘+wheel` zoom · `Alt` while moving or resizing disables snapping · `Shift` while resizing toggles aspect lock.
 
 ## Export & import
 
@@ -82,7 +82,7 @@ The **same runtime code** renders the editor canvas, runs Preview, and is bundle
 
 - Desktop-first editor (min. width ~1024 px). Exported webpages **scale down** proportionally on small screens rather than re-flowing into a mobile layout.
 - Fonts other than the embedded “Friendly” (Nunito) font use system font stacks, so text can render slightly differently between operating systems.
-- Resizing rotated elements works, but alignment/snapping uses unrotated bounding boxes.
+- Resizing rotated elements works, but alignment/snapping uses unrotated bounding boxes, and resizing only snaps for unrotated elements.
 - Only number variables and one condition type (variable comparison); no keyboard/timer/variable-change triggers yet.
 - Drafts live in this browser’s storage only; export to keep a durable copy. Very large images can make files big (use “Optimised”).
 - No audio/video, timelines, collaboration, or custom code (by design for the MVP).
