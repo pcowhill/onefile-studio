@@ -10,6 +10,7 @@ import { resizeBox, snapBox, snapResize } from './snap';
 import type { Box, Guide, Handle } from './snap';
 import { EDITOR_ELEMENTS } from '../catalog';
 import { addImageFiles, insertImage } from '../ops';
+import { normalizeMime } from '../../io/assets';
 import { elementMenu, canvasMenu } from './menus';
 import { openContextMenu } from '../ui/contextMenu';
 import { Icon } from '../ui/Icon';
@@ -398,7 +399,7 @@ export function Canvas() {
   };
 
   const onDrop = async (e: React.DragEvent) => {
-    const files = [...e.dataTransfer.files].filter((f) => f.type.startsWith('image/'));
+    const files = [...e.dataTransfer.files].filter((f) => normalizeMime(f.type, f.name));
     if (!files.length) return;
     e.preventDefault();
     const pt = toLogical(e.clientX, e.clientY);

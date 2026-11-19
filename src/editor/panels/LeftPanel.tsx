@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useEditor, editor } from '../store/store';
 import type { LeftTab } from '../store/store';
 import { Icon } from '../ui/Icon';
@@ -6,30 +6,33 @@ import { PageThumb } from './PageThumb';
 import { CATALOG, CATALOG_GROUPS, templatesFor } from '../catalog';
 import type { CatalogItem } from '../catalog';
 import {
-  addImageFiles,
+  addMediaFiles,
   addPage,
   addVariable,
-  assetUsage,
   deleteAsset,
   deletePage,
   deleteVariable,
   duplicatePage,
   insertCatalogItem,
-  insertImage,
+  insertMedia,
   movePage,
-  pickImages,
+  pickMedia,
   renameVariable,
   variableUsage,
 } from '../ops';
 import { openContextMenu } from '../ui/contextMenu';
-import { Popover, NumberInput } from '../ui/controls';
+import { AssetTile, Popover, NumberInput } from '../ui/controls';
+import type { AssetKind } from '../../model/types';
+import { assetKind } from '../../model/types';
+import { formatTime } from '../../runtime/elements/mediaShared';
+import '../../styles/media.css';
 import { formatBytes } from '../../io/exportHtml';
 import { CatalogIllustration, TemplateIllustration } from './illustrations';
 
 const TABS: Array<{ id: LeftTab; label: string; icon: string }> = [
   { id: 'pages', label: 'Pages', icon: 'slides' },
   { id: 'insert', label: 'Insert', icon: 'plus' },
-  { id: 'images', label: 'Images', icon: 'image' },
+  { id: 'images', label: 'Media', icon: 'image' },
   { id: 'variables', label: 'Variables', icon: 'variable' },
 ];
 
@@ -55,7 +58,7 @@ export function LeftPanel() {
       <div className="ed-left-body">
         {tab === 'pages' && <PagesPanel />}
         {tab === 'insert' && <InsertPanel />}
-        {tab === 'images' && <ImagesPanel />}
+        {tab === 'images' && <MediaPanel />}
         {tab === 'variables' && <VariablesPanel />}
       </div>
     </aside>
@@ -239,13 +242,23 @@ function CatalogCard({ item }: { item: CatalogItem }) {
   );
 }
 
-function ImagesPanel() {
+type MediaFilter = 'all' | AssetKind;
+const FILTER_LABEL: Record<MediaFilter, string> = { all: 'All', image: 'Images', video: 'Videos', audio: 'Sounds' };
+
+function MediaPanel() {
   const project = useEditor((s) => s.project)!;
   const assets = Object.values(project.assets);
   const [over, setOver] = useState(false);
+  const [filter, setFilter] = useState<MediaFilter>('all');
+  const kinds = new Set(assets.map((a) => assetKind(a.mime)));
+  const shown = filter === 'all' ? assets : assets.filter((a) => assetKind(a.mime) === filter);
+  const usage = useMemo(() => {
+    const json = JSON.stringify(project.pages);
+    return (id: string) => json.split(`"${id}"`).length - 1;
+  }, [project.pages]);
   return (
     <div className="ed-panel">
-      <PanelHead title="Images" />
+      <PanelHead title="Media" />
       <div className="ed-panel-scroll">
         <div
           className={`ed-drop ${over ? 'is-over' : ''}`}
@@ -257,45 +270,70 @@ function ImagesPanel() {
           onDrop={async (e) => {
             e.preventDefault();
             setOver(false);
-            await addImageFiles([...e.dataTransfer.files]);
+            await addMediaFiles([...e.dataTransfer.files]);
           }}
         >
-          <Icon name="upload" size={26} />
-          <strong>Drop images here</strong>
-          <span>PNG, JPEG, GIF, WebP or SVG — embedded right into your file</span>
-          <button className="ed-btn ed-btn-primary ed-btn-sm" onClick={() => void pickImages(true)} data-testid="upload-images">
-            Choose images
+          <span className="ed-media-drop-icons" aria-hidden="true">
+            <Icon name="image" size={20} />
+            <Icon name="video" size={20} />
+            <Icon name="audio" size={20} />
+          </span>
+          <strong>Drop files here</strong>
+          <span>Images, animated GIFs, videos (MP4, WebM) and sounds (MP3, WAV, OGG, M4A) — embedded right into your file</span>
+          <button className="ed-btn ed-btn-primary ed-btn-sm" onClick={() => void pickMedia()} data-testid="upload-images">
+            <Icon name="upload" size={15} /> Choose files
           </button>
         </div>
-        {assets.length > 0 && <p className="ed-panel-hint">Click an image to place it. Right-click for options.</p>}
+        {kinds.size > 1 && (
+          <div className="ed-media-filter" role="radiogroup" aria-label="Show">
+            {(['all', 'image', 'video', 'audio'] as MediaFilter[])
+              .filter((f) => f === 'all' || kinds.has(f))
+              .map((f) => (
+                <button key={f} role="radio" aria-checked={filter === f} className={filter === f ? 'is-on' : ''} onClick={() => setFilter(f)}>
+                  {FILTER_LABEL[f]}
+                </button>
+              ))}
+          </div>
+        )}
+        {assets.length > 0 && <p className="ed-panel-hint">Click to place it on the page. Right-click for options.</p>}
         <div className="ed-assets">
-          {assets.map((a) => {
-            const used = assetUsage(project, a.id);
+          {shown.map((a) => {
+            const used = usage(a.id);
+            const kind = assetKind(a.mime);
+            const details = [
+              kind === 'image' ? `${a.width}×${a.height}` : '',
+              kind === 'video' && a.width ? `${a.width}×${a.height}` : '',
+              a.duration ? formatTime(a.duration) : '',
+              formatBytes(a.bytes),
+            ].filter(Boolean);
             return (
               <button
                 key={a.id}
                 className="ed-asset"
-                onClick={() => insertImage(a)}
-                title={`${a.name} · ${a.width}×${a.height} · ${formatBytes(a.bytes)}`}
+                data-testid="media-asset"
+                data-kind={kind}
+                onClick={() => insertMedia(a)}
+                title={`${a.name} · ${details.join(' · ')}${a.animated ? ' · animated' : ''}`}
                 onContextMenu={(e) => {
                   e.preventDefault();
                   openContextMenu(
                     e.clientX,
                     e.clientY,
                     [
-                      { label: 'Place on page', icon: 'plus', onClick: () => insertImage(a) },
+                      { label: 'Place on page', icon: 'plus', onClick: () => insertMedia(a) },
                       { label: used ? `Remove (used ${used}×)` : 'Remove from project', icon: 'trash', danger: true, onClick: () => deleteAsset(a.id) },
                     ],
                     a.name,
                   );
                 }}
               >
-                <span className="ed-asset-img" style={{ backgroundImage: `url("${a.data}")` }} />
+                <AssetTile asset={a} className="ed-asset-img" />
+                {a.animated && <span className="ed-media-animated">Animated</span>}
                 <span className="ed-asset-meta">
                   <span>{a.name}</span>
                   <small>
                     {formatBytes(a.bytes)}
-                    {!used && ' · unused'}
+                    {used ? ` · used ${used}×` : ' · unused'}
                   </small>
                 </span>
               </button>
