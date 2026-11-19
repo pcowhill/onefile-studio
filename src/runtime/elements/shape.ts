@@ -16,14 +16,14 @@ export interface ShapeProps {
 }
 
 /** Paths drawn in a 100×100 box and stretched to the element size. */
-export const SHAPE_PATHS: Record<string, string> = {
+export const SHAPE_PATHS: Record<string, string> = Object.assign(Object.create(null), {
   triangle: 'M50 3 L97 95 L3 95 Z',
   diamond: 'M50 2 L98 50 L50 98 L2 50 Z',
   star: 'M50 3 L62.2 35.5 L97 37.3 L69.8 59 L79 92.7 L50 73.5 L21 92.7 L30.2 59 L3 37.3 L37.8 35.5 Z',
   heart: 'M50 92 C22 72 3 56 3 32 C3 15 16 4 30 4 C40 4 46 10 50 17 C54 10 60 4 70 4 C84 4 97 15 97 32 C97 56 78 72 50 92 Z',
   hexagon: 'M27 4 L73 4 L97 50 L73 96 L27 96 L3 50 Z',
   blob: 'M52 4 C74 3 95 18 96 42 C98 66 84 92 58 96 C33 100 9 86 4 62 C-1 38 14 6 52 4 Z',
-};
+});
 
 let gradSeq = 0;
 

@@ -72,7 +72,7 @@ const KIND_WORD: Record<AssetKind, string> = { image: 'an image', video: 'a vide
 
 function checkRef(project: Project, id: unknown, want: AssetKind): string | null {
   if (typeof id !== 'string' || !id) return null;
-  const a = project.assets[id];
+  const a = Object.prototype.hasOwnProperty.call(project.assets, id) ? project.assets[id] : undefined;
   if (!a) return 'uses a file that is no longer in the project';
   const kind = assetKind(a.mime);
   if (kind !== want) return `needs ${KIND_WORD[want]} but points to ${KIND_WORD[kind]}`;

@@ -335,7 +335,7 @@ export const THEME_IDS = Object.keys(THEMES) as ThemeId[];
 export const DEFAULT_THEME: ThemeId = 'playful';
 
 export function isThemeId(v: unknown): v is ThemeId {
-  return typeof v === 'string' && v in THEMES;
+  return typeof v === 'string' && Object.prototype.hasOwnProperty.call(THEMES, v);
 }
 
 export function getTheme(id: unknown): ThemeTokens {

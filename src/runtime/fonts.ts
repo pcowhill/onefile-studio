@@ -19,13 +19,13 @@ export const FONT_PRESETS: FontPreset[] = [
 ];
 
 /** Embedded font family names each preset needs (exports include only what is used). */
-export const FONT_FILES: Record<string, string[]> = {
+export const FONT_FILES: Record<string, string[]> = Object.assign(Object.create(null), {
   rounded: ['nunito'],
   hand: ['nunito'],
   modern: ['inter'],
   grotesk: ['spaceGrotesk', 'inter'],
   elegant: ['fraunces'],
-};
+});
 
 export function fontStack(id: unknown): string {
   return (FONT_PRESETS.find((f) => f.id === id) ?? FONT_PRESETS[0]).stack;

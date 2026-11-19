@@ -82,7 +82,7 @@ export interface RuntimeEnv {
 
 export function assetUrl(project: Project, id: unknown): string | undefined {
   if (typeof id !== 'string') return undefined;
-  const a: Asset | undefined = project.assets[id];
+  const a: Asset | undefined = Object.prototype.hasOwnProperty.call(project.assets, id) ? project.assets[id] : undefined;
   if (!a || typeof a.data !== 'string' || !a.data.startsWith('data:image/')) return undefined;
   return a.data;
 }
@@ -97,9 +97,10 @@ const blobUrls = new Map<string, string>();
  */
 export function mediaUrl(project: Project, id: unknown, kind: 'video' | 'audio'): string | undefined {
   if (typeof id !== 'string') return undefined;
-  const a: Asset | undefined = project.assets[id];
+  const a: Asset | undefined = Object.prototype.hasOwnProperty.call(project.assets, id) ? project.assets[id] : undefined;
   if (!a || typeof a.data !== 'string' || !a.data.startsWith(`data:${kind}/`)) return undefined;
-  const key = `${a.hash}:${a.bytes}:${a.data.length}`;
+  // Keyed by the payload itself (never by the untrusted stored hash).
+  const key = a.data;
   const cached = blobUrls.get(key);
   if (cached) return cached;
   if (typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function' || typeof Blob === 'undefined' || typeof atob !== 'function') return a.data;
@@ -109,6 +110,20 @@ export function mediaUrl(project: Project, id: unknown, kind: 'video' | 'audio')
     return url;
   } catch {
     return a.data;
+  }
+}
+
+/** Revokes cached media Blob URLs (all, or those whose payload is not in `keep`). */
+export function releaseMediaUrls(keep?: Project) {
+  const live = new Set(keep ? Object.values(keep.assets).map((a) => a.data) : []);
+  for (const [data, url] of [...blobUrls]) {
+    if (live.has(data)) continue;
+    try {
+      URL.revokeObjectURL(url);
+    } catch {
+      /* ignore */
+    }
+    blobUrls.delete(data);
   }
 }
 

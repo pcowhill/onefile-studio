@@ -8,7 +8,7 @@ import { actionRegistry } from '../runtime/actions';
 import { animationRegistry } from '../runtime/animations';
 import { dragRegistry } from '../runtime/drag';
 import { COMPARE_OPS } from '../runtime/conditions';
-import { DEFAULT_THEME, isThemeId } from './theme/tokens';
+import { BACKGROUND_ROLES, DEFAULT_THEME, isThemeId } from './theme/tokens';
 import { ASSET_REFS, assetOfKind, PROP_SANITIZERS } from './propSchemas';
 import type { SanitizeCtx } from './propSchemas';
 
@@ -107,7 +107,7 @@ export function validateProject(raw: unknown): ValidationResult {
     // Assets
     if (isObj(migrated.assets)) {
       for (const [key, a] of Object.entries(migrated.assets)) {
-        if (!isObj(a) || !SAFE_ID.test(key)) {
+        if (!isObj(a) || !SAFE_ID.test(key) || RESERVED_KEYS.has(key)) {
           warnings.push(`Skipped an invalid asset entry.`);
           continue;
         }
@@ -222,6 +222,8 @@ function paint(v: unknown, d: Paint): Paint {
 }
 
 const ROLE = /^[a-zA-Z0-9]{1,24}$/;
+/** Keys that would touch Object.prototype if used on a plain object. */
+const RESERVED_KEYS = new Set(['__proto__', 'constructor', 'prototype', 'hasOwnProperty', 'toString', 'valueOf']);
 
 function background(v: unknown, project: Project): Background {
   const b = isObj(v) ? v : {};
@@ -231,7 +233,7 @@ function background(v: unknown, project: Project): Background {
     out.imageFit = b.imageFit === 'contain' ? 'contain' : 'cover';
     out.imageDim = finite(b.imageDim, 0, 0, 0.9);
   }
-  if (typeof b.role === 'string' && ROLE.test(b.role)) out.role = b.role;
+  if (typeof b.role === 'string' && (BACKGROUND_ROLES as string[]).includes(b.role)) out.role = b.role;
   if (b.themed === true) out.themed = true;
   return out;
 }

@@ -412,7 +412,9 @@ export function rememberContentHash(asset: Pick<Asset, 'id' | 'data' | 'hash'>) 
 export async function contentHash(asset: Pick<Asset, 'id' | 'data'>): Promise<string> {
   const known = verifiedHashes.get(asset.id);
   if (known && known.data === asset.data) return known.hash;
-  const hash = await hashString(asset.data);
+  let hash = await hashString(asset.data);
+  // The non-cryptographic fallback (insecure contexts) can collide: never share payloads under it.
+  if (hash.startsWith('fnv')) hash = `${hash}:${asset.id}`;
   verifiedHashes.set(asset.id, { data: asset.data, hash });
   return hash;
 }
@@ -509,7 +511,8 @@ export async function fileToAsset(file: File, opts: FileToAssetOptions = {}): Pr
 
 /** Adds an asset, re-using an identical existing one (by content hash). Mutates `assets`. */
 export function addAssetDedup(assets: Project['assets'], asset: Asset): string {
-  const existing = Object.values(assets).find((a) => a.hash === asset.hash);
+  // Stored hashes may come from an imported file: confirm the bytes really match.
+  const existing = Object.values(assets).find((a) => a.hash === asset.hash && a.data === asset.data);
   if (existing) return existing.id;
   assets[asset.id] = asset;
   return asset.id;

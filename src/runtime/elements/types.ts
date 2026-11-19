@@ -37,21 +37,21 @@ export interface RuntimeElementDef<P extends object = Record<string, unknown>> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyElementDef = RuntimeElementDef<any>;
 
-export const SHADOWS: Record<string, string> = {
+export const SHADOWS: Record<string, string> = Object.assign(Object.create(null), {
   none: 'none',
   soft: '0 6px 20px rgba(32, 20, 70, 0.14)',
   lifted: '0 18px 44px rgba(32, 20, 70, 0.26)',
   subtle: '0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 14px rgba(15, 23, 42, 0.07)',
   glow: '0 0 0 1px rgba(56, 189, 248, 0.28), 0 0 26px rgba(34, 211, 238, 0.16)',
-};
+});
 
 /** Equivalent drop-shadow filters for non-rectangular content (SVG shapes). */
-export const DROP_SHADOWS: Record<string, string> = {
+export const DROP_SHADOWS: Record<string, string> = Object.assign(Object.create(null), {
   soft: 'drop-shadow(0 5px 10px rgba(32,20,70,.16))',
   lifted: 'drop-shadow(0 14px 22px rgba(32,20,70,.28))',
   subtle: 'drop-shadow(0 2px 5px rgba(15,23,42,.12))',
   glow: 'drop-shadow(0 0 10px rgba(34,211,238,.35))',
-};
+});
 
 export function h<K extends keyof HTMLElementTagNameMap>(
   doc: Document,
@@ -73,7 +73,7 @@ export function svg<K extends keyof SVGElementTagNameMap>(doc: Document, tag: K,
 }
 
 /** Tiny icon set used inside rendered content (buttons, gallery arrows, handles). */
-export const ICON_PATHS: Record<string, string> = {
+export const ICON_PATHS: Record<string, string> = Object.assign(Object.create(null), {
   'arrow-right': 'M5 12h14M13 6l6 6-6 6',
   'arrow-left': 'M19 12H5M11 6l-6 6 6 6',
   'chevron-right': 'M9 6l6 6-6 6',
@@ -86,7 +86,7 @@ export const ICON_PATHS: Record<string, string> = {
   heart: 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z',
   check: 'M5 12.5l4.5 4.5L19 7.5',
   home: 'M4 11l8-7 8 7v9h-5v-6H9v6H4z',
-};
+});
 
 export function icon(doc: Document, name: string, size = 20, filled = false): SVGSVGElement {
   const s = svg(doc, 'svg', { viewBox: '0 0 24 24', width: size, height: size, 'aria-hidden': 'true' });

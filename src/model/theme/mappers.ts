@@ -180,7 +180,7 @@ export function themeableKeys(t: ThemeTokens, type: string, role?: string): stri
 }
 
 export function backgroundPaint(t: ThemeTokens, role: string | undefined): Paint {
-  return t.backgrounds[(role as BackgroundRole) in t.backgrounds ? (role as BackgroundRole) : 'base'];
+  return typeof role === 'string' && Object.prototype.hasOwnProperty.call(t.backgrounds, role) ? t.backgrounds[role as BackgroundRole] : t.backgrounds.base;
 }
 
 /** Roles the inspector offers for a type (with friendly labels). */

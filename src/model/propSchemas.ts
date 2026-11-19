@@ -155,6 +155,7 @@ export const ASSET_REFS: Record<string, Record<string, AssetKind>> = {
 
 export function assetOfKind(project: Project, id: unknown, kind: AssetKind): boolean {
   if (typeof id !== 'string' || !id) return false;
+  if (!Object.prototype.hasOwnProperty.call(project.assets, id)) return false;
   const a = project.assets[id];
   return !!a && assetKind(a.mime) === kind;
 }

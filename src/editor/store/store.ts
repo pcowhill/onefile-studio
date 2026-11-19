@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { produce, setAutoFreeze } from 'immer';
 import type { Page, Project, SceneElement } from '../../model/types';
+import { releaseMediaUrls } from '../../runtime/env';
 
 // Projects are treated as immutable snapshots; freezing them would also freeze
 // structuredClone()d copies' sources in dev, which is unnecessary overhead.
@@ -86,6 +87,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   triggerPickerFor: null,
 
   openProject(p, pageId) {
+    releaseMediaUrls(p);
     set({
       project: p,
       pageId: pageId && p.pages.some((x) => x.id === pageId) ? pageId : p.pages[0].id,
@@ -105,6 +107,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     });
   },
   closeProject() {
+    releaseMediaUrls();
     set({ project: null, selection: [], past: [], future: [], txBase: null, previewOpen: false, exportOpen: false, themeOpen: false });
   },
   update(recipe, opts) {
