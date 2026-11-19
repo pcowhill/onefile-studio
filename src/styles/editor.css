@@ -3691,3 +3691,7 @@ body.ed-gesturing * {
 .ed-modal-backdrop.is-docked .ed-modal-actions {
   margin-top: 16px;
 }
+.ed-bg-presets .ed-swatch-row-label {
+  grid-column: 1 / -1;
+  margin: 2px 0 0;
+}

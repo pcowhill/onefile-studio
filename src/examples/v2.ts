@@ -202,7 +202,7 @@ export function featureRelease(): Project {
   const s4 = page('pg_r4', 'What changed', 'alt', [
     ...title(4, 'AT A GLANCE', 'What changed in 3.2'),
     text('el_r_tablehint', 'Hint', [80, 168, 700, 30], 'caption', 'Click a column header to sort.', { size: 16 }),
-    el('table', 'el_r_table', 'Changes table', [80, 206, 1120, 380], undefined, {
+    el('table', 'el_r_table', 'Changes table', [80, 206, 1120, 296], undefined, {
       rows: [
         ['Area', 'Version 3.1', 'Version 3.2', 'Change'],
         ['Board load (1,000 tasks)', '1,250 ms', '390 ms', '3.2× faster'],
