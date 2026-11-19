@@ -6,6 +6,7 @@ import { FONT_PRESETS } from '../../runtime/fonts';
 import { Icon } from './Icon';
 import { useEditor } from '../store/store';
 import { pickImages } from '../ops';
+import { getTheme } from '../../model/theme';
 
 export const PALETTE = [
   '#1d1b2c',
@@ -167,6 +168,14 @@ export function Toggle({ checked, onChange, label, description }: { checked: boo
   );
 }
 
+/** Colours of the open project's theme (shown first in colour pickers). */
+function useThemeSwatches(): string[] {
+  const id = useEditor((s) => s.project?.settings.theme);
+  const t = getTheme(id);
+  const c = t.colors;
+  return [...new Set([c.text, c.muted, c.accent, c.accent2, c.bg, c.surfaceAlt, ...t.chart.slice(2, 4)])].filter((x) => x.startsWith('#')).slice(0, 8);
+}
+
 export function ColorPicker({
   value,
   onChange,
@@ -178,9 +187,25 @@ export function ColorPicker({
   allowTransparent?: boolean;
   palette?: string[];
 }) {
-  const isCustom = !palette.includes(value) && value !== 'transparent';
+  const themeSwatches = useThemeSwatches();
+  const isCustom = !palette.includes(value) && !themeSwatches.includes(value) && value !== 'transparent';
   return (
     <div className="ed-swatches">
+      {palette === PALETTE && (
+        <>
+          {themeSwatches.map((c) => (
+            <button
+              key={`t${c}`}
+              className={`ed-swatch is-theme ${value.toLowerCase() === c ? 'is-on' : ''}`}
+              style={{ background: c }}
+              title={`Theme colour ${c}`}
+              aria-label={`Theme colour ${c}`}
+              onClick={() => onChange(c)}
+            />
+          ))}
+          <span className="ed-swatch-sep" aria-hidden="true" />
+        </>
+      )}
       {allowTransparent && (
         <button
           className={`ed-swatch ed-swatch-none ${value === 'transparent' ? 'is-on' : ''}`}

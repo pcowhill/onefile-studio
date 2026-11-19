@@ -36,6 +36,7 @@ export interface EditorState {
   fitZoom: number;
   previewOpen: boolean;
   exportOpen: boolean;
+  themeOpen: boolean;
   saveState: SaveState;
   /** Element briefly highlighted (e.g. when hovering a target in a picker). */
   highlightId: string | null;
@@ -79,6 +80,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   fitZoom: 1,
   previewOpen: false,
   exportOpen: false,
+  themeOpen: false,
   saveState: 'saved',
   highlightId: null,
   triggerPickerFor: null,
@@ -96,13 +98,14 @@ export const useEditor = create<EditorState>((set, get) => ({
       zoom: null,
       previewOpen: false,
       exportOpen: false,
+      themeOpen: false,
       saveState: 'saved',
       inspectorTab: 'design',
       leftTab: 'pages',
     });
   },
   closeProject() {
-    set({ project: null, selection: [], past: [], future: [], txBase: null, previewOpen: false, exportOpen: false });
+    set({ project: null, selection: [], past: [], future: [], txBase: null, previewOpen: false, exportOpen: false, themeOpen: false });
   },
   update(recipe, opts) {
     const { project, past, lastMerge } = get();

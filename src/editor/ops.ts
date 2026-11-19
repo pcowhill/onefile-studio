@@ -7,7 +7,17 @@ import type { Built, CatalogItem, PageTemplate } from './catalog';
 import { nameFor } from './catalog';
 import { addAssetDedup, fileToAsset } from '../io/assets';
 import { toast } from './ui/toast';
-import { applyThemeToElement, getTheme, markExplicit, themeNewBackground, themeNewElement } from '../model/theme';
+import {
+  applyThemeToElement,
+  defaultRole,
+  getTheme,
+  inferBackgroundRole,
+  markExplicit,
+  resetElementToTheme,
+  setElementRole,
+  themeNewBackground,
+  themeNewElement,
+} from '../model/theme';
 
 export type Recipe<T> = (draft: T) => void;
 
@@ -43,12 +53,33 @@ export function placeCentered(project: Project, pg: Page, el: SceneElement) {
   el.y = y;
 }
 
+const ON_DARK: Record<string, string> = {
+  heading: 'display',
+  subheading: 'displaySub',
+  body: 'displaySub',
+  caption: 'displaySub',
+  primary: 'hero',
+  secondary: 'heroGhost',
+};
+
+/** Dark (hero/dark/accent theme background, or a dark custom colour) pages get light text by default. */
+function isDarkPage(pg: Page): boolean {
+  const bg = pg.background;
+  if (bg.themed && bg.role) return bg.role === 'hero' || bg.role === 'dark' || bg.role === 'accent';
+  return inferBackgroundRole(bg) !== 'base';
+}
+
 export function insertBuilt(built: Built, opts: { keepPosition?: boolean; keepStyle?: boolean } = {}) {
   const s = editor();
   if (!s.project) return;
   const el = built.element;
-  // New elements follow the project theme (every themeable prop is "themed").
-  if (!opts.keepStyle) themeNewElement(el, getTheme(s.project.settings.theme));
+  // New elements follow the project theme (every themeable prop is "themed"),
+  // using the "on dark" styles when the page has a dark background.
+  if (!opts.keepStyle) {
+    const pg = page(s.project, s.pageId);
+    const role = pg && isDarkPage(pg) ? ON_DARK[el.role ?? defaultRole(el.type)] : undefined;
+    themeNewElement(el, getTheme(s.project.settings.theme), role ?? el.role);
+  }
   s.update((d) => {
     const pg = page(d, s.pageId);
     if (!pg) return;
@@ -145,6 +176,25 @@ export function updateProps(id: string, patch: Record<string, unknown>, merge?: 
     },
     merge ?? Object.keys(patch).join(','),
   );
+}
+
+/** Restores theme styling on elements (all their themeable props). */
+export function resetToTheme(ids: string[] = editor().selection) {
+  editor().update((d) => {
+    const t = getTheme(d.settings.theme);
+    for (const id of ids) {
+      const f = findEl(d, id);
+      if (f) resetElementToTheme(f.el, t);
+    }
+  });
+}
+
+/** Changes an element's theme style role (e.g. paragraph → heading). */
+export function setRole(id: string, role: string) {
+  editor().update((d) => {
+    const f = findEl(d, id);
+    if (f) setElementRole(f.el, role, getTheme(d.settings.theme));
+  });
 }
 
 export function updateSelected(recipe: Recipe<SceneElement>, merge?: string) {

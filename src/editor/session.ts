@@ -1,4 +1,4 @@
-import type { Project, ProjectKind } from '../model/types';
+import type { Project, ProjectKind, ThemeId } from '../model/types';
 import { createProject } from '../model/factory';
 import { uid } from '../model/ids';
 import { validateProject } from '../model/validate';
@@ -33,8 +33,8 @@ function open(project: Project) {
   void persist();
 }
 
-export function startNew(kind: ProjectKind) {
-  open(createProject(kind));
+export function startNew(kind: ProjectKind, theme?: ThemeId) {
+  open(createProject(kind, undefined, theme));
 }
 
 export function openExample(id: string) {

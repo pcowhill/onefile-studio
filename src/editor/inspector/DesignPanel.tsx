@@ -16,7 +16,9 @@ import {
   TextInput,
   Toggle,
 } from '../ui/controls';
-import { align, moveLayer, updateElement, updatePage, updateProps, updateSelected } from '../ops';
+import { align, moveLayer, resetToTheme, setRole, updateElement, updatePage, updateProps, updateSelected } from '../ops';
+import { customizedKeys, getTheme, inferRole, ROLE_OPTIONS, themeValues, backgroundPaint, BACKGROUND_ROLES } from '../../model/theme';
+import { ThemePreview } from '../theme/ThemePicker';
 import { EDITOR_ELEMENTS } from '../catalog';
 import type { TextProps } from '../../runtime/elements/text';
 import type { ImageProps } from '../../runtime/elements/image';
@@ -54,19 +56,73 @@ export function DesignPanel({ els }: { els: SceneElement[] }) {
           <span>{EDITOR_ELEMENTS[el.type].builtIn}</span>
         </div>
       )}
+      <StyleStrip el={el} project={project} />
       {Editor && <Editor {...props} />}
       <ArrangeSection els={[el]} />
     </div>
   );
 }
 
+const ROLE_LABEL = (type: string, role: string) => ROLE_OPTIONS[type]?.find((o) => o.value === role)?.label;
+
+/** Shows whether an element follows the project theme, its style role, and a one-click reset. */
+function StyleStrip({ el, project }: { el: SceneElement; project: Project }) {
+  const t = getTheme(project.settings.theme);
+  const keys = Object.keys(themeValues(t, el.type, el.role));
+  if (!keys.length) return null;
+  const custom = customizedKeys(el, t);
+  const roles = ROLE_OPTIONS[el.type];
+  const role = el.role ?? inferRole(el);
+  return (
+    <div className="ed-style-strip" data-testid="style-strip">
+      {roles ? (
+        <Select
+          value={roles.some((r) => r.value === role) ? role : roles[0].value}
+          onChange={(v) => setRole(el.id, v)}
+          options={roles.map((r) => ({ value: r.value, label: `Style: ${r.label}` }))}
+          ariaLabel="Theme style"
+        />
+      ) : (
+        <span style={{ flex: 1 }}>{t.label} theme</span>
+      )}
+      {custom.length === 0 ? (
+        <span className="ed-style-badge is-theme" title={`Colours and fonts follow the ${t.label} theme`}>
+          <Icon name="check" size={12} stroke={3} /> Theme
+        </span>
+      ) : (
+        <button
+          className="ed-style-reset"
+          onClick={() => resetToTheme([el.id])}
+          title={`${custom.length} custom setting${custom.length > 1 ? 's' : ''} — restore the ${t.label} theme's ${ROLE_LABEL(el.type, role)?.toLowerCase() ?? ''} style`}
+          data-testid="reset-theme"
+        >
+          <Icon name="reset" size={13} /> Reset to theme
+        </button>
+      )}
+    </div>
+  );
+}
+
 function MultiDesign({ els }: { els: SceneElement[] }) {
+  const project = useEditor((s) => s.project)!;
+  const t = getTheme(project.settings.theme);
+  const custom = els.filter((e) => customizedKeys(e, t).length > 0).length;
   return (
     <div className="ed-inspector-body">
       <div className="ed-builtin">
         <Icon name="select" size={16} />
         <span>{els.length} elements selected. Drag any of them to move them together.</span>
       </div>
+      {custom > 0 && (
+        <div className="ed-style-strip">
+          <span style={{ flex: 1 }}>
+            {custom} with custom style{custom > 1 ? 's' : ''}
+          </span>
+          <button className="ed-style-reset" onClick={() => resetToTheme(els.map((e) => e.id))} data-testid="reset-theme">
+            <Icon name="reset" size={13} /> Reset to theme
+          </button>
+        </div>
+      )}
       <ArrangeSection els={els} />
     </div>
   );
@@ -812,6 +868,8 @@ const EDITORS: Record<string, (p: P<any>) => React.ReactNode> = {
 
 // ---------------- page / project settings ----------------
 
+const BG_ROLE_LABELS: Record<string, string> = { base: 'Base', alt: 'Alternate', hero: 'Hero', dark: 'Dark', accent: 'Accent' };
+
 const BG_PRESETS: Array<Page['background']['paint']> = [
   { kind: 'solid', color: '#ffffff' },
   { kind: 'solid', color: '#fbfaff' },
@@ -834,6 +892,7 @@ export function PageSettings() {
   const slides = project.kind === 'slides';
   const noun = slides ? 'Slide' : 'Section';
   const bg = page.background;
+  const theme = getTheme(project.settings.theme);
   return (
     <div className="ed-inspector-body">
       <Section title={noun} icon={slides ? 'slides' : 'page'}>
@@ -842,20 +901,59 @@ export function PageSettings() {
         </Field>
         <Field label="Background">
           <div className="ed-bg-presets">
+            <span className="ed-swatch-row-label">{theme.label} theme</span>
+            {BACKGROUND_ROLES.map((role) => {
+              const p = backgroundPaint(theme, role);
+              return (
+                <button
+                  key={role}
+                  className={`ed-bg-preset ${bg.themed && (bg.role ?? 'base') === role ? 'is-on' : ''}`}
+                  style={{ background: paintToCss(p) }}
+                  aria-label={`Theme background: ${BG_ROLE_LABELS[role]}`}
+                  title={`${BG_ROLE_LABELS[role]} — follows the theme`}
+                  data-testid={`bg-theme-${role}`}
+                  onClick={() =>
+                    updatePage(page.id, (d) => {
+                      d.background.role = role;
+                      d.background.themed = true;
+                      d.background.paint = JSON.parse(JSON.stringify(p));
+                    })
+                  }
+                />
+              );
+            })}
+            <span className="ed-swatch-row-label">More colours</span>
             {BG_PRESETS.map((p, i) => (
               <button
                 key={i}
-                className={`ed-bg-preset ${JSON.stringify(p) === JSON.stringify(bg.paint) ? 'is-on' : ''}`}
+                className={`ed-bg-preset ${!bg.themed && JSON.stringify(p) === JSON.stringify(bg.paint) ? 'is-on' : ''}`}
                 style={{ background: paintToCss(p) }}
                 aria-label={`Background preset ${i + 1}`}
-                onClick={() => updatePage(page.id, (d) => void (d.background.paint = p))}
+                onClick={() =>
+                  updatePage(page.id, (d) => {
+                    d.background.paint = p;
+                    d.background.themed = false;
+                  })
+                }
               />
             ))}
           </div>
         </Field>
         <details className="ed-details">
           <summary>Custom colour</summary>
-          <PaintPicker value={bg.paint} onChange={(p) => updatePage(page.id, (d) => void (d.background.paint = p), 'bg')} />
+          <PaintPicker
+            value={bg.paint}
+            onChange={(p) =>
+              updatePage(
+                page.id,
+                (d) => {
+                  d.background.paint = p;
+                  d.background.themed = false;
+                },
+                'bg',
+              )
+            }
+          />
         </details>
         <Field label="Background image">
           <ImageChooser value={bg.imageId ?? ''} onChange={(id) => updatePage(page.id, (d) => void (d.background.imageId = id))} compact />
@@ -900,6 +998,16 @@ function ProjectSettings() {
   const upd = (fn: (p: Project) => void, merge?: string) => editor().update(fn, merge ? { merge } : undefined);
   return (
     <Section title="Whole project" icon="settings" defaultOpen={false}>
+      <Field label="Theme">
+        <button className="ed-theme-setting" onClick={() => editor().set({ themeOpen: true })} data-testid="theme-setting">
+          <ThemePreview id={project.settings.theme} compact />
+          <span>
+            <strong>{getTheme(project.settings.theme).label}</strong>
+            <small>Change theme…</small>
+          </span>
+          <Icon name="right" size={16} />
+        </button>
+      </Field>
       {slides && (
         <>
           <Field label="Slide transition">
@@ -924,8 +1032,23 @@ function ProjectSettings() {
       <Field label={slides ? 'Colour around slides' : 'Page edge colour'}>
         <ColorPicker
           value={project.settings.backdrop}
-          onChange={(c) => upd((d) => void (d.settings.backdrop = c))}
-          palette={['#1b1834', '#000000', '#2b2840', '#ffffff', '#f3f0ff', '#fff8ef']}
+          onChange={(c) =>
+            upd((d) => {
+              d.settings.backdrop = c;
+              d.settings.backdropThemed = false;
+            })
+          }
+          palette={[
+            ...new Set([
+              getTheme(project.settings.theme).colors[slides ? 'backdropSlides' : 'backdropPage'],
+              '#1b1834',
+              '#000000',
+              '#2b2840',
+              '#ffffff',
+              '#f3f0ff',
+              '#fff8ef',
+            ]),
+          ]}
         />
       </Field>
     </Section>

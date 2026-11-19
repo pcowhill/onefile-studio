@@ -2,7 +2,8 @@ import type { SceneElement } from '../../model/types';
 import type { MenuItem } from '../ui/contextMenu';
 import { mod } from '../ui/contextMenu';
 import { editor } from '../store/store';
-import { copySelection, deleteSelection, duplicateSelection, moveLayer, pasteClipboard, selectAll, updateSelected, addPage } from '../ops';
+import { copySelection, deleteSelection, duplicateSelection, moveLayer, pasteClipboard, resetToTheme, selectAll, updateSelected, addPage } from '../ops';
+import { customizedKeys, getTheme } from '../../model/theme';
 import { EDITOR_ELEMENTS } from '../catalog';
 
 export function elementMenu(els: SceneElement[]): MenuItem[] {
@@ -15,6 +16,13 @@ export function elementMenu(els: SceneElement[]): MenuItem[] {
   }
   items.push(
     { label: 'Edit properties', icon: 'palette', onClick: () => editor().set({ inspectorTab: 'design' }) },
+    {
+      label: 'Reset to theme style',
+      icon: 'reset',
+      disabled: !els.some((e) => customizedKeys(e, getTheme(editor().project?.settings.theme)).length > 0),
+      title: 'Restore the colours and fonts of the project theme',
+      onClick: () => resetToTheme(els.map((e) => e.id)),
+    },
     {
       label: 'Add interaction',
       icon: 'bolt',
@@ -55,5 +63,6 @@ export function canvasMenu(): MenuItem[] {
     { label: slides ? 'Slide background…' : 'Section background…', icon: 'palette', onClick: () => s.set({ selection: [], inspectorTab: 'design' }) },
     { label: slides ? 'Add slide after this' : 'Add section after this', icon: 'plus', onClick: () => addPage(undefined, s.pageId) },
     { label: 'Insert element…', icon: 'grid', onClick: () => s.set({ leftTab: 'insert' }) },
+    { label: 'Change theme…', icon: 'palette', onClick: () => s.set({ themeOpen: true }) },
   ];
 }

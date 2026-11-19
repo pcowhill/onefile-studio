@@ -5,12 +5,14 @@ import { Canvas } from './canvas/Canvas';
 import { Inspector } from './inspector/Inspector';
 import { Preview } from './dialogs/Preview';
 import { ExportDialog } from './dialogs/ExportDialog';
+import { ThemeDialog } from './theme/ThemePicker';
 import { useShortcuts } from './shortcuts';
 import { Icon } from './ui/Icon';
 
 export function Editor() {
   const previewOpen = useEditor((s) => s.previewOpen);
   const exportOpen = useEditor((s) => s.exportOpen);
+  const themeOpen = useEditor((s) => s.themeOpen);
   useShortcuts();
   return (
     <div className="ed-app">
@@ -26,6 +28,7 @@ export function Editor() {
       </div>
       {previewOpen && <Preview />}
       {exportOpen && <ExportDialog />}
+      {themeOpen && <ThemeDialog />}
     </div>
   );
 }

@@ -321,6 +321,31 @@ export function TemplateIllustration({ id }: { id: string }) {
         </>
       );
       break;
+    case 'chartText':
+      body = (
+        <>
+          {bar(8, 12, 30, 6, '#1d1b2c')}
+          {bar(8, 23, 32, 3, '#b9b2d9')}
+          {bar(8, 29, 26, 3, '#b9b2d9')}
+          {bar(46, 8, 46, 40, '#f3f0ff', 4)}
+          {bar(52, 30, 6, 14, '#8b6cff', 1.5)}
+          {bar(61, 22, 6, 22, '#ff7eb3', 1.5)}
+          {bar(70, 26, 6, 18, '#8b6cff', 1.5)}
+          {bar(79, 16, 6, 28, '#ff7eb3', 1.5)}
+        </>
+      );
+      break;
+    case 'countdownSection':
+      bg = '#fbfaff';
+      body = (
+        <>
+          {bar(24, 9, 52, 6, '#1d1b2c')}
+          {bar(18, 22, 18, 20, '#f39c12', 3)}
+          {bar(41, 22, 18, 20, '#f39c12', 3)}
+          {bar(64, 22, 18, 20, '#f39c12', 3)}
+        </>
+      );
+      break;
     case 'statement':
       bg = '#2a2350';
       body = (

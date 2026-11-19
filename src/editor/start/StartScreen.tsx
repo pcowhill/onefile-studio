@@ -5,10 +5,32 @@ import { EXAMPLES } from '../../examples';
 import { importFile, openDraft, openExample, pickAndImport, startNew } from '../session';
 import { Icon } from '../ui/Icon';
 import { Logo } from '../ui/Logo';
+import { ThemeGrid } from '../theme/ThemePicker';
+import type { ThemeId } from '../../model/types';
+import { DEFAULT_THEME, isThemeId } from '../../model/theme';
+
+const THEME_KEY = 'ofs:start-theme';
+function initialTheme(): ThemeId {
+  try {
+    const v = localStorage.getItem(THEME_KEY);
+    return isThemeId(v) ? v : DEFAULT_THEME;
+  } catch {
+    return DEFAULT_THEME;
+  }
+}
 
 export function StartScreen() {
   const [drafts, setDrafts] = useState<DraftSummary[]>([]);
   const [over, setOver] = useState(false);
+  const [theme, setTheme] = useState<ThemeId>(initialTheme);
+  const pickTheme = (id: ThemeId) => {
+    setTheme(id);
+    try {
+      localStorage.setItem(THEME_KEY, id);
+    } catch {
+      /* storage unavailable */
+    }
+  };
   useEffect(() => {
     void listDrafts().then(setDrafts);
   }, []);
@@ -49,8 +71,14 @@ export function StartScreen() {
           </h1>
           <p>Build interactive slides and webpages without code — then share them as a single HTML file that works anywhere, even offline.</p>
         </section>
+        <section className="st-themes" aria-label="Choose a style">
+          <h2>
+            <Icon name="palette" size={18} /> Pick a style <small>— you can change it any time</small>
+          </h2>
+          <ThemeGrid value={theme} onPick={pickTheme} compact />
+        </section>
         <section className="st-create" aria-label="Create a new project">
-          <button className="st-card st-card-slides" onClick={() => startNew('slides')} data-testid="new-slides">
+          <button className="st-card st-card-slides" onClick={() => startNew('slides', theme)} data-testid="new-slides">
             <SlidesArt />
             <span className="st-card-text">
               <strong>Slide presentation</strong>
@@ -60,7 +88,7 @@ export function StartScreen() {
               <Icon name="right" size={20} />
             </span>
           </button>
-          <button className="st-card st-card-page" onClick={() => startNew('page')} data-testid="new-page">
+          <button className="st-card st-card-page" onClick={() => startNew('page', theme)} data-testid="new-page">
             <PageArt />
             <span className="st-card-text">
               <strong>Scrolling webpage</strong>
