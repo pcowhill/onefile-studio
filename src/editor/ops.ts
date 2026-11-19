@@ -7,6 +7,7 @@ import type { Built, CatalogItem, PageTemplate } from './catalog';
 import { nameFor } from './catalog';
 import { addAssetDedup, fileToAsset } from '../io/assets';
 import { toast } from './ui/toast';
+import { applyThemeToElement, getTheme, markExplicit, themeNewBackground, themeNewElement } from '../model/theme';
 
 export type Recipe<T> = (draft: T) => void;
 
@@ -42,10 +43,12 @@ export function placeCentered(project: Project, pg: Page, el: SceneElement) {
   el.y = y;
 }
 
-export function insertBuilt(built: Built, opts: { keepPosition?: boolean } = {}) {
+export function insertBuilt(built: Built, opts: { keepPosition?: boolean; keepStyle?: boolean } = {}) {
   const s = editor();
   if (!s.project) return;
   const el = built.element;
+  // New elements follow the project theme (every themeable prop is "themed").
+  if (!opts.keepStyle) themeNewElement(el, getTheme(s.project.settings.theme));
   s.update((d) => {
     const pg = page(d, s.pageId);
     if (!pg) return;
@@ -129,8 +132,19 @@ export function updateElement(id: string, recipe: Recipe<SceneElement>, merge?: 
   );
 }
 
+/**
+ * Author edits to props. Any edited key becomes an explicit choice that theme
+ * changes will no longer touch (see src/model/theme/apply.ts).
+ */
 export function updateProps(id: string, patch: Record<string, unknown>, merge?: string) {
-  updateElement(id, (el) => Object.assign(el.props as Record<string, unknown>, patch), merge ?? Object.keys(patch).join(','));
+  updateElement(
+    id,
+    (el) => {
+      Object.assign(el.props as Record<string, unknown>, patch);
+      markExplicit(el, Object.keys(patch));
+    },
+    merge ?? Object.keys(patch).join(','),
+  );
 }
 
 export function updateSelected(recipe: Recipe<SceneElement>, merge?: string) {
@@ -195,8 +209,11 @@ export function pasteClipboard() {
     const pg = page(d, s.pageId);
     if (!pg) return;
     for (const a of clipAssets) if (!d.assets[a.id]) d.assets[a.id] = a;
+    const theme = getTheme(d.settings.theme);
     for (const src of s.clipboard) {
       const copy = cloneElement(src);
+      // Pasting into a project with another theme: themed props adopt this project's theme.
+      applyThemeToElement(copy, theme);
       const sameSpot = pg.elements.some((e) => e.x === copy.x && e.y === copy.y);
       if (sameSpot) {
         copy.x += 24;
@@ -283,9 +300,10 @@ export function addPage(template?: PageTemplate, afterId?: string) {
   s.update((d) => {
     const pg = createPage(d);
     if (template) {
+      const theme = getTheme(d.settings.theme);
       const t = template.build(d);
-      pg.background = t.background;
-      pg.elements = t.elements.map((el) => ({ ...el, name: el.name }));
+      pg.background = themeNewBackground(theme, t.backgroundRole);
+      pg.elements = t.elements.map((el) => themeNewElement(el, theme));
       if (d.kind === 'page' && t.height) pg.height = t.height;
       for (const el of pg.elements) {
         el.name = nameFor({ ...d, pages: [...d.pages, pg] }, el.type);

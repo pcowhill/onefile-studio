@@ -96,6 +96,10 @@ const defs: ActionDef[] = [
       return p.wait ? run : undefined;
     },
   },
+  { id: 'mediaPlay', execute: (p, c) => c.player.api(target(p, c))?.play?.() },
+  { id: 'mediaPause', execute: (p, c) => c.player.api(target(p, c))?.pause?.() },
+  { id: 'mediaRestart', execute: (p, c) => c.player.api(target(p, c))?.restart?.() },
+  { id: 'quizReset', execute: (p, c) => c.player.api(target(p, c))?.reset?.() },
   {
     id: 'wait',
     execute: (p) => new Promise<void>((res) => setTimeout(res, Math.max(0, Math.min(60000, n(p.seconds, 1) * 1000)))),

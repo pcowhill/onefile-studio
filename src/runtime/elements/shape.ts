@@ -1,5 +1,5 @@
 import type { RuntimeElementDef } from './types';
-import { h, num, SHADOWS, svg } from './types';
+import { DROP_SHADOWS, h, num, SHADOWS, svg } from './types';
 import type { Paint } from '../../model/types';
 import { paintToCss } from '../../model/paint';
 
@@ -53,9 +53,7 @@ export const shapeDef: RuntimeElementDef<ShapeProps> = {
       return { node };
     }
     const node = h(doc, 'div', 'ofs-shape ofs-shape-svg', { opacity });
-    if (p.shadow && p.shadow !== 'none') {
-      node.style.filter = p.shadow === 'lifted' ? 'drop-shadow(0 14px 22px rgba(32,20,70,.28))' : 'drop-shadow(0 5px 10px rgba(32,20,70,.16))';
-    }
+    if (p.shadow && p.shadow !== 'none') node.style.filter = DROP_SHADOWS[p.shadow] ?? DROP_SHADOWS.soft;
     const s = svg(doc, 'svg', { viewBox: '0 0 100 100', preserveAspectRatio: 'none', width: '100%', height: '100%' });
     let fill: string;
     if (p.fill?.kind === 'linear') {

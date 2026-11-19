@@ -9,10 +9,33 @@ import { beforeAfterDef } from './beforeAfter';
 import { galleryDef } from './gallery';
 import { scrollTextDef } from './scrollText';
 import { progressDef } from './progress';
+import { videoDef } from './video';
+import { audioDef } from './audio';
+import { chartDef } from './chart';
+import { tableDef } from './table';
+import { countdownDef } from './countdown';
+import { quizDef } from './quiz';
 
 /** Runtime element registry. Add a new element type by registering its def here. */
 export const elementRegistry = new Registry<AnyElementDef>('element');
-for (const def of [textDef, imageDef, shapeDef, arrowDef, buttonDef, navButtonDef, beforeAfterDef, galleryDef, scrollTextDef, progressDef]) {
+for (const def of [
+  textDef,
+  imageDef,
+  shapeDef,
+  arrowDef,
+  buttonDef,
+  navButtonDef,
+  beforeAfterDef,
+  galleryDef,
+  scrollTextDef,
+  progressDef,
+  videoDef,
+  audioDef,
+  chartDef,
+  tableDef,
+  countdownDef,
+  quizDef,
+]) {
   elementRegistry.register(def);
 }
 

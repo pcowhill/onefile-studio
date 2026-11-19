@@ -87,6 +87,46 @@ export function assetUrl(project: Project, id: unknown): string | undefined {
   return a.data;
 }
 
+const blobUrls = new Map<string, string>();
+
+/**
+ * URL for an embedded video/audio asset. Large media plays and seeks far more
+ * reliably from a Blob than from a multi-megabyte data: URL, so the base64
+ * payload is decoded (in chunks, without network access) into a Blob once per
+ * asset and cached. Falls back to the data: URL where Blob URLs are unavailable.
+ */
+export function mediaUrl(project: Project, id: unknown, kind: 'video' | 'audio'): string | undefined {
+  if (typeof id !== 'string') return undefined;
+  const a: Asset | undefined = project.assets[id];
+  if (!a || typeof a.data !== 'string' || !a.data.startsWith(`data:${kind}/`)) return undefined;
+  const key = `${a.hash}:${a.bytes}:${a.data.length}`;
+  const cached = blobUrls.get(key);
+  if (cached) return cached;
+  if (typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function' || typeof Blob === 'undefined' || typeof atob !== 'function') return a.data;
+  try {
+    const url = URL.createObjectURL(dataUrlToBlob(a.data));
+    blobUrls.set(key, url);
+    return url;
+  } catch {
+    return a.data;
+  }
+}
+
+/** Decodes a base64 data: URL into a Blob in ~1.5 MB chunks (keeps peak memory low). */
+export function dataUrlToBlob(dataUrl: string): Blob {
+  const comma = dataUrl.indexOf(',');
+  const mime = dataUrl.slice(5, dataUrl.indexOf(';'));
+  const parts: Uint8Array[] = [];
+  const CHUNK = 4 * 1024 * 512;
+  for (let i = comma + 1; i < dataUrl.length; i += CHUNK) {
+    const bin = atob(dataUrl.slice(i, Math.min(dataUrl.length, i + CHUNK)));
+    const bytes = new Uint8Array(bin.length);
+    for (let j = 0; j < bin.length; j++) bytes[j] = bin.charCodeAt(j);
+    parts.push(bytes);
+  }
+  return new Blob(parts as BlobPart[], { type: mime });
+}
+
 export function findElement(project: Project, id: string): { page: Page; el: SceneElement; index: number } | null {
   for (let i = 0; i < project.pages.length; i++) {
     const el = project.pages[i].elements.find((e) => e.id === id);

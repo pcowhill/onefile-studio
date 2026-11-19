@@ -13,7 +13,7 @@ import {
   EMPHASIS_PRESETS,
   ENTRANCE_PRESETS,
   TRIGGER_CATEGORIES,
-  TRIGGERS,
+  triggersFor,
   triggerUi,
   VISIBILITY_EFFECTS,
 } from './catalog';
@@ -146,10 +146,12 @@ export function BehaviorPanel({ el }: { el: SceneElement }) {
 // ---------------- trigger picker ("When…") ----------------
 
 export function TriggerPicker({ el, current, onPick, onClose }: { el: SceneElement; current?: string; onPick(id: string): void; onClose(): void }) {
-  const primary = TRIGGERS.filter((t) => t.primary);
-  const more = TRIGGERS.filter((t) => !t.primary);
+  const available = triggersFor(el.type);
+  const special = available.filter((t) => t.forTypes);
+  const primary = available.filter((t) => t.primary || (special.length && t.forTypes));
+  const more = available.filter((t) => !primary.includes(t));
   const [showMore, setShowMore] = useState(!!current && more.some((m) => m.id === current));
-  const cats = [...new Set(TRIGGERS.map((t) => t.category))];
+  const cats = [...new Set(available.map((t) => t.category))];
   return (
     <Modal onClose={onClose} label="Choose a trigger" className="ed-trigger-modal">
       <div className="ed-when">
@@ -166,7 +168,7 @@ export function TriggerPicker({ el, current, onPick, onClose }: { el: SceneEleme
             ))}
           </div>
         </div>
-        <div className="ed-trigger-grid">
+        <div className={`ed-trigger-grid ${primary.length > 3 ? 'is-many' : ''}`}>
           {primary.map((t) => (
             <TriggerCard key={t.id} id={t.id} selected={current === t.id} onPick={onPick} big />
           ))}
@@ -527,6 +529,25 @@ function ActionRow({
         </>
       );
       break;
+    case 'mediaPlay':
+    case 'mediaPause':
+    case 'mediaRestart':
+      body = (
+        <>
+          <span className="ed-w">{action.type === 'mediaPlay' ? 'Play' : action.type === 'mediaPause' ? 'Pause' : 'Restart'}</span>
+          {target((e) => e.type === 'video' || e.type === 'audio', el.type === 'video' || el.type === 'audio')}
+        </>
+      );
+      break;
+    case 'quizReset':
+      body = (
+        <>
+          <span className="ed-w">Reset</span>
+          {target((e) => e.type === 'quiz', el.type === 'quiz')}
+          <span className="ed-w">so it can be answered again</span>
+        </>
+      );
+      break;
     case 'animate':
       body = (
         <>
@@ -696,6 +717,14 @@ export function actionSummary(a: Action, project: Project, selfId: string): stri
       return `${p.preset} ${name(p.target)}`;
     case 'wait':
       return `wait ${p.seconds}s`;
+    case 'mediaPlay':
+      return `play ${name(p.target)}`;
+    case 'mediaPause':
+      return `pause ${name(p.target)}`;
+    case 'mediaRestart':
+      return `restart ${name(p.target)}`;
+    case 'quizReset':
+      return `reset ${name(p.target)}`;
     default:
       return a.type;
   }

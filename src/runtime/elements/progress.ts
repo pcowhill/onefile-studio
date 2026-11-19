@@ -15,6 +15,8 @@ export interface ProgressProps {
   track: string;
   label: 'none' | 'percent' | 'value' | 'fraction';
   labelColor: string;
+  /** Label font (v2; v0.1 always used the friendly font). */
+  font: string;
 }
 
 export const progressDef: RuntimeElementDef<ProgressProps> = {
@@ -28,6 +30,7 @@ export const progressDef: RuntimeElementDef<ProgressProps> = {
     track: 'rgba(109, 74, 255, 0.14)',
     label: 'none',
     labelColor: '#1d1b2c',
+    font: 'rounded',
   }),
   render(el, { doc, env, onCleanup }) {
     const p = el.props;
@@ -35,7 +38,7 @@ export const progressDef: RuntimeElementDef<ProgressProps> = {
     node.setAttribute('role', 'progressbar');
     node.setAttribute('aria-valuemin', '0');
     node.setAttribute('aria-valuemax', '100');
-    const label = h(doc, 'span', 'ofs-progress-label', { color: p.labelColor, fontFamily: fontStack('rounded') });
+    const label = h(doc, 'span', 'ofs-progress-label', { color: p.labelColor, fontFamily: fontStack(p.font) });
     let setFrac: (f: number) => void;
     if (p.style === 'ring') {
       const size = Math.min(el.w, el.h);

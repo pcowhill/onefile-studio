@@ -171,6 +171,109 @@ export function CatalogIllustration({ id }: { id: string }) {
           </text>
         </svg>
       );
+    case 'video':
+      return (
+        <svg viewBox={v}>
+          <rect x="8" y="8" width="48" height="32" rx="6" fill="#2a2340" />
+          <rect x="8" y="8" width="48" height="7" rx="3" fill="#3b3356" />
+          <circle cx="13" cy="11.5" r="1.4" fill="#ff5d73" />
+          <circle cx="17.5" cy="11.5" r="1.4" fill="#ffd23f" />
+          <circle cx="32" cy="27" r="8" fill="#ef4444" />
+          <path d="M29.5 23.2v7.6l6.2-3.8z" fill="#fff" />
+          <rect x="12" y="36" width="40" height="2" rx="1" fill="#5d5576" />
+          <rect x="12" y="36" width="17" height="2" rx="1" fill="#ef4444" />
+        </svg>
+      );
+    case 'audio':
+      return (
+        <svg viewBox={v}>
+          <rect x="6" y="13" width="52" height="22" rx="11" fill="#e4f8f0" />
+          <circle cx="17" cy="24" r="7" fill="#10b981" />
+          <path d="M15.2 20.8v6.4l5-3.2z" fill="#fff" />
+          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+            <rect
+              key={i}
+              x={28 + i * 3.4}
+              y={24 - [3, 6, 4, 8, 5, 7, 3, 5][i]}
+              width="2"
+              height={[3, 6, 4, 8, 5, 7, 3, 5][i] * 2}
+              rx="1"
+              fill={i < 4 ? '#10b981' : '#9fe3c8'}
+            />
+          ))}
+        </svg>
+      );
+    case 'chart-bar':
+      return (
+        <svg viewBox={v}>
+          <path d="M10 40h44" stroke="#d6d1e8" strokeWidth="2" strokeLinecap="round" />
+          {[
+            [13, 18, '#8b6cff'],
+            [22, 12, '#ff7eb3'],
+            [31, 24, '#8b6cff'],
+            [40, 8, '#ff7eb3'],
+          ].map(([x, y, c]) => (
+            <rect key={String(x)} x={Number(x)} y={Number(y)} width="7" height={38 - Number(y)} rx="2.5" fill={String(c)} />
+          ))}
+          <rect x="49" y="15" width="5" height="23" rx="2" fill="#3d8bff" />
+        </svg>
+      );
+    case 'chart-line':
+      return (
+        <svg viewBox={v}>
+          <path d="M10 40h44" stroke="#d6d1e8" strokeWidth="2" strokeLinecap="round" />
+          <path d="M11 32 L22 24 L32 28 L42 14 L53 10 V38 H11Z" fill="#3d8bff" opacity=".14" />
+          <path d="M11 32 L22 24 L32 28 L42 14 L53 10" fill="none" stroke="#3d8bff" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
+          <path d="M11 36 L22 33 L32 34 L42 27 L53 24" fill="none" stroke="#ff7eb3" strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" />
+          {[
+            [22, 24],
+            [32, 28],
+            [42, 14],
+          ].map(([x, y]) => (
+            <circle key={x} cx={x} cy={y} r="2.6" fill="#fff" stroke="#3d8bff" strokeWidth="2" />
+          ))}
+        </svg>
+      );
+    case 'table':
+      return (
+        <svg viewBox={v}>
+          <rect x="8" y="8" width="48" height="32" rx="5" fill="#fff" stroke="#d6eef6" strokeWidth="1.5" />
+          <path d="M8 13a5 5 0 0 1 5-5h38a5 5 0 0 1 5 5v3H8z" fill="#0abde3" />
+          <rect x="8" y="24" width="48" height="8" fill="#ecf9fd" />
+          {[20, 28, 36].map((y) => (
+            <g key={y}>
+              <rect x="12" y={y - 1.5} width="12" height="3" rx="1.5" fill="#b9b2d9" />
+              <rect x="30" y={y - 1.5} width="8" height="3" rx="1.5" fill="#b9b2d9" />
+              <rect x="44" y={y - 1.5} width="8" height="3" rx="1.5" fill="#b9b2d9" />
+            </g>
+          ))}
+        </svg>
+      );
+    case 'countdown':
+      return (
+        <svg viewBox={v}>
+          {[8, 23, 38].map((x, i) => (
+            <g key={x}>
+              <rect x={x} y="12" width="13" height="18" rx="3.5" fill="#f39c12" />
+              <text x={x + 6.5} y="25.5" textAnchor="middle" fontSize="10" fontWeight="900" fill="#fff" fontFamily="'OFS Nunito', system-ui">
+                {['07', '12', '45'][i]}
+              </text>
+              <rect x={x + 2} y="34" width="9" height="2.5" rx="1.25" fill="#f7c873" />
+            </g>
+          ))}
+        </svg>
+      );
+    case 'quiz':
+      return (
+        <svg viewBox={v}>
+          <rect x="10" y="6" width="44" height="6" rx="3" fill="#b9b2d9" />
+          <rect x="10" y="16" width="44" height="8" rx="4" fill="#fde4f0" />
+          <rect x="10" y="27" width="44" height="8" rx="4" fill="#e84393" />
+          <rect x="10" y="38" width="44" height="6" rx="3" fill="#fde4f0" />
+          <circle cx="15" cy="31" r="2.6" fill="#fff" />
+          <path d="M44 31l2.4 2.4 4.6-4.8" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
     default:
       return (
         <svg viewBox={v}>

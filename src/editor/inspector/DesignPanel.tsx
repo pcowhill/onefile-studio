@@ -30,13 +30,14 @@ import type { ProgressProps } from '../../runtime/elements/progress';
 import { AssetLibrary } from '../ui/controls';
 import { pickImages } from '../ops';
 
-type P<T> = { el: SceneElement<T>; set(patch: Partial<T>, merge?: string): void; project: Project };
-
-const SHADOW_OPTS = [
-  { value: 'none', label: 'None' },
-  { value: 'soft', label: 'Soft' },
-  { value: 'lifted', label: 'Lifted' },
-];
+import type { P } from './shared';
+import { SHADOW_OPTS } from './shared';
+import { VideoEditor } from './editors/VideoEditor';
+import { AudioEditor } from './editors/AudioEditor';
+import { ChartEditor } from './editors/ChartEditor';
+import { TableEditor } from './editors/TableEditor';
+import { CountdownEditor } from './editors/CountdownEditor';
+import { QuizEditor } from './editors/QuizEditor';
 
 export function DesignPanel({ els }: { els: SceneElement[] }) {
   const project = useEditor((s) => s.project)!;
@@ -801,6 +802,12 @@ const EDITORS: Record<string, (p: P<any>) => React.ReactNode> = {
   gallery: GalleryEditor,
   scrollText: ScrollTextEditor,
   progress: ProgressEditor,
+  video: VideoEditor,
+  audio: AudioEditor,
+  chart: ChartEditor,
+  table: TableEditor,
+  countdown: CountdownEditor,
+  quiz: QuizEditor,
 };
 
 // ---------------- page / project settings ----------------

@@ -1,14 +1,16 @@
-import type { Background, Page, Project, ProjectKind, SceneElement, Variable } from './types';
+import type { Background, Page, Project, ProjectKind, SceneElement, ThemeId, Variable } from './types';
 import { SCHEMA_ID, SCHEMA_VERSION } from './types';
 import { uid } from './ids';
 import { elementRegistry } from '../runtime/elements';
-import { solid } from './paint';
+import { DEFAULT_THEME, getTheme } from './theme/tokens';
+import { themeBackdrop, themeNewBackground } from './theme/apply';
 
 export const SLIDE_SIZE = { width: 1280, height: 720 };
 export const PAGE_SIZE = { width: 1000, height: 560 };
 
-export function createProject(kind: ProjectKind, title?: string): Project {
+export function createProject(kind: ProjectKind, title?: string, theme: ThemeId = DEFAULT_THEME): Project {
   const now = new Date().toISOString();
+  const t = getTheme(theme);
   const project: Project = {
     schema: SCHEMA_ID,
     version: SCHEMA_VERSION,
@@ -18,9 +20,11 @@ export function createProject(kind: ProjectKind, title?: string): Project {
     settings: {
       width: kind === 'slides' ? SLIDE_SIZE.width : PAGE_SIZE.width,
       height: kind === 'slides' ? SLIDE_SIZE.height : PAGE_SIZE.height,
-      transition: 'fade',
+      transition: t.transition,
       showNavigation: true,
-      backdrop: kind === 'slides' ? '#1b1834' : '#ffffff',
+      backdrop: themeBackdrop(t, kind),
+      theme: t.id,
+      backdropThemed: true,
     },
     pages: [],
     variables: [],
@@ -30,8 +34,9 @@ export function createProject(kind: ProjectKind, title?: string): Project {
   return project;
 }
 
-export function defaultBackground(): Background {
-  return { paint: solid('#ffffff') };
+/** A themed base background for the project's theme. */
+export function defaultBackground(project?: Pick<Project, 'settings'>, role = 'base'): Background {
+  return themeNewBackground(getTheme(project?.settings.theme), role);
 }
 
 export function createPage(project: Project, name?: string, background?: Background): Page {
@@ -39,7 +44,7 @@ export function createPage(project: Project, name?: string, background?: Backgro
   return {
     id: uid('pg'),
     name: name ?? (project.kind === 'slides' ? `Slide ${n}` : `Section ${n}`),
-    background: background ?? defaultBackground(),
+    background: background ?? defaultBackground(project),
     ...(project.kind === 'page' ? { height: project.settings.height } : {}),
     elements: [],
   };

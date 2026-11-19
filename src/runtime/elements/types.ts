@@ -8,11 +8,16 @@ export interface RenderCtx {
   onCleanup(fn: () => void): void;
 }
 
-/** Imperative capabilities an element exposes to actions (e.g. gallery "next"). */
+/** Imperative capabilities an element exposes to actions (e.g. gallery "next", video "play"). */
 export interface ElementApi {
   next?(): void;
   prev?(): void;
+  /** Gallery: first image. Quiz: clear the answer. */
   reset?(): void;
+  /** Media (video/audio). */
+  play?(): void;
+  pause?(): void;
+  restart?(): void;
 }
 
 export interface RenderResult {
@@ -25,6 +30,8 @@ export interface RuntimeElementDef<P extends object = Record<string, unknown>> {
   id: string;
   defaults(): P;
   render(el: SceneElement<P>, ctx: RenderCtx): RenderResult;
+  /** Element-specific playback CSS (class names prefixed with `ofs-`). */
+  css?: string;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -34,6 +41,16 @@ export const SHADOWS: Record<string, string> = {
   none: 'none',
   soft: '0 6px 20px rgba(32, 20, 70, 0.14)',
   lifted: '0 18px 44px rgba(32, 20, 70, 0.26)',
+  subtle: '0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 14px rgba(15, 23, 42, 0.07)',
+  glow: '0 0 0 1px rgba(56, 189, 248, 0.28), 0 0 26px rgba(34, 211, 238, 0.16)',
+};
+
+/** Equivalent drop-shadow filters for non-rectangular content (SVG shapes). */
+export const DROP_SHADOWS: Record<string, string> = {
+  soft: 'drop-shadow(0 5px 10px rgba(32,20,70,.16))',
+  lifted: 'drop-shadow(0 14px 22px rgba(32,20,70,.28))',
+  subtle: 'drop-shadow(0 2px 5px rgba(15,23,42,.12))',
+  glow: 'drop-shadow(0 0 10px rgba(34,211,238,.35))',
 };
 
 export function h<K extends keyof HTMLElementTagNameMap>(
