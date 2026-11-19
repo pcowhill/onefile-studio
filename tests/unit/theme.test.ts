@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
+import presentationHtml from '../fixtures/v0.1/presentation.html?raw';
+import clickerHtml from '../fixtures/v0.1/clicker.html?raw';
 import { createElement, createProject } from '../../src/model/factory';
 import { validateProject } from '../../src/model/validate';
 import { extractProjectData, importFromText } from '../../src/io/importHtml';
@@ -25,7 +25,8 @@ import { parseHex } from '../../src/model/paint';
 import type { Project, SceneElement } from '../../src/model/types';
 import { SCHEMA_VERSION } from '../../src/model/types';
 
-const fixture = (name: string) => fs.readFileSync(path.resolve('tests/fixtures/v0.1', name), 'utf8');
+const FIXTURES: Record<string, string> = { 'presentation.html': presentationHtml, 'clicker.html': clickerHtml };
+const fixture = (name: string) => FIXTURES[name];
 
 function contrast(a: string, b: string): number {
   const lum = (c: string) => {
@@ -101,8 +102,8 @@ describe('theme definitions', () => {
 describe('theme provenance', () => {
   it('new elements follow the theme; switching restyles themed props only', () => {
     const p = createProject('slides', 'T', 'playful');
-    const heading = themeNewElement(createElement('text', { props: { text: 'Hi', size: 60 } }), 'playful', 'heading');
-    const custom = themeNewElement(createElement('text', { props: { text: 'Mine' } }), 'playful', 'body');
+    const heading = themeNewElement(createElement<Record<string, unknown>>('text', { props: { text: 'Hi', size: 60 } }), 'playful', 'heading');
+    const custom = themeNewElement(createElement<Record<string, unknown>>('text', { props: { text: 'Mine' } }), 'playful', 'body');
     customize(custom, { color: '#ff0000' });
     p.pages[0].elements.push(heading, custom);
     expect(heading.themed).toContain('color');
