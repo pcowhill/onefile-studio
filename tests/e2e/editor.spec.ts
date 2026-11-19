@@ -66,6 +66,69 @@ test('add, edit, move, resize, delete with undo/redo', async ({ page }) => {
   expect(await elements(page)).toHaveLength(2);
 });
 
+test('resizing snaps to the slide edges; dragging never selects text', async ({ page }) => {
+  await openStudio(page);
+  await page.getByTestId('new-slides').click();
+  await page.getByTestId('quick-heading').click();
+  await page.locator('.ed-el').first().click();
+  const stage = (await page.locator('.ed-stage').boundingBox())!;
+  const z = stage.width / 1280;
+
+  // Drag the right-hand handle to 4px short of the slide's right edge: it snaps.
+  const handle = page.locator('.ed-handle-e');
+  const hb = (await handle.boundingBox())!;
+  await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(stage.x + (1280 - 4) * z, hb.y + hb.height / 2, { steps: 8 });
+  await expect(page.locator('.ed-guide')).toHaveCount(1);
+  // Sweep across the text while still dragging: nothing gets text-selected.
+  await page.mouse.move(stage.x + 100, stage.y + 100, { steps: 8 });
+  await page.mouse.move(stage.x + (1280 - 4) * z, hb.y + hb.height / 2, { steps: 8 });
+  expect(await page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('');
+  await page.mouse.up();
+  const [el] = await elements(page);
+  expect(el.x + el.w).toBe(1280);
+
+  // Alt disables snapping.
+  const hb2 = (await handle.boundingBox())!;
+  await page.mouse.move(hb2.x + hb2.width / 2, hb2.y + hb2.height / 2);
+  await page.keyboard.down('Alt');
+  await page.mouse.down();
+  await page.mouse.move(hb2.x + hb2.width / 2 - 4 * z, hb2.y + hb2.height / 2, { steps: 4 });
+  await page.mouse.up();
+  await page.keyboard.up('Alt');
+  const [el2] = await elements(page);
+  expect(el2.x + el2.w).toBeLessThan(1280);
+});
+
+test('the window never scrolls, whatever the inspector shows', async ({ page }) => {
+  await openStudio(page);
+  await page.getByTestId('example-presentation').click();
+  const els = page.locator('.ed-el');
+  await expect(els.first()).toBeVisible();
+  const n = await els.count();
+  for (let i = 0; i < n; i++) {
+    await els.nth(i).click({ force: true });
+    for (const tab of ['tab-design', 'tab-behavior']) {
+      await page.getByTestId(tab).click();
+      const overflow = await page.evaluate(() => document.scrollingElement!.scrollHeight - document.scrollingElement!.clientHeight);
+      expect(overflow, `element ${i}, ${tab}`).toBe(0);
+    }
+  }
+});
+
+test('hovering a button does not promote the slide to a new layer', async ({ page }) => {
+  // Hover effects on buttons must avoid transform/filter transitions, which
+  // temporarily composite part of the scaled slide and shift its edges by a pixel.
+  await openStudio(page);
+  await page.getByTestId('example-presentation').click();
+  await page.keyboard.press('Control+Enter');
+  const btn = page.locator('.ed-preview .ofs-button').first();
+  await expect(btn).toBeVisible();
+  const props = await btn.evaluate((b) => getComputedStyle(b).transitionProperty);
+  expect(props).not.toMatch(/transform|filter|all/);
+});
+
 test('custom context menu on elements only', async ({ page }) => {
   await openStudio(page);
   await page.getByTestId('new-slides').click();
