@@ -82,6 +82,22 @@ export function isValidTimeZone(tz: unknown): tz is string {
 
 const timeZone: Sanitizer = (v) => (isValidTimeZone(v) ? v : 'UTC');
 
+/** One of a fixed set of strings (enumerated props). */
+const oneOf =
+  (...options: string[]): Sanitizer =>
+  (v, def) =>
+    typeof v === 'string' && options.includes(v) ? v : def;
+
+/** A finite number clamped to [min, max] (rounded when `int`). */
+const range =
+  (min: number, max: number, int = false): Sanitizer =>
+  (v, def) => {
+    const n = typeof v === 'number' ? v : Number(v);
+    if (typeof v === 'boolean' || v === null || v === '' || !Number.isFinite(n)) return def;
+    const c = Math.max(min, Math.min(max, n));
+    return int ? Math.round(c) : c;
+  };
+
 /** Structured props per element type. */
 export const PROP_SANITIZERS: Record<string, Record<string, Sanitizer>> = {
   progress: { variableId: variableRef },
@@ -91,13 +107,29 @@ export const PROP_SANITIZERS: Record<string, Record<string, Sanitizer>> = {
     palette: colorList,
   },
   table: { rows: tableRows, columnAlign: alignList },
-  countdown: { target: isoInstant, timezone: timeZone },
+  countdown: {
+    target: isoInstant,
+    timezone: timeZone,
+    repeat: oneOf('none', 'daily', 'weekly'),
+    // Less than a week (the longest repeat period).
+    holdMinutes: range(0, 7 * 24 * 60 - 1, true),
+    style: oneOf('cards', 'digital', 'inline'),
+    title: (v, def) => (typeof v === 'string' ? v.slice(0, 200) : def),
+    doneText: (v, def) => (typeof v === 'string' ? v.slice(0, 300) : def),
+    radius: range(0, 400),
+  },
   quiz: {
+    question: (v, def) => (typeof v === 'string' ? v.slice(0, 2000) : def),
     choices: (v, def, ctx) => {
       const list = stringList(MAX_QUIZ_CHOICES, 300)(v, def, ctx) as string[];
       return list.length >= 2 ? list : def;
     },
+    layout: oneOf('list', 'grid', 'pills'),
+    feedbackCorrect: (v, def) => (typeof v === 'string' ? v.slice(0, 1000) : def),
+    feedbackIncorrect: (v, def) => (typeof v === 'string' ? v.slice(0, 1000) : def),
     scoreVariable: variableRef,
+    points: range(-1e6, 1e6),
+    radius: range(0, 400),
   },
 };
 
