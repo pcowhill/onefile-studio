@@ -39,7 +39,7 @@ type Gesture =
   | { kind: 'marquee'; sx: number; sy: number; shift: boolean; base: string[] }
   | { kind: 'section'; pageId: string; sy: number; startH: number };
 
-const PAD = 56;
+const PAD = 40;
 const HANDLES: Handle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
 
 export function Canvas() {
