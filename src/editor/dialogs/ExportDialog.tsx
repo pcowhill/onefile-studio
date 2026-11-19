@@ -132,9 +132,11 @@ export function ExportDialog() {
         <li>
           <b>{stats.interactions}</b> {plural(stats.interactions, 'interaction')}
         </li>
-        <li>
-          <b>{counts.image}</b> {plural(counts.image, 'image')}
-        </li>
+        {(counts.image > 0 || counts.video + counts.audio === 0) && (
+          <li>
+            <b>{counts.image}</b> {plural(counts.image, 'image')}
+          </li>
+        )}
         {counts.video > 0 && (
           <li>
             <b>{counts.video}</b> {plural(counts.video, 'video')}
