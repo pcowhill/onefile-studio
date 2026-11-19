@@ -55,6 +55,10 @@ Editor surfaces: start-screen style picker, the docked theme dialog (live canvas
 
 Video/audio/GIF assets are embedded as base64 `data:` URLs inside the project JSON — exports always contain the real bytes and never blob: URLs. At playback `mediaUrl()` (`runtime/env.ts`) decodes a media asset once, in chunks, into a `Blob` and uses an object URL: large media seeks and plays far more reliably than from a multi-megabyte data URL, and no network/`fetch` is involved (the CSP forbids it). Autoplay honours browser policies: when `play()` is refused the element shows a play button instead of pretending to play. Image optimisation never touches GIFs (animation preserved), video or audio.
 
+Uploading (`io/assets.ts`) normalises MIME types, measures video/audio (with header parsing as a fallback), detects animated GIF/APNG/WebP, and de-duplicates by content hash. Exports are sized without building them twice (`io/exportPlan.ts`: the HTML shell plus exact base64 lengths), and blocked when too large or when an element points at a missing/wrong-kind file.
+
+Drafts (`io/storage.ts`, IndexedDB v2) keep asset payloads in a separate store keyed by a SHA-256 computed locally, so autosave rewrites only the small project record; v1 draft records still load and are converted on their next save.
+
 ## Component events
 
 Interactive components announce events by dispatching bubbling DOM events from their content node (`emit()` in `triggers.ts`); triggers such as `quizCorrect`, `countdownDone` and `mediaEnded` listen on the element wrapper like `click` does, and declare `forTypes` so the editor only offers them where they make sense. Element APIs (`play`, `pause`, `restart`, `reset`…) are reached by actions through `PlayerControl.api()`; `clearState()` resets per-session state (e.g. a quiz answer) even for elements on other slides.

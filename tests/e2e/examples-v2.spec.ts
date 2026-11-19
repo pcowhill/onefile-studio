@@ -121,3 +121,59 @@ test('Example: event announcement (countdown, animated GIF, table, scrolling)', 
   await importIntoStudio(page, file);
   expect(normalise(await studioProject(page))).toEqual(normalise(embeddedProject(file)));
 });
+
+test('Example: feature release walkthrough (video, chart, table, reveals)', async ({ page, browser }) => {
+  await openExample(page, 'release');
+  await expect(page.getByTestId('theme-button')).toContainText('Professional');
+  const before = await studioProject(page);
+  const file = await exportProject(page, 'release.html');
+  expect(normalise(embeddedProject(file))).toEqual(normalise(before));
+  const html = (await import('node:fs')).readFileSync(file, 'utf8');
+  expect(html).toContain('data:video/webm;base64,');
+  expect(html).not.toMatch(/"blob:/);
+
+  const ex = await openExported(browser, file);
+  const p = ex.page;
+  await expect(p.locator('.ofs-nav-count')).toHaveText('1 / 5');
+  await expectImagesLoaded(p);
+  await el(p, 'el_r_start').locator('button').click();
+  // The embedded video really plays (muted autoplay) and the action buttons control it.
+  const video = el(p, 'el_r_video').locator('video');
+  await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.readyState)).toBeGreaterThanOrEqual(2);
+  expect(await video.evaluate((v: HTMLVideoElement) => v.duration)).toBeGreaterThan(5);
+  await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime)).toBeGreaterThan(0.3);
+  await el(p, 'el_r_pause').locator('button').click();
+  await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.paused)).toBe(true);
+  await el(p, 'el_r_replay').locator('button').click();
+  await expect.poll(() => video.evaluate((v: HTMLVideoElement) => !v.paused && v.currentTime < 2)).toBe(true);
+  // Chart: hover shows an exact value.
+  await p.keyboard.press('ArrowRight');
+  await expect(p.locator('.ofs-nav-count')).toHaveText('3 / 5');
+  const chart = el(p, 'el_r_chart');
+  await expect(chart.locator('.ofs-chart-bar')).toHaveCount(8);
+  await chart.locator('.ofs-chart-hit').last().hover();
+  await expect(chart.locator('.ofs-chart-tip')).toContainText('ms');
+  // Table: sorting by a column.
+  await p.keyboard.press('ArrowRight');
+  const table = el(p, 'el_r_table');
+  const firstCell = () => table.locator('tbody tr').first().locator('td').first().textContent();
+  expect(await firstCell()).toBe('Board load (1,000 tasks)');
+  await table.locator('th .ofs-table-sort').first().click();
+  await expect.poll(firstCell).toBe('Board load (1,000 tasks)');
+  await table.locator('th .ofs-table-sort').first().click();
+  await expect.poll(firstCell).toBe('Open accessibility issues');
+  // Reveal interactions on the last slide.
+  await p.keyboard.press('ArrowRight');
+  await expect(el(p, 'el_r_cardd1')).toBeHidden();
+  await el(p, 'el_r_cardbtn1').locator('button').click();
+  await expect(el(p, 'el_r_cardd1')).toBeVisible();
+  await el(p, 'el_r_restart').locator('button').click();
+  await expect(p.locator('.ofs-nav-count')).toHaveText('1 / 5');
+  expect(ex.requests).toEqual([]);
+  expect(ex.errors).toEqual([]);
+  await ex.close();
+
+  await importIntoStudio(page, file);
+  const after = await studioProject(page);
+  expect(normalise(after)).toEqual(normalise(embeddedProject(file)));
+});

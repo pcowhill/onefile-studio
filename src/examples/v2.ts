@@ -154,9 +154,9 @@ export function featureRelease(): Project {
         interactions: [ix('ix_r_pause', 'click', [['mediaPause', { target: 'el_r_video' }]])],
       },
     ),
-    el('video', 'el_r_video', 'Product tour', [550, 150, 650, 400], undefined, {
+    el('video', 'el_r_video', 'Product tour', [550, 156, 650, 366], undefined, {
       assetId: video.id,
-      frame: 'browser',
+      frame: 'border',
       alt: 'Tasklane — Sprint board',
       autoplay: true,
       muted: true,

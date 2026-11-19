@@ -228,6 +228,13 @@ export const tableDef: RuntimeElementDef<TableProps> = {
               applySort();
             });
           }
+          if (play) {
+            // The whole header cell is a click target (the button stays the keyboard target).
+            th.classList.add('ofs-table-th-sortable');
+            th.addEventListener('click', (e) => {
+              if (e.target === th) (inner as HTMLButtonElement).click();
+            });
+          }
           if (colAlign[c] === 'right') inner.classList.add('ofs-table-sort-end');
           inner.appendChild(label);
           inner.appendChild(ind);
@@ -283,6 +290,7 @@ export const tableDef: RuntimeElementDef<TableProps> = {
 .ofs-table-sort{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;gap:.45em;max-width:100%;cursor:pointer;border-radius:6px;font:inherit;color:inherit;letter-spacing:inherit}
 span.ofs-table-sort{cursor:default}
 .ofs-table-sort-end{flex-direction:row-reverse}
+.ofs-table-th-sortable{cursor:pointer}
 .ofs-table-sort:focus-visible{outline:2px solid currentColor;outline-offset:3px}
 .ofs-table-th-label{overflow:hidden;text-overflow:ellipsis}
 .ofs-table-sort-ind{flex:none;opacity:.55;transition:opacity .15s}
