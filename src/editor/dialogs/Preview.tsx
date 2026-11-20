@@ -4,6 +4,7 @@ import { createPlayer } from '../../runtime/player';
 import type { Player } from '../../runtime/player';
 import { useEditor, editor } from '../store/store';
 import { Icon } from '../ui/Icon';
+import { toast } from '../ui/toast';
 
 /** Preview runs the real playback engine — the same code embedded in exports. */
 export function Preview() {
@@ -22,7 +23,16 @@ export function Preview() {
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
-    const player = createPlayer(host, project, { startPage: startIndex, onPageChange: setPage });
+    const player = createPlayer(host, project, {
+      startPage: startIndex,
+      onPageChange: setPage,
+      // Links never navigate the editor itself away: Preview always uses a new tab.
+      openLink(href, newTab) {
+        if (/^(mailto|tel):/.test(href)) return window.location.assign(href);
+        window.open(href, '_blank', 'noopener,noreferrer');
+        if (!newTab) toast('In the exported file this link opens in the same tab. Preview opened it in a new one so your work stays open.', 'info', 5000);
+      },
+    });
     playerRef.current = player;
     setPage(player.currentPage());
     setVars(player.vars.snapshot());
