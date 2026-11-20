@@ -20,7 +20,10 @@ export function normalizeLink(raw: unknown): string | null {
   const s = raw.trim();
   if (!s || s.length > MAX_URL) return null;
   // Control characters (incl. tabs/newlines browsers would strip to hide a scheme) are never valid.
-  if (/[\u0000-\u001f\u007f]/.test(s)) return null;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c < 0x20 || c === 0x7f) return null;
+  }
   let candidate = s;
   const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(s);
   if (s.startsWith('//')) candidate = `https:${s}`;

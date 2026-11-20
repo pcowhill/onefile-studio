@@ -238,6 +238,7 @@ export const triggerUi = (id: string) => TRIGGERS.find((t) => t.id === id);
 /** Triggers that make sense for an element type (or, with '@page', for a slide/section). */
 export function triggersFor(type: string): TriggerUi[] {
   if (type === '@page') return TRIGGERS.filter((t) => t.owners?.includes('page'));
+  if (type === '@project') return TRIGGERS.filter((t) => t.owners?.includes('project'));
   return TRIGGERS.filter((t) => (t.owners ?? ['element']).includes('element') && (!t.forTypes || t.forTypes.includes(type)));
 }
 

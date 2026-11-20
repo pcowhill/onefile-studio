@@ -1,7 +1,7 @@
 import { useEditor, editor, selectedElements } from '../store/store';
 import { Icon } from '../ui/Icon';
 import { DesignPanel, PageSettings } from './DesignPanel';
-import { BehaviorPanel } from '../behavior/BehaviorPanel';
+import { BehaviorPanel, PageBehaviorPanel } from '../behavior/BehaviorPanel';
 import { EDITOR_ELEMENTS } from '../catalog';
 import { updateElement } from '../ops';
 import { useShallow } from 'zustand/react/shallow';
@@ -10,6 +10,10 @@ export function Inspector() {
   const els = useEditor(useShallow((s) => selectedElements(s)));
   const tab = useEditor((s) => s.inspectorTab);
   const kind = useEditor((s) => s.project?.kind);
+  const pageIxCount = useEditor((s) => {
+    const pg = s.project?.pages.find((p) => p.id === s.pageId);
+    return (pg?.interactions?.length ?? 0) + (s.project?.interactions?.length ?? 0);
+  });
   if (!els.length) {
     return (
       <aside className="ed-right" aria-label="Properties">
@@ -22,8 +26,9 @@ export function Inspector() {
             <small>Select an element to edit it</small>
           </div>
         </div>
-        <div className="ed-insp-scroll">
-          <PageSettings />
+        <InspectorTabs tab={tab} badge={pageIxCount} />
+        <div className="ed-insp-scroll" key="page">
+          {tab === 'behavior' ? <PageBehaviorPanel /> : <PageSettings />}
         </div>
       </aside>
     );
@@ -50,32 +55,36 @@ export function Inspector() {
           <small>{single ? def?.label : 'Multiple selection'}</small>
         </div>
       </div>
-      {single && (
-        <div className="ed-tabs" role="tablist">
-          <button
-            role="tab"
-            aria-selected={tab === 'design'}
-            className={tab === 'design' ? 'is-on' : ''}
-            onClick={() => editor().set({ inspectorTab: 'design' })}
-            data-testid="tab-design"
-          >
-            <Icon name="palette" size={16} /> Design
-          </button>
-          <button
-            role="tab"
-            aria-selected={tab === 'behavior'}
-            className={tab === 'behavior' ? 'is-on' : ''}
-            onClick={() => editor().set({ inspectorTab: 'behavior' })}
-            data-testid="tab-behavior"
-          >
-            <Icon name="bolt" size={16} /> Behavior
-            {single.interactions.length > 0 && <span className="ed-tab-badge">{single.interactions.length}</span>}
-          </button>
-        </div>
-      )}
+      {single && <InspectorTabs tab={tab} badge={single.interactions.length} />}
       <div className="ed-insp-scroll" key={single?.id ?? 'multi'}>
         {single && tab === 'behavior' ? <BehaviorPanel el={single} /> : <DesignPanel els={els} />}
       </div>
     </aside>
+  );
+}
+
+function InspectorTabs({ tab, badge }: { tab: 'design' | 'behavior'; badge: number }) {
+  return (
+    <div className="ed-tabs" role="tablist">
+      <button
+        role="tab"
+        aria-selected={tab === 'design'}
+        className={tab === 'design' ? 'is-on' : ''}
+        onClick={() => editor().set({ inspectorTab: 'design' })}
+        data-testid="tab-design"
+      >
+        <Icon name="palette" size={16} /> Design
+      </button>
+      <button
+        role="tab"
+        aria-selected={tab === 'behavior'}
+        className={tab === 'behavior' ? 'is-on' : ''}
+        onClick={() => editor().set({ inspectorTab: 'behavior' })}
+        data-testid="tab-behavior"
+      >
+        <Icon name="bolt" size={16} /> Behavior
+        {badge > 0 && <span className="ed-tab-badge">{badge}</span>}
+      </button>
+    </div>
   );
 }
