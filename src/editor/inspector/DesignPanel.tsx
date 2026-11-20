@@ -41,6 +41,7 @@ import { ChartEditor } from './editors/ChartEditor';
 import { TableEditor } from './editors/TableEditor';
 import { CountdownEditor } from './editors/CountdownEditor';
 import { QuizEditor } from './editors/QuizEditor';
+import { QuickClick } from '../behavior/QuickClick';
 
 export function DesignPanel({ els }: { els: SceneElement[] }) {
   const project = useEditor((s) => s.project)!;
@@ -526,15 +527,14 @@ function ButtonLook({ el, set }: P<ButtonProps>) {
 
 function ButtonEditor(props: P<ButtonProps>) {
   return (
-    <Section title="Button" icon="button">
-      <ButtonLook {...props} />
-      <button
-        className="ed-btn ed-btn-soft ed-btn-block"
-        onClick={() => editor().set({ inspectorTab: 'behavior', triggerPickerFor: props.el.interactions.length ? null : props.el.id })}
-      >
-        <Icon name="bolt" size={16} /> {props.el.interactions.length ? 'Edit what it does' : 'Make it do something'}
-      </button>
-    </Section>
+    <>
+      <Section title="When clicked" icon="bolt">
+        <QuickClick el={props.el as unknown as SceneElement} project={props.project} />
+      </Section>
+      <Section title="Button" icon="button">
+        <ButtonLook {...props} />
+      </Section>
+    </>
   );
 }
 

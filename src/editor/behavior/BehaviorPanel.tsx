@@ -31,6 +31,7 @@ import { EDITOR_ELEMENTS } from '../catalog';
 import { pageTargetOptions } from '../inspector/DesignPanel';
 import { playAnimation } from '../../runtime/animations';
 import { Modal } from '../ui/Modal';
+import '../../styles/behavior.css';
 
 export function BehaviorPanel({ el }: { el: SceneElement }) {
   const project = useEditor((s) => s.project)!;
@@ -761,7 +762,7 @@ function ActionRow({
 }
 
 /** "Open <url> in a new tab", with friendly validation and an optional description for screen readers. */
-function LinkEditor({ params, onParams }: { params: Record<string, ParamValue>; onParams(patch: Record<string, ParamValue>, merge?: string): void }) {
+export function LinkEditor({ params, onParams }: { params: Record<string, ParamValue>; onParams(patch: Record<string, ParamValue>, merge?: string): void }) {
   const url = String(params.url ?? '');
   const [touched, setTouched] = useState(!!url);
   const problem = linkProblem(url);
