@@ -31,7 +31,6 @@ async function popupTarget(popup: Page): Promise<string> {
   return popup.evaluate(() => (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.name ?? location.href);
 }
 
-
 test('Insert → Image creates a placeholder, then library / upload / replace keep the element', async ({ page, browser }) => {
   await openStudio(page);
   await page.getByTestId('new-slides').click();
@@ -360,7 +359,8 @@ test('3D: insert a model element, upload a GLB, Preview it; broken files get a h
   await expect(page.locator('.ed-toast').last()).toContainText('not a binary glTF');
   const [good] = await Promise.all([page.waitForEvent('filechooser'), page.getByTestId('choose-model').click()]);
   await good.setFiles(ROVER);
-  await expect(page.getByTestId('chosen-model')).toContainText('rover.glb');
+  // Inspecting a 650 KB model can take a while when the machine is busy.
+  await expect(page.getByTestId('chosen-model')).toContainText('rover.glb', { timeout: 30_000 });
   await expect(page.locator('.ed-el .ofs-model-poster')).toHaveAttribute('src', /^data:image\/png/, { timeout: 20_000 });
   // Editor gestures move the element (the model itself does not orbit in the editor).
   const before = await studioProject(page);

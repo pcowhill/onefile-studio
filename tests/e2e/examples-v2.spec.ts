@@ -103,10 +103,15 @@ test('Example: event announcement (countdown, animated GIF, table, scrolling)', 
   const cd = el(p, 'el_e_countdown');
   await cd.scrollIntoViewIfNeeded();
   const read = () => cd.locator('.ofs-countdown-value').allTextContents();
-  const first = await read();
-  expect(first.length).toBe(4);
-  expect(Number(first[0])).toBeLessThanOrEqual(7);
-  await expect.poll(read, { timeout: 4000 }).not.toEqual(first);
+  // Fridays 5:30–9 pm (the example's weekly "doors open" hold) the countdown shows its message instead.
+  if (await cd.locator('.ofs-countdown-is-done').count()) {
+    await expect(cd).toContainText('Doors are open');
+  } else {
+    const first = await read();
+    expect(first.length).toBe(4);
+    expect(Number(first[0])).toBeLessThanOrEqual(7);
+    await expect.poll(read, { timeout: 4000 }).not.toEqual(first);
+  }
   // Navigation button scrolls down; RSVP interaction reveals the thanks.
   await el(p, 'el_e_go').locator('button').click();
   await expect.poll(() => p.locator('.ofs-player').evaluate((n) => n.scrollTop)).toBeGreaterThan(300);

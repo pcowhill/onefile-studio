@@ -11,7 +11,7 @@ import { installModel3dLoader } from './editor/model3d';
 ensureRuntimeStyles(document);
 installModel3dLoader();
 // Read-only hook used by the end-to-end tests to inspect the open project.
-(window as unknown as { __ofsStudio: unknown }).__ofsStudio = { project: () => useEditor.getState().project };
+(window as unknown as { __ofsStudio: unknown }).__ofsStudio = { project: () => useEditor.getState().project, selection: () => useEditor.getState().selection };
 ensureEditorFonts(document);
 
 createRoot(document.getElementById('root')!).render(

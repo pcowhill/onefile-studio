@@ -627,28 +627,28 @@ export function technicalExplainerTemplate(theme: ThemeId = 'technical'): Projec
     '4. The database returns the data; the answer travels back the same way.',
   ];
   const stepIs = (n: number): Interaction['conditions'] => [{ id: `cd_tx_step${n}`, type: 'variable', variableId: 'var_tx_step', op: 'eq', value: n }];
-  const advance = (prefix: string): Interaction[] => [
-    ...stepTexts.map((_, n) =>
-      ix(
-        `${prefix}_s${n}`,
-        prefix.includes('key') ? 'key' : 'click',
-        [
-          ['show', { target: `el_tx_step${n}`, effect: 'slide' }],
-          ['animate', { target: `el_tx_snode${n}`, preset: 'bounce' }],
-        ],
-        stepIs(n),
-      ),
-    ),
-    ix(
-      `${prefix}_add`,
-      prefix.includes('key') ? 'key' : 'click',
-      [['varAdd', { variable: 'var_tx_step', amount: 1 }]],
-      [{ id: `cd_${prefix}_max`, type: 'variable', variableId: 'var_tx_step', op: 'lt', value: stepTexts.length }],
-    ),
-  ];
+  // One rule per step, newest first. Every action is instant (the animations
+  // are not waited for), so each press completes at once and quick repeated
+  // presses — or Restart in between — can never skip or repeat a step.
+  const advance = (prefix: string): Interaction[] =>
+    stepTexts
+      .map((_, n) =>
+        ix(
+          `${prefix}_s${n}`,
+          prefix.includes('key') ? 'key' : 'click',
+          [
+            ['varAdd', { variable: 'var_tx_step', amount: 1 }],
+            ['show', { target: `el_tx_step${n}`, effect: 'none' }],
+            ['animate', { target: `el_tx_step${n}`, preset: 'pop' }],
+            ['animate', { target: `el_tx_snode${n}`, preset: 'bounce' }],
+          ],
+          stepIs(n),
+        ),
+      )
+      .reverse();
   const reset: Array<[string, Props]> = [
     ['varReset', { variable: 'var_tx_step' }],
-    ...stepTexts.map((_, n): [string, Props] => ['hide', { target: `el_tx_step${n}`, effect: 'fade' }]),
+    ...stepTexts.map((_, n): [string, Props] => ['hide', { target: `el_tx_step${n}`, effect: 'none' }]),
   ];
   const s3 = page('pg_tx3', 'Step by step', 'base', [
     ...heading(3, 'STEP BY STEP', 'Follow one request'),

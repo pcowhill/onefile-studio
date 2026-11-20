@@ -165,6 +165,10 @@ A model asset is a binary glTF 2.0 file embedded as `data:model/gltf-binary;base
 
 `SCHEMA_VERSION` lives in `src/model/types.ts`. When the format changes incompatibly: bump it, add a step to `migrate()` in `validate.ts` that upgrades the previous version, and add a fixture test. Files with a newer version than the editor understands are refused with a clear message.
 
+### v0.5 (no schema change)
+
+v0.5 adds templates and lessons without changing the format: templates are ordinary v4 projects (see *Templates* in [ARCHITECTURE.md](ARCHITECTURE.md)), and the quick-start guide and lesson state live only in the editor (lesson progress in `localStorage`), never in project files. v0.4 editors open v0.5 exports, and every older file opens unchanged.
+
 ### v3 → v4
 
 Additive only: page/project `interactions`, `interaction.options`, the `key`/`pageStart`/`pageTimer` triggers, the `openLink`/`modelView`/`modelSpin` actions, `floaty`/`weighted` drag modes with `amount`/`settle`, GLB assets and the `model` element. v3 files need no changes and look identical. v0.3 editors refuse v4 exports with the "newer version" message; the exported files themselves keep working anywhere.

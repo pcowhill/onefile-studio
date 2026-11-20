@@ -86,3 +86,27 @@ describe('v0.5 fix: first slide thumbnail outline', () => {
     expect(padTop).toBeGreaterThanOrEqual(marker);
   });
 });
+
+describe('v0.5: focus never stays on a slide that is leaving', () => {
+  it('moves focus to the player when the slide holding it is replaced', async () => {
+    const p = createProject('slides');
+    p.settings.transition = 'fade';
+    p.pages[0].elements = [createElement('button', { id: 'el_b', props: { label: 'Go' } })];
+    p.pages.push({ ...p.pages[0], id: 'pg_2', elements: [] });
+    const { q, player } = mountPlayer(p);
+    const btn = q('el_b')!.querySelector('button')!;
+    btn.focus();
+    expect(document.activeElement).toBe(btn);
+    player.goTo('next');
+    await tick();
+    expect(document.activeElement).toBe(player.root);
+    player.destroy();
+  });
+});
+
+describe('v0.5: the tutorial engine is editor-only', () => {
+  it('the exported runtime contains no coach, lesson or template code', async () => {
+    const { default: runtime } = await import('virtual:ofs-runtime');
+    for (const s of ['Quick start', 'Practice —', 'Customize your', 'coach-', 'Learn by doing']) expect(runtime).not.toContain(s);
+  });
+});

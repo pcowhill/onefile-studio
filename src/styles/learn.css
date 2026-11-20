@@ -758,3 +758,13 @@
   font-size: 12.5px;
   white-space: nowrap;
 }
+
+/* Phone widths: the start screen's style picker wraps instead of running off-screen. */
+@media (max-width: 760px) {
+  .st-themes .ed-theme-grid.is-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .st-themes .ed-theme-card {
+    min-width: 0;
+  }
+}

@@ -129,15 +129,8 @@ export const LESSONS: Lesson[] = [
       {
         id: 'when',
         title: 'Choose what happens',
-        body: 'With the button selected, find “When clicked” in the Design panel and choose “Show an element”.',
-        control: '[data-testid="quick-click"]',
-        done: (c) => hasAction(interactions(c.project), 'show') || hasAction(interactions(c.project), 'toggle'),
-      },
-      {
-        id: 'target',
-        title: 'Pick the secret',
-        body: 'Choose “Secret message” as the element to show. (In the Behavior tab you can add more actions later.)',
-        control: '[data-testid="tab-behavior"]',
+        body: 'With the button selected, find “When clicked” in the Design panel and choose “Show an element”. The hidden Secret message is picked for you.',
+        control: '[data-testid="quick-show"]',
         done: (c) =>
           hasAction(interactions(c.project), 'show', (a) => a.target === 'el_l2_secret') ||
           hasAction(interactions(c.project), 'toggle', (a) => a.target === 'el_l2_secret'),
@@ -213,13 +206,13 @@ export const LESSONS: Lesson[] = [
       {
         id: 'choose',
         title: 'Choose a picture',
-        body: 'In the Design panel choose Library and pick a sample picture — or upload your own.',
+        body: 'In the Design panel, pick a sample picture under “From this project” — or upload your own.',
         done: (c) => ofType(c.project, 'image').some((e) => !!props(e).assetId && c.project.assets[String(props(e).assetId)]),
       },
       {
         id: 'replace',
         title: 'Replace it',
-        body: 'Pick a different picture for the same element. Its size, style and interactions stay as they are.',
+        body: 'Click Library in the Design panel and pick a different picture. The element keeps its size, style and interactions.',
         done: (c) =>
           ofType(c.project, 'image').some((e) => {
             const b = before(c, e.id);
@@ -310,7 +303,7 @@ export const LESSONS: Lesson[] = [
       {
         id: 'create',
         title: 'Create a variable',
-        body: 'Open Variables (left) and click “Add variable”. Name it Clicks.',
+        body: 'Open Variables (left) and add a variable. Name it Clicks.',
         control: '[data-testid="tab-variables"], [data-testid="add-variable"]',
         done: (c) => c.project.variables.length > c.stepStart.variables.length,
       },
@@ -330,7 +323,7 @@ export const LESSONS: Lesson[] = [
       {
         id: 'progress',
         title: 'Fill a progress bar',
-        body: 'Insert a Progress bar, set “Follows” to your variable and pick a maximum such as 10.',
+        body: 'Insert a Progress bar. In its Design panel set “Shows” to “A variable”, pick yours and choose when it is full (e.g. 10).',
         control: '[data-testid="tab-insert"], [data-testid="insert-progress"]',
         done: (c) => ofType(c.project, 'progress').some((e) => props(e).source === 'variable' && !!props(e).variableId),
       },
@@ -427,7 +420,7 @@ export const LESSONS: Lesson[] = [
       {
         id: 'choose',
         title: 'Pick the sample rover',
-        body: 'In the Design panel choose “From project” and pick the rover (or upload your own GLB file).',
+        body: 'In the Design panel click Library and pick the sample rover (or upload your own .glb file).',
         done: (c) => ofType(c.project, 'model').some((e) => !!props(e).assetId),
       },
       {
