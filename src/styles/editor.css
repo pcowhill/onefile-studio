@@ -80,6 +80,9 @@ kbd {
 }
 
 /* ---------- buttons ---------- */
+a.ed-btn {
+  text-decoration: none;
+}
 .ed-btn {
   display: inline-flex;
   align-items: center;

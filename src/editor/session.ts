@@ -8,6 +8,7 @@ import { editor, useEditor } from './store/store';
 import { toast } from './ui/toast';
 import { EXAMPLES } from '../examples';
 import { coachEvent } from './learn/coach';
+import { buildShowcase, getShowcase } from '../showcase';
 
 const LAST_KEY = 'ofs:last-project';
 
@@ -50,6 +51,24 @@ export function openExample(id: string) {
   p.id = uid('prj');
   open(p);
   toast(`Opened “${ex.title}”. It's a normal project — change anything you like.`, 'info');
+}
+
+/**
+ * Opens an independent, editable copy of a landing-page showcase (v0.6,
+ * `studio/?open=<id>`). Like an example: a fresh project id every time, so the
+ * showcase itself never changes and earlier copies stay separate drafts.
+ */
+export function openShowcase(id: string): boolean {
+  const meta = getShowcase(id);
+  const p = buildShowcase(id);
+  if (!meta || !p) {
+    toast('That showcase could not be found. Pick an example or a template below.', 'error', 6000);
+    return false;
+  }
+  p.id = uid('prj');
+  open(p);
+  toast(`Opened your own copy of “${meta.title}”. Change anything you like — it's saved as a draft in this browser.`, 'info', 6000);
+  return true;
 }
 
 export async function openDraft(id: string) {
