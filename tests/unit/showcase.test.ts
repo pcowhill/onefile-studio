@@ -18,7 +18,10 @@ describe('showcase registry', () => {
     expect(new Set(SHOWCASES.map((s) => s.file)).size).toBe(6);
     for (const s of SHOWCASES) {
       expect(s.id).toMatch(/^[a-z0-9-]+$/);
-      expect(EXAMPLES.some((e) => e.id === s.example), s.id).toBe(true);
+      expect(
+        EXAMPLES.some((e) => e.id === s.example),
+        s.id,
+      ).toBe(true);
       expect(s.file).toMatch(/^[A-Za-z0-9.-]+\.html$/);
       expect(s.description.length).toBeLessThan(140);
       expect(getShowcase(s.id)).toBe(s);
@@ -36,6 +39,8 @@ describe('showcase registry', () => {
         if (!r.ok) return;
         expect(r.warnings).toEqual([]);
         expect(p.kind).toBe(s.format);
+        // The card's title is (the start of) the project's own title.
+        expect(p.meta.title).toContain(s.title);
         expect(findAssetIssues(p)).toEqual({ problems: [], empty: [] });
       });
 

@@ -36,10 +36,11 @@ export interface OpenedExport {
  * Opens an exported file in a brand-new, OFFLINE browser context straight from
  * disk (file://) and records every network request and script error.
  */
-export async function openExported(browser: Browser, file: string): Promise<OpenedExport> {
+export async function openExported(browser: Browser, file: string, opts: { setup?(page: Page): Promise<void> } = {}): Promise<OpenedExport> {
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   await context.setOffline(true);
   const page = await context.newPage();
+  await opts.setup?.(page);
   const requests: string[] = [];
   const errors: string[] = [];
   page.on('request', (r) => {
