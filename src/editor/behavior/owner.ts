@@ -24,5 +24,6 @@ export function elementOwner(project: Project, el: SceneElement): IxOwner {
 export function pageOwner(project: Project, page: Page): IxOwner {
   const i = project.pages.indexOf(page);
   const noun = project.kind === 'slides' ? 'slide' : 'section';
-  return { kind: 'page', selfId: '', name: `${noun} ${i + 1}${page.name ? ` (${page.name})` : ''}`, type: '@page', pageId: page.id };
+  const generic = !page.name || /^(slide|section) \d+$/i.test(page.name.trim());
+  return { kind: 'page', selfId: '', name: generic ? `${noun} ${i + 1}` : `${noun} ${i + 1} (${page.name})`, type: '@page', pageId: page.id };
 }

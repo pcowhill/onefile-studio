@@ -215,7 +215,8 @@ function buildStage(renderer: WebGLRenderer, model: Object3D, opts: ModelViewOpt
 function fitDistance(radius: number, aspect: number): number {
   const v = (FOV * DEG) / 2;
   const h = Math.atan(Math.tan(v) * Math.max(0.2, aspect));
-  return (radius / Math.sin(Math.min(v, h))) * 1.08;
+  // A bounding sphere overestimates most models, so come in a little closer than an exact fit.
+  return (radius / Math.sin(Math.min(v, h))) * 0.9;
 }
 
 function placeCamera(camera: PerspectiveCamera, target: Vector3, dist: number, yaw: number, pitch: number) {
