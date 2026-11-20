@@ -1,5 +1,5 @@
 /**
- * OneFile Studio project model (schema version 2).
+ * OneFile Studio project model (schema version 3).
  *
  * Everything an experience needs — pages, elements, interactions, variables and
  * embedded assets — lives in a single JSON-serialisable `Project` object. The
@@ -7,8 +7,10 @@
  * embedded verbatim in every exported HTML file.
  */
 
+import type { MediaEdit } from './mediaEdit';
+
 export const SCHEMA_ID = 'onefile-studio/project';
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /** Built-in project themes (see src/model/theme). */
 export type ThemeId = 'playful' | 'professional' | 'technical' | 'editorial';
@@ -174,6 +176,12 @@ export interface Asset {
   duration?: number;
   /** True for animated GIFs (never re-encoded by optimisation). */
   animated?: boolean;
+  /**
+   * The media library's nondestructive edit of this file (v3): crop/rotate/flip
+   * for images, crop/trim for videos, trim for sounds. The bytes in `data` are
+   * always the untouched original. See src/model/mediaEdit.ts.
+   */
+  edit?: MediaEdit;
 }
 
 export type AssetKind = 'image' | 'video' | 'audio';

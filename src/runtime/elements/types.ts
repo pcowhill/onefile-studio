@@ -18,6 +18,8 @@ export interface ElementApi {
   play?(): void;
   pause?(): void;
   restart?(): void;
+  /** Media: play when paused, pause when playing (v3). */
+  toggle?(): void;
 }
 
 export interface RenderResult {

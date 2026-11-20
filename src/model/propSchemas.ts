@@ -1,6 +1,7 @@
 import type { AssetKind, Project } from './types';
 import { assetKind } from './types';
 import { isSafeColor } from './paint';
+import { sanitizeEdit } from './mediaEdit';
 
 /**
  * Validation for structured element props (arrays, nested records, references)
@@ -103,8 +104,20 @@ const range =
     return int ? Math.round(c) : c;
   };
 
+/**
+ * An element's own media edit (v3): null follows the media library's version,
+ * an object (even empty = "the original") overrides it for this element.
+ */
+const mediaEdit =
+  (kind: AssetKind): Sanitizer =>
+  (v) =>
+    typeof v === 'object' && v !== null && !Array.isArray(v) ? sanitizeEdit(v, kind) : null;
+
 /** Structured props per element type. */
 export const PROP_SANITIZERS: Record<string, Record<string, Sanitizer>> = {
+  image: { edit: mediaEdit('image') },
+  video: { edit: mediaEdit('video') },
+  audio: { edit: mediaEdit('audio') },
   progress: { variableId: variableRef },
   chart: {
     labels: stringList(MAX_CHART_POINTS, 60),

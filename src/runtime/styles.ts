@@ -1,3 +1,4 @@
+import { EDITED_IMAGE_CSS } from './elements/editedImage';
 import { elementRegistry } from './elements';
 
 /** Playback stylesheet. Shared verbatim by the editor canvas, Preview and exported files. */
@@ -122,6 +123,8 @@ const BASE_CSS = `
 /** Base styles plus each registered element type's own CSS. */
 export const RUNTIME_CSS =
   BASE_CSS +
+  EDITED_IMAGE_CSS +
+  '\n' +
   elementRegistry
     .all()
     .map((d) => d.css ?? '')

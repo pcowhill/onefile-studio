@@ -1,5 +1,6 @@
 import type { Action, AnimationRef, Asset, Background, Condition, Interaction, Page, Paint, Project, SceneElement, Variable } from './types';
-import { SCHEMA_ID, SCHEMA_VERSION, SELF_TARGET } from './types';
+import { assetKind, SCHEMA_ID, SCHEMA_VERSION, SELF_TARGET } from './types';
+import { isIdentity, sanitizeEdit } from './mediaEdit';
 import { SAFE_ID, uid } from './ids';
 import { isSafeColor } from './paint';
 import { elementRegistry } from '../runtime/elements';
@@ -129,6 +130,10 @@ export function validateProject(raw: unknown): ValidationResult {
         const duration = finite(a.duration, 0, 0, 1e7);
         if (duration > 0) asset.duration = duration;
         if (a.animated === true) asset.animated = true;
+        if (isObj(a.edit)) {
+          const edit = sanitizeEdit(a.edit, assetKind(asset.mime), asset.duration);
+          if (!isIdentity(edit)) asset.edit = edit;
+        }
         project.assets[key] = asset;
       }
     }
@@ -203,6 +208,10 @@ export function validateProject(raw: unknown): ValidationResult {
  * v1 → v2: adds the project theme. v1 projects become "playful" (the original
  * look) and every element/background keeps its stored values as explicit
  * author choices (no `themed` keys), so nothing changes appearance.
+ *
+ * v2 → v3: adds nondestructive media edits (`asset.edit`, and an `edit` prop on
+ * image, video and audio elements). Older files simply have none: elements get
+ * `edit: null` (follow the library version) from the registry defaults.
  */
 export function migrate(raw: Record<string, unknown>, version: number): Record<string, unknown> {
   let out = raw;
@@ -210,6 +219,7 @@ export function migrate(raw: Record<string, unknown>, version: number): Record<s
     const settings = isObj(out.settings) ? out.settings : {};
     out = { ...out, version: 2, settings: { ...settings, theme: DEFAULT_THEME, backdropThemed: false } };
   }
+  if (Number(out.version) < 3) out = { ...out, version: 3 };
   return out;
 }
 
