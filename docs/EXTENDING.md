@@ -28,16 +28,19 @@ Every extensible concept is a pair: a **runtime definition** (behaviour, bundled
 
 1. Register a `TriggerDef` in `src/runtime/triggers.ts`:
    ```ts
-   triggerRegistry.register({ id: 'longpress', bind(node, fire) { /* add listeners */ return () => { /* remove */ }; } });
+   triggerRegistry.register({ id: 'longpress', bind(node, fire, ctx) { /* add listeners */ return () => { /* remove */ }; } });
    ```
-   Triggers bound to elements receive the element wrapper node. For component events, have the element call `emit(node, 'ofs-my-event', detail)` and register a trigger that listens for it with `forTypes: ['myThing']`. Project-level triggers (timers, variable changes, keys) would be bound once in `player.ts` — add a small hook there when the first one is needed.
-2. Add a `TriggerUi` entry to `TRIGGERS` in `src/editor/behavior/catalog.tsx` with a label, sentence, category (`mouse`, `keyboard`, `timing`, `state`, `component` — each has a colour) and an SVG illustration. Mark it `primary` to show it prominently; otherwise it appears under “More”. Set `forTypes` for component triggers (they are then shown first for that element type only). Only list triggers that actually work.
+   Triggers bound to elements receive the element wrapper node (pages: the slide/section node; project: the player root). For component events, have the element call `emit(node, 'ofs-my-event', detail)` and register a trigger that listens for it with `forTypes: ['myThing']`.
+   - `owners` (default `['element']`) says who may own it: add `'page'` / `'project'` for slide-level or project-wide triggers. The validator and the editor read it.
+   - `options(raw)` sanitises trigger settings (stored in `interaction.options`); `ctx.options` has the clean values at bind time.
+   - `ctx.onKey(spec, fire)` dispatches keys while the owner is active; `ctx.onEnter(fn)` / `ctx.onLeave(fn)` follow the owner's page becoming (and stopping being) the current one — see `key`, `pageStart` and `pageTimer`.
+2. Add a `TriggerUi` entry to `TRIGGERS` in `src/editor/behavior/catalog.tsx` with a label, sentence, category (`mouse`, `keyboard`, `timing`, `state`, `component` — each has a colour) and an SVG illustration. Mark it `primary` to show it prominently; otherwise it appears under “More”. Set `forTypes` for component triggers (they are then shown first for that element type only) and the same `owners` as the runtime. `standalone: true` for sentences that do not start with the element's name, and `{page}` in texts becomes "slide"/"section". Trigger settings get their UI in `InteractionCard` (`BehaviorPanel.tsx`; e.g. `KeyPicker`) and their wording in `triggerSentence`. Only list triggers that actually work.
 
 ## Add an action
 
 1. Register an `ActionDef` in `src/runtime/actions.ts`. `execute(params, ctx)` gets the `PlayerControl` (vars, visibility, navigation, element APIs, animation) and may return a Promise to delay the next action.
 2. Add an `ActionUi` to `ACTIONS` in `src/editor/behavior/catalog.tsx` (category, icon, default params, optional `unavailable()` reason) and a sentence editor case in `ActionRow` (`BehaviorPanel.tsx`), plus a summary in `actionSummary`.
-3. If params reference elements or variables, name them `target` / `variable` so validation clears dangling references.
+3. If params reference elements or variables, name them `target` / `variable` so validation clears dangling references. Params that need stricter checks (like `openLink`'s `url`, see `src/model/links.ts`) are validated in `validate.ts → interactions()` *and* again in the action itself.
 
 ## Add an animation preset
 
@@ -45,7 +48,7 @@ Register in `src/runtime/animations.ts` with `kind` (`entrance`, `emphasis`, `ex
 
 ## Add a drag mode
 
-`src/runtime/drag.ts` defines `DragMode { id, attach(node, ctx) }`. `ctx` gives the element, current stage scale, page bounds, position and `moveTo()`. A “floaty” or “weighted” mode would track velocity in `attach` and apply rotation/spring easing to the node (e.g. via a transform on the wrapper). Then offer it in the “Visibility & dragging” section of `BehaviorPanel.tsx` (currently a single toggle for `rigid`).
+`src/runtime/drag.ts` defines `DragMode { id, attach(node, ctx) }`. `ctx` gives the element, its `feel` settings (`amount`, `settle`, 0..1), the stage scale, page bounds, position/angle, `moveTo()`, `setPose()` (position, angle, squash & stretch — viewer state only), `toLocal()` (pointer → page coordinates) and `win` for animation frames. Physics modes can reuse the `DragPhysics` interface and the shared driver (`floatyPhysics`, `weightedPhysics`). Offer a new mode in `MODES` in `src/editor/behavior/DragModes.tsx` (with an illustration); the inspector's playground runs the real mode, and validation accepts any registered mode id.
 
 ## Conditions
 
@@ -58,6 +61,10 @@ Add a `ThemeTokens` object to `THEMES` in `src/model/theme/tokens.ts` (and its i
 ## Support media edits in a new element
 
 Elements that show an image, video or sound should honour nondestructive edits (`src/model/mediaEdit.ts`). For pictures, render through `imageFill(doc, project, assetId, { fit, alt, edit })` (`src/runtime/elements/editedImage.ts`) instead of a bare `<img>`: it follows the library version, or `edit` when the element has its own. For media playback, wrap the element with `playSegment()` (`mediaShared.ts`) and resolve the trim with `resolveEdit()` + `trimBounds()`. To let authors give the element its own edit, add `edit: null` to its defaults and `edit: mediaEdit(kind)` to `PROP_SANITIZERS`, and show `MediaEditRow` in its inspector.
+
+## Support a new 3D format or viewer feature
+
+The renderer lives in `src/runtime/model3d/viewer.ts` (three.js) behind the `Model3dRuntime` contract (`contract.ts`); the `model` element and editor only talk to the contract. A new format needs an upload check like `inspectGlb()` (`src/model/glb.ts`), its MIME in `ACCEPTED_MODEL_TYPES` / `DATA_URL_HEAD`, and a loader that works without network access under the export CSP (no `fetch`, no workers, no external decoders). Keep the add-on separate from the core runtime so files without models stay small.
 
 ## Add a capture source
 
