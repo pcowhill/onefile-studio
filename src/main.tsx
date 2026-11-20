@@ -5,8 +5,10 @@ import { App } from './App';
 import { useEditor } from './editor/store/store';
 import { ensureRuntimeStyles } from './runtime/styles';
 import { ensureEditorFonts } from './io/fonts';
+import { installModel3dLoader } from './editor/model3d';
 
 ensureRuntimeStyles(document);
+installModel3dLoader();
 // Read-only hook used by the end-to-end tests to inspect the open project.
 (window as unknown as { __ofsStudio: unknown }).__ofsStudio = { project: () => useEditor.getState().project };
 ensureEditorFonts(document);

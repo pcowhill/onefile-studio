@@ -14,6 +14,8 @@ export function escapeInlineScript(code: string): string {
 
 const RUNTIME_ID = 'virtual:ofs-runtime';
 const RESOLVED_RUNTIME_ID = '\0' + RUNTIME_ID;
+const RUNTIME_3D_ID = 'virtual:ofs-runtime-3d';
+const RESOLVED_RUNTIME_3D_ID = '\0' + RUNTIME_3D_ID;
 
 /**
  * Exposes the standalone playback runtime as a string (`virtual:ofs-runtime`).
@@ -21,17 +23,19 @@ const RESOLVED_RUNTIME_ID = '\0' + RUNTIME_ID;
  * modules are imported directly by the editor for Preview, so the editor and
  * the exported document always execute the same playback engine.
  */
-export function runtimePlugin(entry: string): Plugin {
+export function runtimePlugin(entry: string, entry3d?: string): Plugin {
   return {
     name: 'ofs-runtime',
     resolveId(id) {
       if (id === RUNTIME_ID) return RESOLVED_RUNTIME_ID;
+      if (id === RUNTIME_3D_ID && entry3d) return RESOLVED_RUNTIME_3D_ID;
       return null;
     },
     async load(id) {
-      if (id !== RESOLVED_RUNTIME_ID) return null;
+      if (id !== RESOLVED_RUNTIME_ID && id !== RESOLVED_RUNTIME_3D_ID) return null;
+      // The 3D add-on (three.js) is a separate bundle so files without models stay small.
       const result = await esbuild({
-        entryPoints: [entry],
+        entryPoints: [id === RESOLVED_RUNTIME_ID ? entry : entry3d!],
         bundle: true,
         write: false,
         format: 'iife',

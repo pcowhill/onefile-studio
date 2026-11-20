@@ -4,7 +4,7 @@ import { fontCssForProject } from './fonts';
 import { isSafeColor } from '../model/paint';
 
 export const GENERATOR = 'OneFile Studio';
-export const APP_VERSION = '0.3.0';
+export const APP_VERSION = '0.4.0';
 
 /**
  * Restrictive Content-Security-Policy for exported files: scripts and styles
@@ -13,6 +13,23 @@ export const APP_VERSION = '0.3.0';
  */
 export const EXPORT_CSP =
   "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; base-uri 'none'; form-action 'none'";
+
+/** The playback code embedded in exports: the core runtime, plus add-ons included only when needed. */
+export interface ExportRuntime {
+  core: string;
+  /** The 3D viewer add-on (three.js); embedded only when the project shows a 3D model. */
+  model3d?: string;
+}
+
+/** True when the project shows at least one 3D model (so the export needs the 3D add-on). */
+export function usesModels(project: Project): boolean {
+  return project.pages.some((pg) =>
+    pg.elements.some((el) => {
+      const id = (el.props as { assetId?: unknown }).assetId;
+      return el.type === 'model' && typeof id === 'string' && Object.prototype.hasOwnProperty.call(project.assets, id);
+    }),
+  );
+}
 
 /** Removes assets that nothing references. Returns a new project. */
 export function pruneUnusedAssets(project: Project): Project {
@@ -25,9 +42,12 @@ export function pruneUnusedAssets(project: Project): Project {
 /**
  * Builds a complete standalone HTML document: markup, CSS, the playback
  * runtime, the full editable project JSON and every embedded asset.
- * `runtime` is the minified IIFE produced from src/runtime/standalone.ts.
+ * `runtime` is the minified IIFE produced from src/runtime/standalone.ts (and,
+ * for projects with 3D models, the 3D add-on, which must run first).
  */
-export function buildStandaloneHtml(project: Project, runtime: string): string {
+export function buildStandaloneHtml(project: Project, runtime: string | ExportRuntime): string {
+  const code = typeof runtime === 'string' ? { core: runtime } : runtime;
+  const addon = code.model3d && usesModels(project) ? `<script>${code.model3d}</script>\n` : '';
   const data: Project = { ...project, meta: { ...project.meta, updatedAt: new Date().toISOString() } };
   const title = escapeHtml(project.meta.title || 'Untitled');
   const backdrop = isSafeColor(project.settings.backdrop) ? project.settings.backdrop : '#ffffff';
@@ -51,7 +71,7 @@ export function buildStandaloneHtml(project: Project, runtime: string): string {
 <div id="ofs-root"></div>
 <noscript><p style="font:16px system-ui;padding:24px">This interactive document needs JavaScript to be enabled.</p></noscript>
 <script type="application/json" id="ofs-project">${jsonForScript(data)}</script>
-<script>${runtime}</script>
+${addon}<script>${code.core}</script>
 </body>
 </html>
 `;

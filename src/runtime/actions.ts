@@ -4,6 +4,7 @@ import type { VarStore } from './env';
 import type { ElementApi } from './elements/types';
 import { Registry } from './registry';
 import { evaluateCondition } from './conditions';
+import { normalizeLink } from '../model/links';
 
 /** The player capabilities actions are allowed to use. */
 export interface PlayerControl {
@@ -15,11 +16,13 @@ export interface PlayerControl {
   /** Forgets an element's per-session state (e.g. a quiz answer), even when it is on another slide. */
   clearState?(id: string): void;
   animate(id: string, preset: string, opts: { duration?: number; direction?: string }): Promise<void>;
+  /** Opens an already-validated http(s)/mailto/tel URL (v4). */
+  openLink?(href: string, newTab: boolean): void;
 }
 
 export interface ActionContext {
   player: PlayerControl;
-  /** Element that owns the interaction. */
+  /** Element that owns the interaction ('' for page and project interactions). */
   selfId: string;
   event?: Event;
 }
@@ -108,6 +111,23 @@ const defs: ActionDef[] = [
       const id = target(p, c);
       c.player.clearState?.(id);
       c.player.api(id)?.reset?.();
+    },
+  },
+  {
+    // v4: the URL is checked again right before opening, whatever the project data says.
+    id: 'openLink',
+    execute(p, c) {
+      const href = normalizeLink(p.url);
+      if (href) c.player.openLink?.(href, p.newTab !== false);
+    },
+  },
+  // v4: 3D model viewers.
+  { id: 'modelView', execute: (p, c) => c.player.api(target(p, c))?.view?.(String(p.view ?? 'reset')) },
+  {
+    id: 'modelSpin',
+    execute(p, c) {
+      const mode = String(p.mode ?? 'toggle');
+      c.player.api(target(p, c))?.spin?.(mode === 'start' ? true : mode === 'stop' ? false : undefined);
     },
   },
   {

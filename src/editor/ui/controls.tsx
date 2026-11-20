@@ -12,6 +12,8 @@ import { getTheme } from '../../model/theme';
 import { formatTime } from '../../runtime/elements/mediaShared';
 import { formatBytes } from '../../io/exportHtml';
 import '../../styles/media.css';
+import { loadModelRuntime } from '../../runtime/model3d/contract';
+import { modelDef, modelViewOptions } from '../../runtime/elements/model';
 
 export const PALETTE = [
   '#1d1b2c',
@@ -504,8 +506,8 @@ export function ImageChooser({
   );
 }
 
-const KIND_ICON: Record<AssetKind, string> = { image: 'image', video: 'video', audio: 'audio' };
-const KIND_NOUN: Record<AssetKind, string> = { image: 'image', video: 'video', audio: 'sound' };
+const KIND_ICON: Record<AssetKind, string> = { image: 'image', video: 'video', audio: 'audio', model: 'cube' };
+const KIND_NOUN: Record<AssetKind, string> = { image: 'image', video: 'video', audio: 'sound', model: '3D model' };
 
 /** Library tile for any asset: picture thumbnail, or an icon with the duration for video/audio. */
 export function AssetTile({ asset, className = '' }: { asset: Asset; className?: string }) {
@@ -535,10 +537,34 @@ export function AssetTile({ asset, className = '' }: { asset: Asset; className?:
         {asset.animated && <span className="ed-media-badge">GIF</span>}
       </span>
     );
+  if (kind === 'model') return <ModelTile asset={asset} className={className} />;
   return (
     <span className={`ed-media-tile is-${kind} ${className}`}>
       <Icon name={KIND_ICON[kind]} size={22} />
       {asset.duration ? <span className="ed-media-duration">{formatTime(asset.duration)}</span> : null}
+    </span>
+  );
+}
+
+/** A 3D model's tile: a cube icon, replaced by a rendered still once the 3D viewer is ready. */
+function ModelTile({ asset, className }: { asset: Asset; className: string }) {
+  const [src, setSrc] = useState('');
+  useEffect(() => {
+    let alive = true;
+    void loadModelRuntime(window).then((rt) =>
+      rt
+        ?.poster({ ...modelViewOptions(modelDef.defaults()), data: asset.data, width: 160, height: 120 })
+        .then((url) => alive && setSrc(url))
+        .catch(() => undefined),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [asset.data]);
+  return (
+    <span className={`ed-media-tile is-model ${className}`} style={src ? { backgroundImage: `url("${src}")` } : undefined}>
+      {!src && <Icon name="cube" size={22} />}
+      <span className="ed-media-badge">3D</span>
     </span>
   );
 }
@@ -609,7 +635,7 @@ export function AssetLibrary({ onPick, label = 'Library', kind = 'image' }: { on
  * Choose a video or sound file: a big, inviting button while empty, then a
  * file card (duration, size) with Replace and Library.
  */
-export function MediaChooser({ kind, value, onChange }: { kind: 'video' | 'audio'; value: string; onChange(asset: Asset): void }) {
+export function MediaChooser({ kind, value, onChange }: { kind: 'video' | 'audio' | 'model'; value: string; onChange(asset: Asset): void }) {
   const assets = useEditor((s) => s.project?.assets ?? {});
   const found = assets[value];
   const a = found && assetKind(found.mime) === kind ? found : undefined;
@@ -631,7 +657,7 @@ export function MediaChooser({ kind, value, onChange }: { kind: 'video' | 'audio
             <Icon name={KIND_ICON[kind]} size={26} />
           </span>
           <strong>Choose {noun} file</strong>
-          <small>{kind === 'video' ? 'MP4 or WebM, up to 150 MB' : 'MP3, WAV, OGG or M4A'}</small>
+          <small>{kind === 'video' ? 'MP4 or WebM, up to 150 MB' : kind === 'model' ? 'A .glb file with everything embedded' : 'MP3, WAV, OGG or M4A'}</small>
         </button>
         {hasLibrary && (
           <div className="ed-media-or">

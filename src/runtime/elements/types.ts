@@ -20,6 +20,10 @@ export interface ElementApi {
   restart?(): void;
   /** Media: play when paused, pause when playing (v3). */
   toggle?(): void;
+  /** 3D model (v4): move the camera to a named view ("reset", "front", "top"…). */
+  view?(name: string): void;
+  /** 3D model (v4): start (true), stop (false) or toggle (undefined) turning by itself. */
+  spin?(on?: boolean): void;
 }
 
 export interface RenderResult {

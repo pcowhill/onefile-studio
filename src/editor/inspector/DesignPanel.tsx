@@ -1,4 +1,4 @@
-import type { Page, Project, SceneElement } from '../../model/types';
+import type { Asset, Page, Project, SceneElement } from '../../model/types';
 import { useEditor, editor } from '../store/store';
 import { Icon } from '../ui/Icon';
 import {
@@ -16,7 +16,8 @@ import {
   TextInput,
   Toggle,
 } from '../ui/controls';
-import { align, moveLayer, resetToTheme, setRole, updateElement, updatePage, updateProps, updateSelected } from '../ops';
+import { align, moveLayer, replaceElementImage, resetToTheme, setRole, updateElement, updatePage, updateProps, updateSelected } from '../ops';
+import { ImagePicker } from '../media/ImagePicker';
 import { customizedKeys, getTheme, inferRole, ROLE_OPTIONS, themeValues, backgroundPaint, BACKGROUND_ROLES } from '../../model/theme';
 import { ThemePreview } from '../theme/ThemePicker';
 import { EDITOR_ELEMENTS } from '../catalog';
@@ -41,6 +42,8 @@ import { ChartEditor } from './editors/ChartEditor';
 import { TableEditor } from './editors/TableEditor';
 import { CountdownEditor } from './editors/CountdownEditor';
 import { QuizEditor } from './editors/QuizEditor';
+import { QuickClick } from '../behavior/QuickClick';
+import { ModelEditor } from './editors/ModelEditor';
 
 export function DesignPanel({ els }: { els: SceneElement[] }) {
   const project = useEditor((s) => s.project)!;
@@ -301,11 +304,25 @@ function TextEditor({ el, set }: P<TextProps>) {
 
 function ImageEditor({ el, set, project }: P<ImageProps>) {
   const p = el.props;
-  const asset = project.assets[p.assetId];
+  const found = project.assets[p.assetId];
+  const asset = found && found.mime.startsWith('image/') ? found : undefined;
+  const choose = (a: Asset) => replaceElementImage(el.id, a);
   return (
     <Section title="Image" icon="image">
-      <ImageChooser value={p.assetId} onChange={(id) => set({ assetId: id, edit: null })} />
-      <MediaEditRow el={el} asset={asset && asset.mime.startsWith('image/') ? asset : undefined} allowScreenshot />
+      {asset ? (
+        <>
+          <ImageChooser
+            value={p.assetId}
+            onChange={(id) => {
+              const a = useEditor.getState().project?.assets[id];
+              if (a) choose(a);
+            }}
+          />
+          <MediaEditRow el={el} asset={asset} allowScreenshot />
+        </>
+      ) : (
+        <ImagePicker elementId={el.id} onPick={choose} />
+      )}
       <Field label="Fit">
         <Segmented
           value={p.fit}
@@ -526,15 +543,14 @@ function ButtonLook({ el, set }: P<ButtonProps>) {
 
 function ButtonEditor(props: P<ButtonProps>) {
   return (
-    <Section title="Button" icon="button">
-      <ButtonLook {...props} />
-      <button
-        className="ed-btn ed-btn-soft ed-btn-block"
-        onClick={() => editor().set({ inspectorTab: 'behavior', triggerPickerFor: props.el.interactions.length ? null : props.el.id })}
-      >
-        <Icon name="bolt" size={16} /> {props.el.interactions.length ? 'Edit what it does' : 'Make it do something'}
-      </button>
-    </Section>
+    <>
+      <Section title="When clicked" icon="bolt">
+        <QuickClick el={props.el as unknown as SceneElement} project={props.project} />
+      </Section>
+      <Section title="Button" icon="button">
+        <ButtonLook {...props} />
+      </Section>
+    </>
   );
 }
 
@@ -867,6 +883,7 @@ const EDITORS: Record<string, (p: P<any>) => React.ReactNode> = {
   table: TableEditor,
   countdown: CountdownEditor,
   quiz: QuizEditor,
+  model: ModelEditor,
 };
 
 // ---------------- page / project settings ----------------

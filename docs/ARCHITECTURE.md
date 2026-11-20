@@ -26,7 +26,8 @@ OneFile Studio is a static, client-only React + TypeScript app. Its defining fea
 - **Model** (`src/model`): the versioned `Project` type (see [SCHEMA.md](SCHEMA.md)), factories (`createProject`, `createElement`…), `validateProject` (treats all input as untrusted and normalises it against the registries; structured props are checked by `propSchemas.ts`), and the **theme system** (`src/model/theme`).
 - **Runtime** (`src/runtime`): framework-free DOM code. It must stay small and must not import React or editor code.
   - `elements/*` — one renderer per element type (`RuntimeElementDef`: `defaults()` + `render()` + optional `css`), registered in `elements/index.ts`. v0.2 adds `video`, `audio`, `chart`, `table`, `countdown` and `quiz`.
-  - `triggers.ts`, `actions.ts`, `conditions.ts`, `animations.ts`, `drag.ts` — registries for interaction pieces.
+  - `triggers.ts`, `actions.ts`, `conditions.ts`, `animations.ts`, `drag.ts` — registries for interaction pieces. `keys.ts` (v0.4) holds key ids, matching and the "is the viewer typing?" rules for keyboard triggers.
+  - `model3d/` (v0.4) — `contract.ts` (no three.js) defines the 3D add-on interface; `viewer.ts` + `addon.ts` are the three.js viewer, bundled separately.
   - `player.ts` — `createPlayer(container, project)` builds the slide stage (scaled, letterboxed, transitions, keyboard, built-in controls) or the scrolling page (full-width section backgrounds, scaled content column, scroll progress, entrance animations on scroll), binds triggers and runs interactions.
   - `standalone.ts` — the entry bundled into exports: reads the embedded JSON and calls `createPlayer`.
 - **IO** (`src/io`): standalone HTML generation, import/extraction, asset helpers (hashing, de-duplication, optimisation), draft storage, download.
@@ -40,6 +41,7 @@ OneFile Studio is a static, client-only React + TypeScript app. Its defining fea
 | Thumbnails | `renderPageStatic()` (mode `thumb`) |
 | Preview | `createPlayer()` imported directly (mode `play`) |
 | Exported file | the same `src/runtime/standalone.ts` bundled by esbuild into a string (`virtual:ofs-runtime`, see `build/plugins.ts`) and inlined |
+| 3D models | `src/runtime/model3d/addon.ts` bundled into a second string (`virtual:ofs-runtime-3d`): exports include it only when a model is shown; the editor injects the same string on first use (see *3D models* below) |
 
 Because Preview and exports execute identical source, behaviour cannot drift between them. The e2e suite verifies this by testing both.
 
@@ -77,17 +79,35 @@ UI: `src/editor/capture/` (Capture cards in the Media panel, `CaptureDialog`), `
 
 Interactive components announce events by dispatching bubbling DOM events from their content node (`emit()` in `triggers.ts`); triggers such as `quizCorrect`, `countdownDone` and `mediaEnded` listen on the element wrapper like `click` does, and declare `forTypes` so the editor only offers them where they make sense. Element APIs (`play`, `pause`, `restart`, `reset`…) are reached by actions through `PlayerControl.api()`; `clearState()` resets per-session state (e.g. a quiz answer) even for elements on other slides.
 
+## Interaction owners and keyboard (v0.4)
+
+Interactions belong to an **owner**: an element, a page (`page.interactions`) or the project (`project.interactions`). Each trigger definition lists the owners it allows (`owners`), so the editor's trigger picker, the validator and the player agree. The player binds every owner through one function (`bindInteractions`) and gives triggers a `TriggerContext`: their options, `onKey()` and the owner page's `onEnter()`/`onLeave()`.
+
+- **Page activity** — each page view is *active* while it is the current slide (or, on webpages, the current section by scroll position). `pageStart` runs on activation, `pageTimer` starts a timer there and cancels it on deactivation; outgoing slides are deactivated before transitions start, so nothing fires twice.
+- **Keyboard** — one `keydown` listener per player. Bindings from active owners whose key matches run, and the event is then consumed (`preventDefault`), which is how a slide's own → rule takes precedence over built-in navigation. Typing targets (fields, sliders, listboxes…), Ctrl/⌘ combinations, IME composition and auto-repeat (unless asked for) are ignored; Enter/Space on a keyboard-focused button keep activating it. Interactions with the same trigger and options on one owner run in list order. Everything is removed on `destroy()`.
+- **Links** — `openLink` re-validates the URL at the moment it runs (`model/links.ts`: http, https, mailto, tel only) and calls `PlayerControl.openLink`. Exports open new tabs with `noopener,noreferrer` (or navigate the same tab); Preview passes its own `openLink` that always uses a new tab so the editor is never navigated away. The export CSP does not restrict navigation, and the file never depends on the link target to render.
+
+## Drag modes (v0.4)
+
+`rigid` is unchanged. `floaty` and `weighted` run a small fixed-step physics integrator (`DragPhysics` in `drag.ts`, DOM-free and unit-tested) inside a `requestAnimationFrame` loop that only runs while dragging or settling. Modes see the element through `DragContext`: `toLocal()` converts pointer positions to page coordinates (slide scale and page scrolling included) and `setPose()` writes position + rotation (+ squash/stretch) to the wrapper once per frame. Poses are viewer state kept in the player's per-session map — never written to the project.
+
+## 3D models (v0.4)
+
+- **One renderer, loaded only when needed.** The `model` element (`runtime/elements/model.ts`) is part of the core runtime but never imports three.js; it asks for the add-on through `loadModelRuntime()` (`window.__ofsModel3d`, or `window.__ofsModel3dLoad` in the editor, which injects the add-on string once). Exports include the add-on script (≈650 KB) before the core runtime only when `usesModels(project)`; files without models stay as small as before.
+- **Offline under the export CSP.** GLB bytes are decoded from the embedded data URL; textures load from `blob:` URLs through `<img>` (a GLTFLoader plugin swaps the default `ImageBitmapLoader`, which would need `fetch`, for `TextureLoader`). No workers, decoders or network.
+- **Editor vs playback.** In the editor canvas and thumbnails, models are stills rendered by one shared, cached renderer (`poster()`), so editing many models never exhausts WebGL contexts and normal drag/resize gestures apply. In playback each viewer has its own renderer with OrbitControls (rotate, zoom, pan), damping, auto-rotate, named views and overlay buttons. It renders only when something moves, pauses off-screen, renders at the on-screen size, keeps orbit gestures from reaching drag modes and click triggers, and on scrolling webpages only zooms with the wheel after the viewer was touched. Failures (no WebGL, invalid model, lost context) show a message in the frame, with "Try again" where recovery is possible; `destroy()` releases geometry, materials, textures, the environment map and the context.
+
 ## Export pipeline
 
 1. `pruneUnusedAssets` drops images nothing references.
 2. Optional `optimizeAssets` re-encodes large raster images (ids unchanged, so structure is preserved).
-3. `buildStandaloneHtml` writes: CSP meta (`default-src 'none'`; inline script/style only; `data:`/`blob:` images and media, `data:` fonts), base CSS, only the embedded fonts the project uses, the project JSON escaped in one pass by `jsonForScript` (`<`, `>`, `&`, U+2028/9 → `\uXXXX`), then the runtime (already escaped for inline use).
+3. `buildStandaloneHtml` writes: CSP meta (`default-src 'none'`; inline script/style only; `data:`/`blob:` images and media, `data:` fonts), base CSS, only the embedded fonts the project uses, the project JSON escaped in one pass by `jsonForScript` (`<`, `>`, `&`, U+2028/9 → `\uXXXX`), the 3D add-on when a model is shown, then the runtime (already escaped for inline use).
 
 The file never references remote URLs; the CSP makes network access impossible even if data were tampered with.
 
 ## Import pipeline
 
-`DOMParser` parses the file inertly → the `#ofs-project` JSON is read → `validateProject` checks schema id/version (migrations hook in `migrate()`), sanitises every field, fills defaults from the element registry, drops unknown/unsafe content with warnings. Only base64 `data:` URLs of supported image/video/audio types are accepted, and references are kind-checked (a video element can only point at a video asset). Text is always rendered with `textContent` (never `innerHTML`).
+`DOMParser` parses the file inertly → the `#ofs-project` JSON is read → `validateProject` checks schema id/version (migrations hook in `migrate()`), sanitises every field, fills defaults from the element registry, drops unknown/unsafe content with warnings. Only base64 `data:` URLs of supported image/video/audio/GLB types are accepted, and references are kind-checked (a video element can only point at a video asset). Text is always rendered with `textContent` (never `innerHTML`).
 
 ## Editor state
 

@@ -7,7 +7,9 @@ import { runtimePlugin, singleFilePlugin } from './build/plugins';
 export default defineConfig({
   // Relative base: the build works on GitHub Pages (any sub-path) and from disk.
   base: './',
-  plugins: [react(), runtimePlugin(path.resolve(__dirname, 'src/runtime/standalone.ts')), singleFilePlugin()],
+  // Example 3D model (imported with ?inline as a data: URL).
+  assetsInclude: ['**/*.glb'],
+  plugins: [react(), runtimePlugin(path.resolve(__dirname, 'src/runtime/standalone.ts'), path.resolve(__dirname, 'src/runtime/model3d/addon.ts')), singleFilePlugin()],
   build: {
     outDir: 'dist',
     emptyOutDir: true,

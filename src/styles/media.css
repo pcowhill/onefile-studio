@@ -479,3 +479,113 @@
 .ed-size + .ed-export-alert.is-error {
   margin: 12px 0 0;
 }
+
+/* ---- Image element: empty state (v0.4) ---- */
+.ed-imgpick {
+  display: grid;
+  gap: 12px;
+}
+.ed-media-big.is-image {
+  border-color: #a6e6d4;
+  background: linear-gradient(160deg, #f6fffc, #e5f8f1);
+}
+.ed-media-big.is-image:hover {
+  border-color: #00b894;
+  box-shadow: 0 8px 20px rgba(0, 184, 148, 0.14);
+}
+.ed-media-big.is-image .ed-media-big-icon {
+  background: #00b894;
+  box-shadow: 0 6px 16px rgba(0, 184, 148, 0.3);
+}
+.ed-imgpick-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--ink-2);
+  margin-bottom: 7px;
+}
+.ed-imgpick-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  max-height: 236px;
+  overflow: auto;
+  padding: 2px;
+}
+.ed-imgpick-item {
+  border: 0;
+  background: #fff;
+  border-radius: 10px;
+  padding: 4px 4px 5px;
+  display: grid;
+  gap: 4px;
+  box-shadow: inset 0 0 0 1.5px var(--line);
+  min-width: 0;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+}
+.ed-imgpick-item:hover {
+  box-shadow: inset 0 0 0 2px #00b894;
+  transform: translateY(-1px);
+}
+.ed-imgpick-item .ed-media-tile {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  height: auto;
+  border-radius: 7px;
+}
+.ed-imgpick-item > span:last-child {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ed-imgpick-empty {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f6f4fd;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+.ed-imgpick-capture {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ---- 3D models (v0.4) ---- */
+.ed-media-tile.is-model {
+  background: radial-gradient(90% 80% at 50% 30%, #f1efff, #dcd8f6) center/cover no-repeat;
+  color: #6366f1;
+  box-shadow: none;
+}
+.ed-media-tile.is-model[style] {
+  background-color: #ebe8fb;
+  background-size: cover;
+}
+.ed-media-big.is-model {
+  border-color: #c7c8f8;
+  background: linear-gradient(160deg, #f8f8ff, #eceafe);
+}
+.ed-media-big.is-model:hover {
+  border-color: #6366f1;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.14);
+}
+.ed-media-big.is-model .ed-media-big-icon {
+  background: #6366f1;
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.3);
+}
+.ed-model-views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 4px;
+}

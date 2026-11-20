@@ -13,6 +13,7 @@ import { nameFor } from './catalog';
 import { acceptAttribute, addAssetDedup, fileToAsset, formatMegabytes, LARGE_FILE_BYTES, normalizeMime } from '../io/assets';
 import { toast } from './ui/toast';
 import { uid } from '../model/ids';
+import { allInteractionLists } from '../model/interactions';
 import type { MediaEdit } from '../model/mediaEdit';
 import { editedAspect, isIdentity, sanitizeEdit } from '../model/mediaEdit';
 import {
@@ -106,12 +107,6 @@ export function insertCatalogItem(item: CatalogItem) {
   if (!s.project) return;
   const pg = page(s.project, s.pageId);
   if (!pg) return;
-  if (item.needsImage) {
-    void pickImages(false).then((assets) => {
-      if (assets[0]) insertImage(assets[0]);
-    });
-    return;
-  }
   const built = item.build({ project: s.project, page: pg });
   insertBuilt(built);
   if (built.variables?.length) toast(`Created the variable “${built.variables[0].name}”. Change it with interactions in the Behavior tab.`, 'info');
@@ -122,7 +117,7 @@ export function pickImages(multiple = true): Promise<Asset[]> {
   return pickMedia(['image'], multiple);
 }
 
-const ALL_KINDS: AssetKind[] = ['image', 'video', 'audio'];
+const ALL_KINDS: AssetKind[] = ['image', 'video', 'audio', 'model'];
 
 /**
  * Opens the OS file picker for the given kinds of media (images, GIFs, videos,
@@ -146,7 +141,7 @@ export function addImageFiles(files: File[]): Promise<Asset[]> {
   return addMediaFiles(files);
 }
 
-const KIND_LABEL: Record<AssetKind, string> = { image: 'an image', video: 'a video', audio: 'a sound file' };
+const KIND_LABEL: Record<AssetKind, string> = { image: 'an image', video: 'a video', audio: 'a sound file', model: 'a 3D model' };
 
 /**
  * Embeds local files as project assets (de-duplicated by content). Shows a
@@ -219,6 +214,7 @@ export function insertMedia(asset: Asset): string | undefined {
     const size = videoSize(asset, portrait ? Math.min(320, W * 0.4) : Math.min(640, W * 0.6), 'none');
     return insertBuilt({ element: createElement('video', { ...size, props: { assetId: asset.id, alt: stripExt(asset.name) } }) });
   }
+  if (kind === 'model') return insertBuilt({ element: createElement('model', { w: 560, h: 420, props: { assetId: asset.id, alt: stripExt(asset.name) } }) });
   return insertBuilt({ element: createElement('audio', { w: 420, h: AUDIO_STYLE_HEIGHT.player, props: { assetId: asset.id } }) });
 }
 
@@ -525,12 +521,11 @@ export function renameVariable(id: string, name: string) {
 export function deleteVariable(id: string) {
   editor().update((d) => {
     d.variables = d.variables.filter((v) => v.id !== id);
-    for (const pg of d.pages)
-      for (const el of pg.elements)
-        for (const ix of el.interactions) {
-          ix.conditions = ix.conditions.filter((c) => c.variableId !== id);
-          for (const a of ix.actions) if (a.params.variable === id) a.params.variable = '';
-        }
+    for (const list of allInteractionLists(d))
+      for (const ix of list) {
+        ix.conditions = ix.conditions.filter((c) => c.variableId !== id);
+        for (const a of ix.actions) if (a.params.variable === id) a.params.variable = '';
+      }
   });
 }
 
@@ -546,10 +541,11 @@ export function variableUsage(project: Project, id: string): number {
       )
         n++;
       if ((el.props as Record<string, unknown>).variableId === id) n++;
-      for (const ix of el.interactions) {
-        n += ix.actions.filter((a) => a.params.variable === id).length;
-        n += ix.conditions.filter((c) => c.variableId === id).length;
-      }
+    }
+  for (const list of allInteractionLists(project))
+    for (const ix of list) {
+      n += ix.actions.filter((a) => a.params.variable === id).length;
+      n += ix.conditions.filter((c) => c.variableId === id).length;
     }
   return n;
 }
@@ -667,15 +663,32 @@ export function renameAsset(id: string, name: string) {
   });
 }
 
-/** Points an image element at another image (e.g. "Replace with screenshot"). */
+/**
+ * Points an image element at another image (library, upload, screenshot,
+ * photo). Position, styling and interactions are kept. A placeholder takes
+ * the picture's shape (same width and centre); an element that already shows
+ * a picture keeps its size (the picture fills it). The element's own crop was
+ * made for the old picture, so it goes back to following the library version.
+ */
 export function replaceElementImage(elementId: string, asset: Asset) {
   editor().update((d) => {
     const f = findEl(d, elementId);
     if (!f || f.el.type !== 'image') return;
     const p = f.el.props as Record<string, unknown>;
+    const wasEmpty = !(typeof p.assetId === 'string' && d.assets[p.assetId]);
     p.assetId = asset.id;
     p.edit = null;
-    fitElementToPicture(f.el, asset, asset.edit ?? {});
+    if (!p.alt || wasEmpty) p.alt = stripExt(asset.name);
+    if (wasEmpty) {
+      const cy = f.el.y + f.el.h / 2;
+      fitElementToPicture(f.el, asset, asset.edit ?? {});
+      const maxH = pageHeight(d, f.page) * 0.9;
+      if (f.el.h > maxH) {
+        f.el.w = Math.round((f.el.w * maxH) / f.el.h);
+        f.el.h = Math.round(maxH);
+      }
+      f.el.y = Math.round(cy - f.el.h / 2);
+    }
   });
   editor().select([elementId]);
 }

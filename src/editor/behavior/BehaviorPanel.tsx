@@ -1,10 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Action, Condition, Interaction, ParamValue, Project, SceneElement } from '../../model/types';
+import type { IxOwner } from './owner';
+import { elementOwner, pageOwner } from './owner';
+import { KeyPicker, keyConflicts } from './KeyPicker';
+import { DragModePicker } from './DragModes';
+import { linkDisplay, linkProblem } from '../../model/links';
 import { SELF_TARGET } from '../../model/types';
 import { uid } from '../../model/ids';
 import { useEditor, editor, findEl } from '../store/store';
 import { Icon } from '../ui/Icon';
-import { Field, NumberInput, Section, Segmented, Select, Slider, Toggle } from '../ui/controls';
+import { Field, NumberInput, Section, Segmented, Select, Slider, TextInput, Toggle } from '../ui/controls';
 import { updateElement } from '../ops';
 import {
   ACTIONS,
@@ -12,32 +17,26 @@ import {
   actionUi,
   EMPHASIS_PRESETS,
   ENTRANCE_PRESETS,
+  MODEL_VIEWS,
+  pageNoun,
   TRIGGER_CATEGORIES,
+  triggerSentence,
   triggersFor,
   triggerUi,
   VISIBILITY_EFFECTS,
 } from './catalog';
+import { MAX_DELAY_SECONDS } from '../../runtime/triggers';
 import { COMPARE_OPS } from '../../runtime/conditions';
 import { EDITOR_ELEMENTS } from '../catalog';
 import { pageTargetOptions } from '../inspector/DesignPanel';
 import { playAnimation } from '../../runtime/animations';
 import { Modal } from '../ui/Modal';
+import '../../styles/behavior.css';
 
 export function BehaviorPanel({ el }: { el: SceneElement }) {
   const project = useEditor((s) => s.project)!;
-  const pickerFor = useEditor((s) => s.triggerPickerFor);
-  const [changing, setChanging] = useState<string | null>(null);
   const builtIn = EDITOR_ELEMENTS[el.type]?.builtIn;
-
-  const setInteractions = (fn: (list: Interaction[]) => void, merge?: string) => updateElement(el.id, (d) => fn(d.interactions), merge);
-
-  const addInteraction = (trigger: string) => {
-    const id = uid('ix');
-    setInteractions((list) => void list.push({ id, trigger, conditions: [], actions: [] }));
-    setOpenId(id);
-  };
-  const [openId, setOpenId] = useState<string | null>(null);
-
+  const owner = elementOwner(project, el);
   return (
     <div className="ed-inspector-body">
       {builtIn && (
@@ -49,56 +48,14 @@ export function BehaviorPanel({ el }: { el: SceneElement }) {
         </div>
       )}
       <Section title="Interactions" icon="bolt">
-        {el.interactions.length === 0 && (
-          <div className="ed-ix-empty">
-            <div className="ed-ix-flow">
-              <span className="ed-flow-when">When</span>
-              <Icon name="right" size={14} />
-              <span className="ed-flow-if">If</span>
-              <Icon name="right" size={14} />
-              <span className="ed-flow-do">Do</span>
-            </div>
-            <p>Make this element respond to viewers — reveal something, change a score, jump to another slide…</p>
-          </div>
-        )}
-        {el.interactions.map((ix, i) => (
-          <InteractionCard
-            key={ix.id}
-            el={el}
-            ix={ix}
-            index={i}
-            project={project}
-            open={openId === ix.id || el.interactions.length === 1}
-            onToggle={() => setOpenId(openId === ix.id ? null : ix.id)}
-            onChangeTrigger={() => setChanging(ix.id)}
-            onChange={(fn, merge) =>
-              setInteractions((list) => {
-                const t = list.find((x) => x.id === ix.id);
-                if (t) fn(t);
-              }, merge)
-            }
-            onDelete={() =>
-              setInteractions(
-                (list) =>
-                  void list.splice(
-                    list.findIndex((x) => x.id === ix.id),
-                    1,
-                  ),
-              )
-            }
-            onMove={(d) =>
-              setInteractions((list) => {
-                const j = i + d;
-                if (j < 0 || j >= list.length) return;
-                [list[i], list[j]] = [list[j], list[i]];
-              })
-            }
-            count={el.interactions.length}
-          />
-        ))}
-        <button className="ed-btn ed-btn-primary ed-btn-block" onClick={() => editor().set({ triggerPickerFor: el.id })} data-testid="add-interaction">
-          <Icon name="plus" size={18} /> Add interaction
-        </button>
+        <InteractionList
+          owner={owner}
+          list={el.interactions}
+          project={project}
+          update={(fn) => updateElement(el.id, (d) => fn(d.interactions))}
+          pickerKey={el.id}
+          empty="Make this element respond to viewers — reveal something, change a score, jump to another slide…"
+        />
       </Section>
       <EntranceSection el={el} />
       <Section title="Visibility & dragging" icon="eye">
@@ -108,16 +65,111 @@ export function BehaviorPanel({ el }: { el: SceneElement }) {
           checked={el.hidden}
           onChange={(v) => updateElement(el.id, (d) => void (d.hidden = v))}
         />
-        <Toggle
-          label="Viewers can drag it"
-          description="It follows the pointer and keeps its angle"
-          checked={!!el.drag}
-          onChange={(v) => updateElement(el.id, (d) => void (d.drag = v ? { mode: 'rigid' } : null))}
-        />
+        <DragModePicker el={el} />
       </Section>
-      {pickerFor === el.id && (
+    </div>
+  );
+}
+
+/**
+ * A WHEN → IF → DO list for any owner (an element or a slide). `update`
+ * applies a change to the owner's list as one undoable edit. Page owners can
+ * also move keyboard interactions to the project ("every slide") list.
+ */
+export function InteractionList({
+  owner,
+  list,
+  project,
+  update,
+  pickerKey,
+  empty,
+  onScope,
+  scope,
+}: {
+  owner: IxOwner;
+  list: Interaction[];
+  project: Project;
+  update(fn: (list: Interaction[]) => void, merge?: string): void;
+  /** Value of `triggerPickerFor` that opens this list's trigger picker. */
+  pickerKey: string;
+  empty?: string;
+  /** Page owners: move an interaction between "this slide" and "every slide". */
+  onScope?(ix: Interaction, to: 'page' | 'project'): void;
+  scope?: 'page' | 'project';
+}) {
+  const pickerFor = useEditor((s) => s.triggerPickerFor);
+  const [changing, setChanging] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [fresh, setFresh] = useState<string | null>(null);
+
+  const addInteraction = (trigger: string) => {
+    const id = uid('ix');
+    const ix: Interaction = { id, trigger, conditions: [], actions: [] };
+    if (trigger === 'key') ix.options = { key: '' };
+    if (trigger === 'pageTimer') ix.options = { seconds: 3 };
+    update((l) => void l.push(ix));
+    setOpenId(id);
+    setFresh(id);
+  };
+
+  return (
+    <>
+      {list.length === 0 && empty && (
+        <div className="ed-ix-empty">
+          <div className="ed-ix-flow">
+            <span className="ed-flow-when">When</span>
+            <Icon name="right" size={14} />
+            <span className="ed-flow-if">If</span>
+            <Icon name="right" size={14} />
+            <span className="ed-flow-do">Do</span>
+          </div>
+          <p>{empty}</p>
+        </div>
+      )}
+      {list.map((ix, i) => (
+        <InteractionCard
+          key={ix.id}
+          owner={owner}
+          ix={ix}
+          index={i}
+          project={project}
+          fresh={fresh === ix.id}
+          scope={scope}
+          onScope={onScope}
+          open={openId === ix.id || list.length === 1}
+          onToggle={() => setOpenId(openId === ix.id ? null : ix.id)}
+          onChangeTrigger={() => setChanging(ix.id)}
+          onChange={(fn, merge) =>
+            update((l) => {
+              const t = l.find((x) => x.id === ix.id);
+              if (t) fn(t);
+            }, merge)
+          }
+          onDelete={() =>
+            update(
+              (l) =>
+                void l.splice(
+                  l.findIndex((x) => x.id === ix.id),
+                  1,
+                ),
+            )
+          }
+          onMove={(d) =>
+            update((l) => {
+              const j = i + d;
+              if (j < 0 || j >= l.length) return;
+              [l[i], l[j]] = [l[j], l[i]];
+            })
+          }
+          count={list.length}
+        />
+      ))}
+      <button className="ed-btn ed-btn-primary ed-btn-block" onClick={() => editor().set({ triggerPickerFor: pickerKey })} data-testid="add-interaction">
+        <Icon name="plus" size={18} /> Add interaction
+      </button>
+      {pickerFor === pickerKey && (
         <TriggerPicker
-          el={el}
+          owner={owner}
           onPick={(t) => {
             addInteraction(t);
             editor().set({ triggerPickerFor: null });
@@ -127,26 +179,32 @@ export function BehaviorPanel({ el }: { el: SceneElement }) {
       )}
       {changing && (
         <TriggerPicker
-          el={el}
-          current={el.interactions.find((x) => x.id === changing)?.trigger}
+          owner={owner}
+          current={list.find((x) => x.id === changing)?.trigger}
           onPick={(t) => {
-            setInteractions((list) => {
-              const ix = list.find((x) => x.id === changing);
-              if (ix) ix.trigger = t;
+            update((l) => {
+              const ix = l.find((x) => x.id === changing);
+              if (!ix || ix.trigger === t) return;
+              ix.trigger = t;
+              delete ix.options;
+              if (t === 'key') ix.options = { key: '' };
+              if (t === 'pageTimer') ix.options = { seconds: 3 };
             });
+            if (t === 'key') setFresh(changing);
             setChanging(null);
           }}
           onClose={() => setChanging(null)}
         />
       )}
-    </div>
+    </>
   );
 }
 
 // ---------------- trigger picker ("When…") ----------------
 
-export function TriggerPicker({ el, current, onPick, onClose }: { el: SceneElement; current?: string; onPick(id: string): void; onClose(): void }) {
-  const available = triggersFor(el.type);
+export function TriggerPicker({ owner, current, onPick, onClose }: { owner: IxOwner; current?: string; onPick(id: string): void; onClose(): void }) {
+  const kind = useEditor((s) => s.project?.kind);
+  const available = triggersFor(owner.type);
   const special = available.filter((t) => t.forTypes);
   const primary = available.filter((t) => t.primary || (special.length && t.forTypes));
   const more = available.filter((t) => !primary.includes(t));
@@ -157,9 +215,15 @@ export function TriggerPicker({ el, current, onPick, onClose }: { el: SceneEleme
       <div className="ed-when">
         <div className="ed-when-head">
           <h2>When…</h2>
-          <p>
-            <strong>{el.name}</strong> is…
-          </p>
+          {owner.kind === 'element' ? (
+            <p>
+              <strong>{owner.name}</strong> is…
+            </p>
+          ) : (
+            <p>
+              something happens on <strong>{owner.name}</strong>…
+            </p>
+          )}
           <div className="ed-cat-legend">
             {cats.map((c) => (
               <span key={c} className="ed-cat-chip" style={{ ['--c' as string]: TRIGGER_CATEGORIES[c].color, ['--s' as string]: TRIGGER_CATEGORIES[c].soft }}>
@@ -170,7 +234,7 @@ export function TriggerPicker({ el, current, onPick, onClose }: { el: SceneEleme
         </div>
         <div className={`ed-trigger-grid ${primary.length > 3 ? 'is-many' : ''}`}>
           {primary.map((t) => (
-            <TriggerCard key={t.id} id={t.id} selected={current === t.id} onPick={onPick} big />
+            <TriggerCard key={t.id} id={t.id} selected={current === t.id} onPick={onPick} big kind={kind} />
           ))}
         </div>
         {more.length > 0 && (
@@ -181,7 +245,7 @@ export function TriggerPicker({ el, current, onPick, onClose }: { el: SceneEleme
             {showMore && (
               <div className="ed-trigger-grid is-small">
                 {more.map((t) => (
-                  <TriggerCard key={t.id} id={t.id} selected={current === t.id} onPick={onPick} />
+                  <TriggerCard key={t.id} id={t.id} selected={current === t.id} onPick={onPick} kind={kind} />
                 ))}
               </div>
             )}
@@ -192,7 +256,7 @@ export function TriggerPicker({ el, current, onPick, onClose }: { el: SceneEleme
   );
 }
 
-function TriggerCard({ id, selected, onPick, big }: { id: string; selected: boolean; onPick(id: string): void; big?: boolean }) {
+function TriggerCard({ id, selected, onPick, big, kind }: { id: string; selected: boolean; onPick(id: string): void; big?: boolean; kind?: Project['kind'] }) {
   const t = triggerUi(id)!;
   const cat = TRIGGER_CATEGORIES[t.category];
   return (
@@ -203,8 +267,8 @@ function TriggerCard({ id, selected, onPick, big }: { id: string; selected: bool
       data-testid={`trigger-${id}`}
     >
       <span className="ed-trigger-art-wrap">{t.art}</span>
-      <span className="ed-trigger-label">{t.label}</span>
-      <span className="ed-trigger-desc">{t.description}</span>
+      <span className="ed-trigger-label">{pageNoun(t.label, kind)}</span>
+      <span className="ed-trigger-desc">{pageNoun(t.description, kind)}</span>
       {selected && (
         <span className="ed-trigger-check">
           <Icon name="check" size={14} stroke={3} />
@@ -217,20 +281,26 @@ function TriggerCard({ id, selected, onPick, big }: { id: string; selected: bool
 // ---------------- interaction card ----------------
 
 function InteractionCard({
-  el,
+  owner,
   ix,
   index,
   count,
   project,
   open,
+  fresh,
+  scope,
+  onScope,
   onToggle,
   onChange,
   onDelete,
   onMove,
   onChangeTrigger,
 }: {
-  el: SceneElement;
+  owner: IxOwner;
   ix: Interaction;
+  fresh?: boolean;
+  scope?: 'page' | 'project';
+  onScope?(ix: Interaction, to: 'page' | 'project'): void;
   index: number;
   count: number;
   project: Project;
@@ -243,13 +313,23 @@ function InteractionCard({
 }) {
   const t = triggerUi(ix.trigger);
   const cat = TRIGGER_CATEGORIES[t?.category ?? 'mouse'];
-  const summary = ix.actions.length ? ix.actions.map((a) => actionSummary(a, project, el.id)).join(', then ') : 'nothing yet';
+  const summary = ix.actions.length ? ix.actions.map((a) => actionSummary(a, project, owner.selfId)).join(', then ') : 'nothing yet';
+  const setOptions = (patch: Record<string, ParamValue | undefined>, merge?: string) =>
+    onChange((d) => {
+      const o = { ...(d.options ?? {}) };
+      for (const [k, v] of Object.entries(patch)) {
+        if (v === undefined || v === false) delete o[k];
+        else o[k] = v;
+      }
+      d.options = o;
+    }, merge);
+  const noun = project.kind === 'slides' ? 'slide' : 'section';
   return (
     <div className={`ed-ix ${open ? 'is-open' : ''}`} style={{ ['--c' as string]: cat.color, ['--s' as string]: cat.soft }} data-testid="interaction">
       <div className="ed-ix-head">
         <button className="ed-ix-trigger" onClick={onChangeTrigger} title="Change trigger">
           <span className="ed-ix-when">When</span>
-          <span className="ed-ix-tlabel">{t?.sentence ?? ix.trigger}</span>
+          <span className="ed-ix-tlabel">{triggerSentence(ix, project.kind)}</span>
         </button>
         <div className="ed-ix-tools">
           {count > 1 && (
@@ -277,6 +357,44 @@ function InteractionCard({
           {ix.conditions.length > 0 && <span className="ed-ix-if-badge">if…</span>} {summary}
         </button>
       )}
+      {ix.trigger === 'key' && (
+        <KeyPicker
+          options={ix.options ?? {}}
+          autoCapture={!!fresh}
+          onChange={(patch) => setOptions(patch)}
+          conflicts={keyConflicts(project, owner, ix, scope)}
+        />
+      )}
+      {open && ix.trigger === 'pageTimer' && (
+        <div className="ed-ix-opts">
+          <span className="ed-w">After</span>
+          <NumberInput
+            value={Number(ix.options?.seconds ?? 3)}
+            step={0.5}
+            min={0}
+            max={MAX_DELAY_SECONDS}
+            onChange={(v) => setOptions({ seconds: v }, `${ix.id}:sec`)}
+            ariaLabel="Seconds"
+            width={104}
+          />
+          <span className="ed-w">seconds on this {noun}</span>
+        </div>
+      )}
+      {open && onScope && ix.trigger === 'key' && (
+        <div className="ed-ix-opts">
+          <span className="ed-w">Works on</span>
+          <Segmented
+            size="sm"
+            ariaLabel="Where this shortcut works"
+            value={scope ?? 'page'}
+            onChange={(v) => onScope(ix, v)}
+            options={[
+              { value: 'page', label: `This ${noun}` },
+              { value: 'project', label: `Every ${noun}` },
+            ]}
+          />
+        </div>
+      )}
       {open && (
         <>
           <ConditionsEditor ix={ix} project={project} onChange={onChange} />
@@ -290,7 +408,7 @@ function InteractionCard({
                   action={a}
                   index={i}
                   count={ix.actions.length}
-                  el={el}
+                  owner={owner}
                   project={project}
                   onParams={(patch, merge) => onChange((d) => Object.assign(d.actions[i].params, patch), merge ? `${a.id}:${merge}` : undefined)}
                   onDelete={() => onChange((d) => void d.actions.splice(i, 1))}
@@ -306,8 +424,8 @@ function InteractionCard({
             </ol>
             <ActionPicker
               project={project}
-              el={el}
-              onPick={(type) => onChange((d) => void d.actions.push({ id: uid('ac'), type, params: actionUi(type)!.defaults(project, el.id) }))}
+              many={count > 1}
+              onPick={(type) => onChange((d) => void d.actions.push({ id: uid('ac'), type, params: actionUi(type)!.defaults(project, owner.selfId) }))}
             />
           </div>
         </>
@@ -359,7 +477,7 @@ function ConditionsEditor({ ix, project, onChange }: { ix: Interaction; project:
 
 // ---------------- actions ----------------
 
-function ActionPicker({ project, el, onPick }: { project: Project; el: SceneElement; onPick(type: string): void }) {
+function ActionPicker({ project, many, onPick }: { project: Project; many: boolean; onPick(type: string): void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -413,9 +531,7 @@ function ActionPicker({ project, el, onPick }: { project: Project; el: SceneElem
               </div>
             );
           })}
-          <p className="ed-action-foot">
-            Actions run in order, top to bottom{el.interactions.length > 1 ? '. Interactions with the same trigger also run in order.' : '.'}
-          </p>
+          <p className="ed-action-foot">Actions run in order, top to bottom{many ? '. Interactions with the same trigger also run in order.' : '.'}</p>
         </div>
       )}
     </div>
@@ -426,7 +542,7 @@ function ActionRow({
   action,
   index,
   count,
-  el,
+  owner,
   project,
   onParams,
   onDelete,
@@ -435,7 +551,7 @@ function ActionRow({
   action: Action;
   index: number;
   count: number;
-  el: SceneElement;
+  owner: IxOwner;
   project: Project;
   onParams(patch: Record<string, ParamValue>, merge?: string): void;
   onDelete(): void;
@@ -457,8 +573,17 @@ function ActionRow({
     />
   );
   const target = (filter?: (e: SceneElement) => boolean, allowSelf = true) => (
-    <ElementPicker value={String(p.target ?? '')} el={el} project={project} filter={filter} allowSelf={allowSelf} onChange={(v) => onParams({ target: v })} />
+    <ElementPicker
+      value={String(p.target ?? '')}
+      owner={owner}
+      project={project}
+      filter={filter}
+      allowSelf={allowSelf && owner.kind === 'element'}
+      onChange={(v) => onParams({ target: v })}
+    />
   );
+  const el = owner.el;
+  const isType = (...types: string[]) => !!el && types.includes(el.type);
   let body: React.ReactNode;
   switch (action.type) {
     case 'show':
@@ -525,7 +650,7 @@ function ActionRow({
             ]}
           />
           <span className="ed-w">image in</span>
-          {target((e) => e.type === 'gallery', el.type === 'gallery')}
+          {target((e) => e.type === 'gallery', isType('gallery'))}
         </>
       );
       break;
@@ -538,7 +663,7 @@ function ActionRow({
           <span className="ed-w">
             {action.type === 'mediaPlay' ? 'Play' : action.type === 'mediaPause' ? 'Pause' : action.type === 'mediaToggle' ? 'Play / pause' : 'Restart'}
           </span>
-          {target((e) => e.type === 'video' || e.type === 'audio', el.type === 'video' || el.type === 'audio')}
+          {target((e) => e.type === 'video' || e.type === 'audio', isType('video', 'audio'))}
         </>
       );
       break;
@@ -546,7 +671,7 @@ function ActionRow({
       body = (
         <>
           <span className="ed-w">Reset</span>
-          {target((e) => e.type === 'quiz', el.type === 'quiz')}
+          {target((e) => e.type === 'quiz', isType('quiz'))}
           <span className="ed-w">so it can be answered again</span>
         </>
       );
@@ -558,6 +683,36 @@ function ActionRow({
           <Select value={String(p.preset ?? 'pop')} onChange={(v) => onParams({ preset: v })} options={EMPHASIS_PRESETS} ariaLabel="Animation" />
           <span className="ed-w">on</span>
           {target()}
+        </>
+      );
+      break;
+    case 'openLink':
+      body = <LinkEditor params={p} onParams={onParams} />;
+      break;
+    case 'modelView':
+      body = (
+        <>
+          <span className="ed-w">Turn</span>
+          {target((e) => e.type === 'model', isType('model'))}
+          <span className="ed-w">to</span>
+          <Select value={String(p.view ?? 'reset')} onChange={(v) => onParams({ view: v })} options={MODEL_VIEWS} ariaLabel="View" />
+        </>
+      );
+      break;
+    case 'modelSpin':
+      body = (
+        <>
+          <Select
+            value={String(p.mode ?? 'toggle')}
+            onChange={(v) => onParams({ mode: v })}
+            ariaLabel="Spin"
+            options={[
+              { value: 'toggle', label: 'Start / stop spinning' },
+              { value: 'start', label: 'Start spinning' },
+              { value: 'stop', label: 'Stop spinning' },
+            ]}
+          />
+          {target((e) => e.type === 'model', isType('model'))}
         </>
       );
       break;
@@ -582,7 +737,11 @@ function ActionRow({
       body = <span className="ed-w">{action.type}</span>;
   }
   return (
-    <li className="ed-action" style={{ ['--c' as string]: cat.color, ['--s' as string]: cat.soft }} data-testid="action-row">
+    <li
+      className={`ed-action ${action.type === 'openLink' ? 'is-wide' : ''}`}
+      style={{ ['--c' as string]: cat.color, ['--s' as string]: cat.soft }}
+      data-testid="action-row"
+    >
       <span className="ed-action-num">{index + 1}</span>
       <div className="ed-action-body">{body}</div>
       <div className="ed-action-tools">
@@ -604,17 +763,65 @@ function ActionRow({
   );
 }
 
+/** "Open <url> in a new tab", with friendly validation and an optional description for screen readers. */
+export function LinkEditor({ params, onParams }: { params: Record<string, ParamValue>; onParams(patch: Record<string, ParamValue>, merge?: string): void }) {
+  const url = String(params.url ?? '');
+  const [touched, setTouched] = useState(!!url);
+  const problem = linkProblem(url);
+  const [more, setMore] = useState(!!params.label);
+  return (
+    <div className="ed-link-editor">
+      <div className="ed-link-row">
+        <span className="ed-w">Open</span>
+        <div className={`ed-link-input ${touched && problem ? 'is-bad' : ''}`} onBlur={() => setTouched(true)}>
+          <Icon name="link" size={14} />
+          <TextInput value={url} onChange={(v) => onParams({ url: v.slice(0, 2000) }, 'url')} placeholder="https://example.com" ariaLabel="Link address" />
+        </div>
+      </div>
+      {touched && problem && (
+        <p className="ed-link-problem" role="alert" data-testid="link-problem">
+          <Icon name="warning" size={13} /> {problem}
+        </p>
+      )}
+      <div className="ed-link-row">
+        <Select
+          value={params.newTab === false ? 'same' : 'new'}
+          onChange={(v) => onParams({ newTab: v === 'new' })}
+          ariaLabel="Where it opens"
+          options={[
+            { value: 'new', label: 'in a new tab' },
+            { value: 'same', label: 'in the same tab' },
+          ]}
+        />
+        {!more && (
+          <button className="ed-link" onClick={() => setMore(true)}>
+            Add a description
+          </button>
+        )}
+      </div>
+      {more && (
+        <TextInput
+          value={String(params.label ?? '')}
+          onChange={(v) => onParams({ label: v.slice(0, 200) }, 'label')}
+          placeholder="Describe the link (read aloud by screen readers)"
+          ariaLabel="Link description"
+        />
+      )}
+    </div>
+  );
+}
+
 /** Dropdown for choosing a target element; hovering an option highlights it on the canvas. */
 function ElementPicker({
   value,
-  el,
+  owner,
   project,
   onChange,
   filter,
   allowSelf = true,
 }: {
   value: string;
-  el: SceneElement;
+  owner: IxOwner;
   project: Project;
   onChange(v: string): void;
   filter?(e: SceneElement): boolean;
@@ -631,12 +838,13 @@ function ElementPicker({
       editor().set({ highlightId: null });
     };
   }, [open]);
-  const isSelf = value === SELF_TARGET || value === el.id;
+  const el = owner.el;
+  const isSelf = !!el && (value === SELF_TARGET || value === el.id);
   const found = !isSelf && value ? findEl(project, value) : null;
   const label = isSelf ? 'this element' : found ? found.el.name : 'choose…';
-  const home = findEl(project, el.id)?.page;
+  const home = project.pages.find((pg) => pg.id === owner.pageId);
   const groups = project.pages
-    .map((pg, i) => ({ pg, i, els: pg.elements.filter((e) => e.id !== el.id && (!filter || filter(e))) }))
+    .map((pg, i) => ({ pg, i, els: pg.elements.filter((e) => e.id !== el?.id && (!filter || filter(e))) }))
     .filter((g) => g.els.length)
     .sort((a, b) => (a.pg === home ? -1 : b.pg === home ? 1 : a.i - b.i));
   return (
@@ -647,7 +855,7 @@ function ElementPicker({
       </button>
       {open && (
         <div className="ed-elpick-menu" role="listbox">
-          {allowSelf && (!filter || filter(el)) && (
+          {allowSelf && el && (!filter || filter(el)) && (
             <button
               role="option"
               aria-selected={isSelf}
@@ -691,7 +899,7 @@ function ElementPicker({
 
 export function actionSummary(a: Action, project: Project, selfId: string): string {
   const p = a.params;
-  const name = (id: unknown) => (id === SELF_TARGET || id === selfId ? 'this' : (typeof id === 'string' && findEl(project, id)?.el.name) || '…');
+  const name = (id: unknown) => ((id === SELF_TARGET || id === selfId) && selfId ? 'this' : (typeof id === 'string' && findEl(project, id)?.el.name) || '…');
   const v = (id: unknown) => (id === '@all' ? 'all variables' : (project.variables.find((x) => x.id === id)?.name ?? '…'));
   switch (a.type) {
     case 'show':
@@ -730,6 +938,12 @@ export function actionSummary(a: Action, project: Project, selfId: string): stri
       return `play / pause ${name(p.target)}`;
     case 'quizReset':
       return `reset ${name(p.target)}`;
+    case 'openLink':
+      return p.url ? `open ${linkDisplay(p.url)}` : 'open a link';
+    case 'modelView':
+      return `turn ${name(p.target)} to ${MODEL_VIEWS.find((v) => v.value === p.view)?.label ?? 'a view'}`;
+    case 'modelSpin':
+      return `${p.mode === 'start' ? 'start spinning' : p.mode === 'stop' ? 'stop spinning' : 'start/stop spinning'} ${name(p.target)}`;
     default:
       return a.type;
   }
@@ -809,5 +1023,92 @@ function EntranceSection({ el }: { el: SceneElement }) {
         </>
       )}
     </Section>
+  );
+}
+
+// ---------------- slide / section behavior ----------------
+
+/**
+ * Behavior of the current slide or section: keyboard shortcuts, "when the
+ * slide opens" and "after a delay" — no invisible button needed. Keyboard
+ * rules can be switched to work on every slide (project-wide).
+ */
+export function PageBehaviorPanel() {
+  const project = useEditor((s) => s.project)!;
+  const pageId = useEditor((s) => s.pageId);
+  const page = project.pages.find((p) => p.id === pageId) ?? project.pages[0];
+  const owner = pageOwner(project, page);
+  const noun = project.kind === 'slides' ? 'slide' : 'section';
+  const projectOwner: IxOwner = { ...owner, type: '@project', name: `every ${noun}` };
+  const updatePageList = (fn: (list: Interaction[]) => void, merge?: string) =>
+    editor().update(
+      (d) => {
+        const pg = d.pages.find((p) => p.id === page.id);
+        if (!pg) return;
+        const list = pg.interactions ?? [];
+        fn(list);
+        if (list.length) pg.interactions = list;
+        else delete pg.interactions;
+      },
+      merge ? { merge: `page-ix:${page.id}:${merge}` } : undefined,
+    );
+  const updateProjectList = (fn: (list: Interaction[]) => void, merge?: string) =>
+    editor().update(
+      (d) => {
+        const list = d.interactions ?? [];
+        fn(list);
+        if (list.length) d.interactions = list;
+        else delete d.interactions;
+      },
+      merge ? { merge: `project-ix:${merge}` } : undefined,
+    );
+  const onScope = (ix: Interaction, to: 'page' | 'project') =>
+    editor().update((d) => {
+      const pg = d.pages.find((p) => p.id === page.id);
+      if (!pg) return;
+      const from = to === 'project' ? (pg.interactions ?? []) : (d.interactions ?? []);
+      const i = from.findIndex((x) => x.id === ix.id);
+      if (i < 0) return;
+      const [moved] = from.splice(i, 1);
+      // A project-wide rule has no "this element": drop @self targets.
+      for (const a of moved.actions) if (a.params.target === SELF_TARGET) a.params.target = '';
+      if (to === 'project') {
+        d.interactions = [...(d.interactions ?? []), moved];
+        if (!from.length) delete pg.interactions;
+      } else {
+        pg.interactions = [...(pg.interactions ?? []), moved];
+        if (!from.length) delete d.interactions;
+      }
+    });
+  const projectList = project.interactions ?? [];
+  return (
+    <div className="ed-inspector-body" data-testid="page-behavior">
+      <Section title={`This ${noun}`} icon="bolt">
+        <InteractionList
+          owner={owner}
+          list={page.interactions ?? []}
+          project={project}
+          update={updatePageList}
+          pickerKey={`@page:${page.id}`}
+          scope="page"
+          onScope={onScope}
+          empty={`Do things when the ${noun} opens, after a few seconds, or when a key is pressed — no button needed. Example: “When Space is pressed → animate Arrow 1”.`}
+        />
+      </Section>
+      {projectList.length > 0 && (
+        <Section title={`Every ${noun}`} icon="keyboard">
+          <p className="ed-note">Keyboard shortcuts that work wherever the viewer is.</p>
+          <InteractionList
+            owner={projectOwner}
+            list={projectList}
+            project={project}
+            update={updateProjectList}
+            pickerKey="@project"
+            scope="project"
+            onScope={onScope}
+          />
+        </Section>
+      )}
+    </div>
   );
 }

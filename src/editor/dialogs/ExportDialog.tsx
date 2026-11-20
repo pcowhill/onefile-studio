@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import runtimeCode from 'virtual:ofs-runtime';
+import coreRuntime from 'virtual:ofs-runtime';
+import model3dRuntime from 'virtual:ofs-runtime-3d';
 import type { AssetKind, Project } from '../../model/types';
 import { assetKind } from '../../model/types';
 import { useEditor, editor } from '../store/store';
 import { Modal } from '../ui/Modal';
 import { Icon } from '../ui/Icon';
 import { buildStandaloneHtml, formatBytes, pruneUnusedAssets } from '../../io/exportHtml';
+import type { ExportRuntime } from '../../io/exportHtml';
+import { countInteractions } from '../../model/interactions';
 import { isOptimizable, optimizeAssets } from '../../io/assets';
 import type { ExportEstimate } from '../../io/exportPlan';
 import { assetBreakdown, editRetention, estimateExport, findAssetIssues, MAX_EXPORT_CHARS, WARN_EMAIL_BYTES, WARN_LARGE_BYTES } from '../../io/exportPlan';
@@ -16,8 +19,11 @@ import '../../styles/media.css';
 
 type Quality = 'original' | 'optimized';
 
+/** Core player plus the 3D add-on (embedded only in files that show a 3D model). */
+const runtimeCode: ExportRuntime = { core: coreRuntime, model3d: model3dRuntime };
+
 const plural = (n: number, word: string) => (n === 1 ? word : `${word}s`);
-const KIND_ICON: Record<AssetKind, string> = { image: 'image', video: 'video', audio: 'audio' };
+const KIND_ICON: Record<AssetKind, string> = { image: 'image', video: 'video', audio: 'audio', model: 'cube' };
 
 export async function buildExport(project: Project, quality: Quality): Promise<{ html: string; project: Project }> {
   let p = pruneUnusedAssets(project);
@@ -41,7 +47,7 @@ export function ExportDialog() {
   const original = useMemo<Plan>(() => ({ project: pruned, estimate: estimateExport(pruned, runtimeCode) }), [pruned]);
   const hasRaster = useMemo(() => Object.values(pruned.assets).some(isOptimizable), [pruned]);
   const counts = useMemo(() => {
-    const c = { image: 0, video: 0, audio: 0, kept: 0 };
+    const c = { image: 0, video: 0, audio: 0, model: 0, kept: 0 };
     for (const a of Object.values(pruned.assets)) {
       const k = assetKind(a.mime);
       c[k]++;
@@ -51,12 +57,8 @@ export function ExportDialog() {
   }, [pruned]);
   const stats = useMemo(() => {
     let elements = 0;
-    let interactions = 0;
-    for (const p of project.pages) {
-      elements += p.elements.length;
-      for (const e of p.elements) interactions += e.interactions.length;
-    }
-    return { elements, interactions };
+    for (const p of project.pages) elements += p.elements.length;
+    return { elements, interactions: countInteractions(project) };
   }, [project]);
 
   useEffect(() => {

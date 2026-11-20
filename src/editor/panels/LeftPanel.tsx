@@ -247,7 +247,7 @@ function CatalogCard({ item }: { item: CatalogItem }) {
 }
 
 type MediaFilter = 'all' | AssetKind;
-const FILTER_LABEL: Record<MediaFilter, string> = { all: 'All', image: 'Images', video: 'Videos', audio: 'Sounds' };
+const FILTER_LABEL: Record<MediaFilter, string> = { all: 'All', image: 'Images', video: 'Videos', audio: 'Sounds', model: '3D' };
 
 function MediaPanel() {
   const project = useEditor((s) => s.project)!;
@@ -281,9 +281,10 @@ function MediaPanel() {
             <Icon name="image" size={20} />
             <Icon name="video" size={20} />
             <Icon name="audio" size={20} />
+            <Icon name="cube" size={20} />
           </span>
           <strong>Upload</strong>
-          <span>Drop images, GIFs, videos or sounds here — they're embedded right into your file</span>
+          <span>Drop images, GIFs, videos, sounds or 3D models (GLB) here — they're embedded right into your file</span>
           <button className="ed-btn ed-btn-primary ed-btn-sm" onClick={() => void pickMedia()} data-testid="upload-images">
             <Icon name="upload" size={15} /> Choose files
           </button>
@@ -291,7 +292,7 @@ function MediaPanel() {
         <CaptureCards />
         {kinds.size > 1 && (
           <div className="ed-media-filter" role="radiogroup" aria-label="Show">
-            {(['all', 'image', 'video', 'audio'] as MediaFilter[])
+            {(['all', 'image', 'video', 'audio', 'model'] as MediaFilter[])
               .filter((f) => f === 'all' || kinds.has(f))
               .map((f) => (
                 <button key={f} role="radio" aria-checked={filter === f} className={filter === f ? 'is-on' : ''} onClick={() => setFilter(f)}>
@@ -333,7 +334,9 @@ function MediaPanel() {
                       e.clientY,
                       [
                         { label: 'Place on page', icon: 'plus', onClick: () => insertMedia(a) },
-                        { label: editLabel, icon: kind === 'image' ? 'crop' : 'scissors', onClick: () => openMediaEdit({ assetId: a.id }) },
+                        ...(kind === 'model'
+                          ? []
+                          : [{ label: editLabel, icon: kind === 'image' ? 'crop' : 'scissors', onClick: () => openMediaEdit({ assetId: a.id }) }]),
                         { label: 'Rename…', icon: 'edit', onClick: rename },
                         { divider: true },
                         { label: used ? `Remove (used ${used}×)` : 'Remove from project', icon: 'trash', danger: true, onClick: () => deleteAsset(a.id) },
@@ -353,15 +356,17 @@ function MediaPanel() {
                     </small>
                   </span>
                 </button>
-                <button
-                  className="ed-asset-edit"
-                  onClick={() => openMediaEdit({ assetId: a.id })}
-                  aria-label={`${editLabel.replace('…', '')} ${a.name}`}
-                  title={editLabel.replace('…', '')}
-                  data-testid="media-asset-edit"
-                >
-                  <Icon name={kind === 'image' ? 'crop' : 'scissors'} size={15} />
-                </button>
+                {kind !== 'model' && (
+                  <button
+                    className="ed-asset-edit"
+                    onClick={() => openMediaEdit({ assetId: a.id })}
+                    aria-label={`${editLabel.replace('…', '')} ${a.name}`}
+                    title={editLabel.replace('…', '')}
+                    data-testid="media-asset-edit"
+                  >
+                    <Icon name={kind === 'image' ? 'crop' : 'scissors'} size={15} />
+                  </button>
+                )}
               </div>
             );
           })}

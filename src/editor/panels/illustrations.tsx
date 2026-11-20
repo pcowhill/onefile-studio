@@ -102,6 +102,16 @@ export function CatalogIllustration({ id }: { id: string }) {
           <rect x="20" y="20.5" width="24" height="3.5" rx="1.75" fill="#fff" />
         </svg>
       );
+    case 'link-button':
+      return (
+        <svg viewBox={v}>
+          <rect x="6" y="17" width="52" height="16" rx="8" fill="#0e7490" />
+          <rect x="6" y="14" width="52" height="16" rx="8" fill="#0891b2" />
+          <rect x="13" y="20.5" width="20" height="3.5" rx="1.75" fill="#fff" />
+          <path d="M42 26.5l7-7M44 19.5h5v5" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <path d="M36 38h22" stroke="#0891b2" strokeWidth="1.8" strokeLinecap="round" strokeDasharray="1 3.5" opacity=".6" />
+        </svg>
+      );
     case 'next':
     case 'back': {
       const back = id === 'back';
@@ -182,6 +192,18 @@ export function CatalogIllustration({ id }: { id: string }) {
           <path d="M29.5 23.2v7.6l6.2-3.8z" fill="#fff" />
           <rect x="12" y="36" width="40" height="2" rx="1" fill="#5d5576" />
           <rect x="12" y="36" width="17" height="2" rx="1" fill="#ef4444" />
+        </svg>
+      );
+    case 'model':
+      return (
+        <svg viewBox={v}>
+          {grad('g-model', '#8b6cff', '#3d8bff')}
+          <ellipse cx="32" cy="41" rx="17" ry="3.5" fill="#2a2340" opacity=".14" />
+          <path d="M32 6l15 8.5v17L32 40 17 31.5v-17z" fill="url(#g-model)" />
+          <path d="M32 6l15 8.5L32 23 17 14.5z" fill="#fff" opacity=".45" />
+          <path d="M32 23v17l15-8.5v-17z" fill="#2a2340" opacity=".18" />
+          <path d="M8 22a24 9 0 0 0 48 0" fill="none" stroke="#ff7eb3" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="1 5" />
+          <path d="M53 18l3.5 4-5 1.2" fill="none" stroke="#ff7eb3" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       );
     case 'audio':

@@ -195,7 +195,7 @@ describe('schema v3: media edits survive validation, export and import', () => {
     if (!r.ok) throw new Error(r.errors.join());
     const p = r.project;
     expect(p.version).toBe(SCHEMA_VERSION);
-    expect(SCHEMA_VERSION).toBe(3);
+    expect(SCHEMA_VERSION).toBeGreaterThanOrEqual(3);
     expect(p.assets.as_img.edit).toEqual({ crop: { x: 0.25, y: 0, w: 0.5, h: 1 }, rotate: 90 });
     expect(p.assets.as_vid.edit).toEqual({ trim: { start: 5, end: 15 } });
     expect(p.assets.as_snd.edit).toBeUndefined();
@@ -219,14 +219,14 @@ describe('schema v3: media edits survive validation, export and import', () => {
     expect(r.project.pages[0].elements[5].props.edit).toBeNull();
   });
 
-  it('migrates v2 files (no edits) to v3 with every element following the library', () => {
+  it('migrates v2 files (no edits) to the current version with every element following the library', () => {
     const raw = JSON.parse(JSON.stringify(editedProject()));
     raw.version = 2;
     for (const a of Object.values(raw.assets) as Array<Record<string, unknown>>) delete a.edit;
     for (const el of raw.pages[0].elements) delete el.props.edit;
     const r = validateProject(raw);
     if (!r.ok) throw new Error(r.errors.join());
-    expect(r.project.version).toBe(3);
+    expect(r.project.version).toBe(SCHEMA_VERSION);
     for (const el of r.project.pages[0].elements) expect(el.props.edit).toBeNull();
     expect(Object.values(r.project.assets).every((a) => !a.edit)).toBe(true);
   });
