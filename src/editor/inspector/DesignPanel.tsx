@@ -1,4 +1,4 @@
-import type { Page, Project, SceneElement } from '../../model/types';
+import type { Asset, Page, Project, SceneElement } from '../../model/types';
 import { useEditor, editor } from '../store/store';
 import { Icon } from '../ui/Icon';
 import {
@@ -16,7 +16,8 @@ import {
   TextInput,
   Toggle,
 } from '../ui/controls';
-import { align, moveLayer, resetToTheme, setRole, updateElement, updatePage, updateProps, updateSelected } from '../ops';
+import { align, moveLayer, replaceElementImage, resetToTheme, setRole, updateElement, updatePage, updateProps, updateSelected } from '../ops';
+import { ImagePicker } from '../media/ImagePicker';
 import { customizedKeys, getTheme, inferRole, ROLE_OPTIONS, themeValues, backgroundPaint, BACKGROUND_ROLES } from '../../model/theme';
 import { ThemePreview } from '../theme/ThemePicker';
 import { EDITOR_ELEMENTS } from '../catalog';
@@ -302,11 +303,25 @@ function TextEditor({ el, set }: P<TextProps>) {
 
 function ImageEditor({ el, set, project }: P<ImageProps>) {
   const p = el.props;
-  const asset = project.assets[p.assetId];
+  const found = project.assets[p.assetId];
+  const asset = found && found.mime.startsWith('image/') ? found : undefined;
+  const choose = (a: Asset) => replaceElementImage(el.id, a);
   return (
     <Section title="Image" icon="image">
-      <ImageChooser value={p.assetId} onChange={(id) => set({ assetId: id, edit: null })} />
-      <MediaEditRow el={el} asset={asset && asset.mime.startsWith('image/') ? asset : undefined} allowScreenshot />
+      {asset ? (
+        <>
+          <ImageChooser
+            value={p.assetId}
+            onChange={(id) => {
+              const a = useEditor.getState().project?.assets[id];
+              if (a) choose(a);
+            }}
+          />
+          <MediaEditRow el={el} asset={asset} allowScreenshot />
+        </>
+      ) : (
+        <ImagePicker elementId={el.id} onPick={choose} />
+      )}
       <Field label="Fit">
         <Segmented
           value={p.fit}

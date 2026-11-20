@@ -91,8 +91,6 @@ export interface CatalogItem {
   icon: string;
   color: string;
   group: 'text' | 'media' | 'shapes' | 'data' | 'interactive';
-  /** Opens a file picker instead of inserting immediately. */
-  needsImage?: boolean;
   build(ctx: BuildContext): Built;
 }
 
@@ -185,12 +183,12 @@ export const CATALOG: CatalogItem[] = [
   {
     id: 'image',
     label: 'Image',
-    hint: 'Upload a picture or animated GIF',
+    hint: 'A picture, screenshot or animated GIF',
     icon: 'image',
     color: '#00b894',
     group: 'media',
-    needsImage: true,
-    build: () => ({ element: createElement('image', { w: 400, h: 300 }) }),
+    // Like Video and Audio: a placeholder first, then choose the picture in the inspector.
+    build: () => ({ element: createElement('image', { w: 480, h: 320 }) }),
   },
   {
     id: 'video',

@@ -106,12 +106,6 @@ export function insertCatalogItem(item: CatalogItem) {
   if (!s.project) return;
   const pg = page(s.project, s.pageId);
   if (!pg) return;
-  if (item.needsImage) {
-    void pickImages(false).then((assets) => {
-      if (assets[0]) insertImage(assets[0]);
-    });
-    return;
-  }
   const built = item.build({ project: s.project, page: pg });
   insertBuilt(built);
   if (built.variables?.length) toast(`Created the variable “${built.variables[0].name}”. Change it with interactions in the Behavior tab.`, 'info');
@@ -667,15 +661,32 @@ export function renameAsset(id: string, name: string) {
   });
 }
 
-/** Points an image element at another image (e.g. "Replace with screenshot"). */
+/**
+ * Points an image element at another image (library, upload, screenshot,
+ * photo). Position, styling and interactions are kept. A placeholder takes
+ * the picture's shape (same width and centre); an element that already shows
+ * a picture keeps its size (the picture fills it). The element's own crop was
+ * made for the old picture, so it goes back to following the library version.
+ */
 export function replaceElementImage(elementId: string, asset: Asset) {
   editor().update((d) => {
     const f = findEl(d, elementId);
     if (!f || f.el.type !== 'image') return;
     const p = f.el.props as Record<string, unknown>;
+    const wasEmpty = !(typeof p.assetId === 'string' && d.assets[p.assetId]);
     p.assetId = asset.id;
     p.edit = null;
-    fitElementToPicture(f.el, asset, asset.edit ?? {});
+    if (!p.alt || wasEmpty) p.alt = stripExt(asset.name);
+    if (wasEmpty) {
+      const cy = f.el.y + f.el.h / 2;
+      fitElementToPicture(f.el, asset, asset.edit ?? {});
+      const maxH = pageHeight(d, f.page) * 0.9;
+      if (f.el.h > maxH) {
+        f.el.w = Math.round((f.el.w * maxH) / f.el.h);
+        f.el.h = Math.round(maxH);
+      }
+      f.el.y = Math.round(cy - f.el.h / 2);
+    }
   });
   editor().select([elementId]);
 }

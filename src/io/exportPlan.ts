@@ -87,6 +87,9 @@ function checkRef(project: Project, id: unknown, want: AssetKind): string | null
  * asset. Exporting would silently drop those files, so the dialog blocks it.
  * `empty` lists media elements that simply have no file chosen yet.
  */
+/** Elements whose empty state is worth a gentle "nothing chosen yet" note in the export dialog. */
+const EMPTY_NOUN: Record<string, string> = { image: 'picture', video: 'video', audio: 'sound', model: '3D model' };
+
 export function findAssetIssues(project: Project): { problems: AssetIssue[]; empty: AssetIssue[] } {
   const problems: AssetIssue[] = [];
   const empty: AssetIssue[] = [];
@@ -100,13 +103,13 @@ export function findAssetIssues(project: Project): { problems: AssetIssue[]; emp
       for (const [prop, kind] of Object.entries(ASSET_REFS[el.type] ?? {})) {
         const issue = checkRef(project, props[prop], kind);
         if (issue) push(issue);
-        else if (prop === 'assetId' && (el.type === 'video' || el.type === 'audio') && !props[prop])
+        else if (prop === 'assetId' && EMPTY_NOUN[el.type] && !props[prop])
           empty.push({
             pageId: page.id,
             pageIndex,
             elementId: el.id,
             label: el.name || el.type,
-            message: `has no ${el.type === 'video' ? 'video' : 'sound'} yet`,
+            message: `has no ${EMPTY_NOUN[el.type]} yet`,
           });
       }
       if (Array.isArray(props.images)) {
