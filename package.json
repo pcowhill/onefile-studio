@@ -1,7 +1,7 @@
 {
   "name": "onefile-studio",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A friendly offline editor for interactive presentations and webpages that export to a single, self-contained HTML file.",
   "type": "module",
   "license": "MIT",

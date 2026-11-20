@@ -37,7 +37,8 @@ for (const theme of ['playful', 'professional', 'technical', 'editorial']) {
     const file = await exportProject(page, `theme-${theme}.html`);
     const html = (await import('node:fs')).readFileSync(file, 'utf8');
     expect(html).toMatch(THEME_FONTS[theme]); // the theme's font is embedded…
-    expect(html).not.toMatch(/https?:\/\/(?!www\.w3\.org)/); // …and nothing remote is referenced
+    // …and nothing remote is referenced (a URL needs a host; the runtime's link validator only has "https://${…}" templates).
+    expect(html).not.toMatch(/https?:\/\/(?!www\.w3\.org)[a-z0-9]/i);
 
     const ex = await openExported(browser, file);
     const text = ex.page.locator(`.ofs-el[data-id="${heading.id}"] .ofs-text`);

@@ -104,7 +104,23 @@ export function technicalExplainer(): Project {
         ],
       },
     ),
-    text(`el_x_nodet${i}`, `${name} label`, [nodeX(i) + 10, 286, 180, 40], 'heading', name, { size: 26, align: 'center', valign: 'middle' }),
+    // The label covers the middle of the box, so it answers clicks too.
+    text(
+      `el_x_nodet${i}`,
+      `${name} label`,
+      [nodeX(i) + 10, 286, 180, 40],
+      'heading',
+      name,
+      { size: 26, align: 'center', valign: 'middle' },
+      {
+        interactions: [
+          ix(`ix_x_nodet${i}`, 'click', [
+            ['animate', { target: `el_x_node${i}`, preset: 'pulse' }],
+            ['toggle', { target: `el_x_call${i}`, effect: 'pop' }],
+          ]),
+        ],
+      },
+    ),
   ]);
   const arrows = [0, 1, 2, 3].map((i) =>
     el(
@@ -175,7 +191,7 @@ export function technicalExplainer(): Project {
   ]);
   s2.interactions = [
     // "When the slide opens": start the story from the first stop every time.
-    ix('ix_x_open', 'pageStart', [...hideAll, ['show', { target: 'el_x_call0', effect: 'none' }], ['varSet', { variable: 'var_step', value: 0 }]]),
+    ix('ix_x_open', 'pageStart', [['varSet', { variable: 'var_step', value: 0 }], ...hideAll, ['show', { target: 'el_x_call0', effect: 'none' }]]),
     // Listed from the last step to the first so one key press advances exactly one step.
     key('ix_x_done', 'ArrowRight', [['navigate', { page: 'next' }]], step('cd_x_done', 4, 'gte')),
     reveal(3),
@@ -184,7 +200,7 @@ export function technicalExplainer(): Project {
     reveal(0),
     { ...key('ix_x_space', 'Space', [['navigate', { page: 'next' }]], step('cd_x_sp', 4, 'gte')) },
     ...[3, 2, 1, 0].map((i) => ({ ...reveal(i), id: `ix_x_sp${i}`, options: { key: 'Space' } })),
-    key('ix_x_reset', 'r', [...hideAll, ['show', { target: 'el_x_call0', effect: 'pop' }], ['varSet', { variable: 'var_step', value: 0 }]]),
+    key('ix_x_reset', 'r', [['varSet', { variable: 'var_step', value: 0 }], ...hideAll, ['show', { target: 'el_x_call0', effect: 'pop' }]]),
   ];
 
   // Slide 3 — number keys pick a detail, a timed tip, links.

@@ -1,11 +1,11 @@
-# Project schema (v3)
+# Project schema (v4)
 
 Projects are plain JSON. TypeScript definitions: `src/model/types.ts`. Validation: `src/model/validate.ts`.
 
 ```jsonc
 {
   "schema": "onefile-studio/project",  // required, identifies the format
-  "version": 3,                         // schema version; newer versions are rejected, older ones migrated
+  "version": 4,                         // schema version; newer versions are rejected, older ones migrated
   "id": "prj_…",
   "kind": "slides" | "page",
   "meta": { "title": "…", "createdAt": "ISO", "updatedAt": "ISO" },
@@ -20,11 +20,12 @@ Projects are plain JSON. TypeScript definitions: `src/model/types.ts`. Validatio
   },
   "pages": [ /* Page */ ],
   "variables": [ { "id": "var_…", "name": "Score", "type": "number", "initial": 0 } ],
-  "assets": { "as_…": { "id", "name", "mime", "data": "data:<mime>;base64,…", "width", "height", "bytes", "hash", "duration"?, "animated"?, "edit"? } }
+  "assets": { "as_…": { "id", "name", "mime", "data": "data:<mime>;base64,…", "width", "height", "bytes", "hash", "duration"?, "animated"?, "edit"? } },
+  "interactions": [ /* Interaction — v4, project-wide keyboard shortcuts (trigger "key" only) */ ]   // optional
 }
 ```
 
-Assets are always embedded base64 `data:` URLs. Accepted MIME types: images (`png`, `jpeg`, `gif`, `webp`, `svg+xml`, `avif`, `bmp`), video (`video/mp4`, `video/webm`, `video/ogg`) and audio (`audio/mpeg`, `audio/wav`, `audio/ogg`, `audio/mp4`, `audio/aac`, `audio/webm`, `audio/flac`). `duration` (seconds) is set for media, `animated: true` marks animated GIFs (never re-encoded). `edit` (v3) is the media library's nondestructive edit of the file — see *Media edits* below. Asset references are kind-checked on import: an image prop can only point at an image, a video element at a video, and so on.
+Assets are always embedded base64 `data:` URLs. Accepted MIME types: images (`png`, `jpeg`, `gif`, `webp`, `svg+xml`, `avif`, `bmp`), video (`video/mp4`, `video/webm`, `video/ogg`), audio (`audio/mpeg`, `audio/wav`, `audio/ogg`, `audio/mp4`, `audio/aac`, `audio/webm`, `audio/flac`) and, from v4, 3D models (`model/gltf-binary`, i.e. GLB; the header is checked on import, the full structure on upload — see *3D models* below). `duration` (seconds) is set for media, `animated: true` marks animated GIFs (never re-encoded). `edit` (v3) is the media library's nondestructive edit of the file — see *Media edits* below. Asset references are kind-checked on import: an image prop can only point at an image, a video element at a video, and so on.
 
 ## Page
 
@@ -39,7 +40,8 @@ Assets are always embedded base64 `data:` URLs. Accepted MIME types: images (`pn
   "role": "hero",         // v2: theme background slot: base | alt | hero | dark | accent
   "themed": true,         // v2: paint follows the theme (false/absent = author's choice)
   "height": 560,          // sections (kind = page) only
-  "elements": [ /* SceneElement, back to front */ ]
+  "elements": [ /* SceneElement, back to front */ ],
+  "interactions": [ /* Interaction — v4, page-level: triggers "key", "pageStart", "pageTimer" */ ]   // optional
 }
 ```
 
@@ -54,7 +56,7 @@ Assets are always embedded base64 `data:` URLs. Accepted MIME types: images (`pn
   "props": { … },      // type-specific, see below
   "interactions": [ /* Interaction */ ],
   "entrance": { "preset": "fadeIn", "duration": 600, "delay": 0, "direction": "up" } | null,
-  "drag": { "mode": "rigid" } | null,
+  "drag": { "mode": "rigid" | "floaty" | "weighted", "amount"?: 0.5, "settle"?: 0.5 } | null,   // v4: physics modes and their feel (0..1)
   "role": "heading",                 // v2: theme style slot (see below)
   "themed": ["color", "font", "weight", "letterSpacing", "background", "radius"]   // v2
 }
@@ -85,6 +87,7 @@ Element types and their props (defaults in each `src/runtime/elements/*.ts`):
 | `chart` (v2) | `chartType` (`bar`, `line`), `title`, `labels` (string[]), `series` ([{ `name`, `values`: number[] }]), `palette` (colours), `preset` (`clean`, `soft`, `bold`), `showLegend`, `legendToggle`, `showValues`, `showGrid`, `xLabel`, `yLabel`, `valuePrefix`, `valueSuffix`, `font`, `textColor`, `mutedColor`, `gridColor`, `background`, `radius`, `shadow` |
 | `table` (v2) | `rows` (string[][]; row 0 is the header when `headerRow`), `headerRow`, `columnAlign` (`auto`, `left`, `center`, `right` per column), `preset` (`lined`, `boxed`, `minimal`), `striped`, `hoverHighlight`, `sortable`, `size`, `font`, `textColor`, `headerBg`, `headerText`, `stripe`, `borderColor`, `background`, `accent`, `radius`, `shadow` |
 | `countdown` (v2) | `target` (ISO-8601 UTC instant), `timezone` (IANA), `repeat` (`none`, `daily`, `weekly`), `holdMinutes`, `showDays`/`showHours`/`showMinutes`/`showSeconds`, `style` (`cards`, `digital`, `inline`), `showLabels`, `title`, `doneText`, `font`, `labelFont`, `color`, `accent`, `cardBg`, `cardText`, `labelColor`, `radius`, `shadow` |
+| `model` (v4) | `assetId` (GLB model), `alt`, `lighting` (`studio`, `soft`, `dramatic`), `backdrop` (`gradient`, `solid`, `none`), `background`, `accent`, `autoRotate`, `rotateSpeed` (0.2–3), `allowRotate`, `allowZoom`, `allowPan`, `controls` (reset/zoom/fullscreen overlay), `groundShadow`, `yaw`/`pitch` (starting view, degrees), `zoom` (0.4–2.5), `radius`, `shadow` |
 | `quiz` (v2) | `question`, `choices` (2–10 strings), `correct` (index), `layout` (`list`, `grid`, `pills`), `showLetters`, `feedbackCorrect`, `feedbackIncorrect`, `allowRetry`, `revealAnswer`, `scoreVariable` (variable id), `points`, `firstTryOnly`, `font`, `headingFont`, `color`, `background`, `accent`, `choiceBg`, `borderColor`, `success`, `danger`, `radius`, `shadow` |
 
 Shadows: `none`, `subtle`, `soft`, `lifted`, `glow`. Fonts: `rounded` (Nunito), `modern` (Inter), `grotesk` (Space Grotesk), `elegant` (Fraunces) — embedded, OFL — plus system stacks `sans`, `serif`, `mono`, `hand`.
@@ -97,7 +100,10 @@ Shadows: `none`, `subtle`, `soft`, `lifted`, `glow`. Fonts: `rounded` (Nunito), 
   "trigger": "click" | "rightclick" | "dblclick" | "hover"
            | "quizCorrect" | "quizIncorrect" | "quizAnswered"   // quiz only (v2)
            | "countdownDone"                                    // countdown only (v2)
-           | "mediaEnded",                                      // video/audio only (v2)
+           | "mediaEnded"                                       // video/audio only (v2)
+           | "key"                                              // v4: elements, pages and the project
+           | "pageStart" | "pageTimer",                         // v4: pages only
+  "options": { "key": "Space", "shift": true, "alt": false, "repeat": false } | { "seconds": 3 },   // v4, trigger settings
   "conditions": [ { "id", "type": "variable", "variableId": "var_…", "op": "eq|neq|lt|lte|gt|gte", "value": 10 } ],  // all must pass
   "actions": [ { "id", "type": "…", "params": { … } } ]   // run in order
 }
@@ -117,6 +123,19 @@ Interactions with the same trigger on one element run in list order; each checks
 | `wait` | `seconds` |
 | `mediaPlay`, `mediaPause`, `mediaRestart` (v2), `mediaToggle` (v3: play when paused, pause when playing) | `target` (a video or audio element) |
 | `quizReset` (v2) | `target` (a quiz; works for quizzes on other slides too) |
+| `openLink` (v4) | `url` (http, https, mailto or tel — anything else is removed on import and refused at playback), `newTab` (default true; opens with `noopener,noreferrer`), optional `label` (accessible name) |
+| `modelView` (v4) | `target` (a 3D model), `view` (`reset`, `front`, `back`, `left`, `right`, `top`) |
+| `modelSpin` (v4) | `target` (a 3D model), `mode` (`toggle`, `start`, `stop`) |
+
+### Triggers with options and owners (v4)
+
+Interactions live on elements (`element.interactions`), on a page (`page.interactions`) or on the project (`project.interactions`). Which triggers each owner may use is part of the trigger definition (`owners` in `src/runtime/triggers.ts`); the validator drops anything else with a warning.
+
+- **`key`** — `options.key` is a key id: a lowercase letter (`"k"`), a digit (`"1"`), a named key (`Space`, `Enter`, `Escape`, `ArrowLeft`/`Right`/`Up`/`Down`, `Backspace`, `Delete`, `Home`, `End`, `PageUp`, `PageDown`) or one of `+ - = ? / . , * [ ]`; `""` = not chosen yet (never fires). `shift`/`alt` must match exactly (Shift is ignored for punctuation, which needs Shift on some layouts); Ctrl/⌘ combinations never match. Auto-repeat is ignored unless `repeat` is true. Element and page keys run only while their slide/section is the current one; project keys run everywhere. A matching rule consumes the key, so it takes precedence over built-in slide navigation. Keys typed into fields, sliders and similar controls are ignored, and Enter/Space on a keyboard-focused button keep activating it.
+- **`pageStart`** — each time the slide is shown / the section becomes the current one.
+- **`pageTimer`** — `options.seconds` (0–600) after the page becomes current; cancelled when leaving, restarted on the next visit.
+
+Interactions on one owner with the same trigger *and the same options* (e.g. two rules for →) run in list order, each checking its conditions when it starts.
 
 `countdownDone` fires once per playback session (also when the countdown is already over when it is shown), and once per occurrence for repeating countdowns.
 
@@ -138,9 +157,17 @@ Edits never change embedded bytes; they describe how to show them (`src/model/me
 - Validation keeps only what a kind supports (images: crop/rotate/flips; videos: crop/trim; sounds: trim), clamps crops into the picture (min 2 % per side), orders trims (min 0.1 s, within the duration) and drops identity edits. Crops are normalised, so "Optimised" exports that downsize images keep them valid.
 - Runtime: edited pictures render as an inline SVG (viewBox = crop, `preserveAspectRatio` = cover/contain, orientation matrix on the original bitmap); cropped videos use a container-query viewport; trimmed media play only their segment (start, end, segment looping, seek clamping, `mediaEnded` at the trim end). Exports embed the whole original.
 
+## 3D models (v4)
+
+A model asset is a binary glTF 2.0 file embedded as `data:model/gltf-binary;base64,…`. On upload `inspectGlb()` (`src/model/glb.ts`) rejects text glTF, external or data-URI buffers, external textures, multiple buffers, truncated data and required extensions that need decoders (Draco, meshopt, KTX2/Basis); optional unknown extensions are ignored. Embedded textures (PNG/JPEG/WebP/AVIF in the binary chunk) are supported. Model elements are rendered by the 3D add-on, which exports include only when at least one model element shows a model.
+
 ## Versioning
 
 `SCHEMA_VERSION` lives in `src/model/types.ts`. When the format changes incompatibly: bump it, add a step to `migrate()` in `validate.ts` that upgrades the previous version, and add a fixture test. Files with a newer version than the editor understands are refused with a clear message.
+
+### v3 → v4
+
+Additive only: page/project `interactions`, `interaction.options`, the `key`/`pageStart`/`pageTimer` triggers, the `openLink`/`modelView`/`modelSpin` actions, `floaty`/`weighted` drag modes with `amount`/`settle`, GLB assets and the `model` element. v3 files need no changes and look identical. v0.3 editors refuse v4 exports with the "newer version" message; the exported files themselves keep working anywhere.
 
 ### v2 → v3
 

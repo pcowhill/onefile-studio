@@ -235,7 +235,9 @@ test('uploaded images are embedded, optimised on request, and reimported', async
   // A real photo-sized PNG: a screenshot of the start screen.
   const png = await page.screenshot({ fullPage: false });
   await page.getByTestId('new-slides').click();
-  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.getByTestId('quick-image').click()]);
+  // v0.4: Image inserts a placeholder first; the picture is chosen in the inspector.
+  await page.getByTestId('quick-image').click();
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.getByTestId('choose-image').click()]);
   await chooser.setFiles({ name: 'photo.png', mimeType: 'image/png', buffer: png });
   await expect(page.locator('.ed-el img')).toBeVisible();
   const p0 = (await studioProject(page)) as unknown as { assets: Record<string, { data: string; bytes: number }> };
