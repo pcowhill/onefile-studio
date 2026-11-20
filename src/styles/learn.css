@@ -440,7 +440,7 @@
   bottom: calc(var(--co-h) + 10px);
 }
 .ed-center {
-  --co-h: 176px;
+  --co-h: 196px;
 }
 .co-card {
   position: fixed;
@@ -557,7 +557,7 @@
   padding: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
 }
 .co-chip {
   border: 0;
@@ -619,9 +619,12 @@
 }
 .co-detail {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+}
+.co-detail p {
+  flex: 1 1 300px;
 }
 .co-actions {
   display: flex;
@@ -743,6 +746,18 @@
   .ed-center {
     --co-h: 196px;
   }
+  /* Narrow canvas: other steps show just their number (title in the tooltip). */
+  .co-chip:not(.is-on) .co-chip-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .co-chip:not(.is-on) {
+    padding-right: 3px;
+  }
   .co-card.is-dock {
     grid-template-columns: 180px 1fr auto;
     gap: 12px;
@@ -765,6 +780,49 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .st-themes .ed-theme-card {
+    min-width: 0;
+  }
+}
+
+/* Narrow editor (≈1024–1180 px): the dock stacks — a compact header row, the
+   step text at full width, then the buttons — so nothing needs scrolling. */
+@media (max-width: 1180px) {
+  .ed-center {
+    --co-h: 244px;
+  }
+  .co-card.is-dock {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+  }
+  .co-card.is-dock .co-side {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+  .co-card.is-dock .co-head {
+    flex: none;
+    gap: 8px;
+  }
+  .co-card.is-dock .co-title,
+  .co-card.is-dock .co-foot {
+    display: none;
+  }
+  .co-card.is-dock .co-bar,
+  .co-card.is-dock .co-dots {
+    flex: 1;
+    order: 1;
+  }
+  .co-card.is-dock .co-controls {
+    order: 2;
+  }
+  .co-card.is-dock .co-main {
+    overflow: visible;
+  }
+  .co-card.is-dock .co-nav {
+    flex-direction: row;
+    justify-content: flex-end;
     min-width: 0;
   }
 }
