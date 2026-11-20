@@ -15,5 +15,5 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["vite.config.ts", "playwright.config.ts", "build", "tests/e2e"]
+  "include": ["vite.config.ts", "vite.site.config.ts", "playwright.config.ts", "build", "tests/e2e", "video"]
 }
