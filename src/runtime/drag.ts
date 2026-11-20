@@ -45,6 +45,25 @@ export interface DragContext {
 
 export const DEFAULT_FEEL: DragFeel = { amount: 0.5, settle: 0.5 };
 
+const unit = (v: unknown, d: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : d);
+
+/** The feel settings of a drag behaviour with defaults filled in. */
+export function dragFeel(drag: { amount?: number; settle?: number } | null | undefined): DragFeel {
+  return { amount: unit(drag?.amount, DEFAULT_FEEL.amount), settle: unit(drag?.settle, DEFAULT_FEEL.settle) };
+}
+
+/** CSS transform for a pose: rotation plus an optional squash & stretch along an axis. */
+export function poseTransform(angle: number, stretch = 1, stretchAngle = 0): string {
+  const r = `rotate(${round(angle)}deg)`;
+  if (!stretch || Math.abs(stretch - 1) < 0.002) return angle ? r : '';
+  // Stretch along the axis, squash across it (area roughly preserved). The axis is in page space,
+  // so undo the element's rotation first.
+  const a = round(stretchAngle - angle);
+  return `${r} rotate(${a}deg) scale(${round(stretch, 4)}, ${round(1 / stretch, 4)}) rotate(${-a}deg)`;
+}
+
+const round = (v: number, d = 3) => Math.round(v * 10 ** d) / 10 ** d;
+
 /**
  * Drag modes let viewers move elements during playback: "rigid" (follows the
  * pointer exactly), "floaty" (springy, tilts while moving, settles back to its

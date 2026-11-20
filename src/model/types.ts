@@ -93,8 +93,12 @@ export interface AnimationRef {
 }
 
 export interface DragBehavior {
-  /** A registered drag mode id, e.g. "rigid". */
+  /** A registered drag mode id: "rigid", "floaty" or "weighted" (v4). */
   mode: string;
+  /** v4, physics modes: playfulness (floaty) / weight (weighted), 0..1. Default 0.5. */
+  amount?: number;
+  /** v4, physics modes: settling speed, 0..1. Default 0.5. */
+  settle?: number;
 }
 
 export interface SceneElement<P = Record<string, unknown>> {

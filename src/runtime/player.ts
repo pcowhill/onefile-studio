@@ -9,7 +9,7 @@ import { triggerRegistry } from './triggers';
 import { HIDE_EFFECTS, runInteraction, SHOW_EFFECTS } from './actions';
 import type { PlayerControl } from './actions';
 import { playAnimation } from './animations';
-import { dragRegistry } from './drag';
+import { dragFeel, dragRegistry, poseTransform } from './drag';
 import { h, icon } from './elements/types';
 
 export interface PlayerOptions {
@@ -113,29 +113,50 @@ export function createPlayer(container: HTMLElement, project: Project, opts: Pla
     view.mounted.push(m);
     if (!visibility.get(el.id)) m.wrapper.classList.add('ofs-hidden');
     const pos = { x: el.x, y: el.y };
-    const saved = elementState.get(`pos:${el.id}`) as { x: number; y: number } | undefined;
+    let angle = el.rotation || 0;
+    const saved = elementState.get(`pos:${el.id}`) as { x: number; y: number; angle?: number } | undefined;
     if (saved) {
       pos.x = saved.x;
       pos.y = saved.y;
+      if (typeof saved.angle === 'number') angle = saved.angle;
       m.wrapper.style.left = `${pos.x}px`;
       m.wrapper.style.top = `${pos.y}px`;
+      m.wrapper.style.transform = angle ? `rotate(${angle}deg)` : '';
     }
     if (el.drag?.mode) {
       const mode = dragRegistry.get(el.drag.mode);
       if (mode) {
+        const remember = () => elementState.set(`pos:${el.id}`, { x: pos.x, y: pos.y, angle });
         m.cleanups.push(
           mode.attach(m.wrapper, {
             el,
+            feel: dragFeel(el.drag),
             scale: () => scale,
             bounds: () => ({ w: W, h: pageHeight(project, view.page) }),
             position: () => pos,
             moveTo(x, y) {
               pos.x = x;
               pos.y = y;
-              elementState.set(`pos:${el.id}`, { x, y });
+              remember();
               m.wrapper.style.left = `${x}px`;
               m.wrapper.style.top = `${y}px`;
             },
+            angle: () => angle,
+            setPose(p) {
+              pos.x = p.x;
+              pos.y = p.y;
+              angle = p.angle;
+              remember();
+              m.wrapper.style.left = `${p.x}px`;
+              m.wrapper.style.top = `${p.y}px`;
+              m.wrapper.style.transform = poseTransform(p.angle, p.stretch, p.stretchAngle);
+            },
+            toLocal(cx, cy) {
+              const r = view.stage.getBoundingClientRect();
+              const s = scale || 1;
+              return { x: (cx - r.left) / s, y: (cy - r.top) / s };
+            },
+            win,
           }),
         );
       }
