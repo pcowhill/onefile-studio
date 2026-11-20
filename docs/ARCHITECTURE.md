@@ -116,6 +116,27 @@ The **coach** (`src/editor/learn/`) is editor-only UI; nothing in it is imported
 - `progress.ts` — completed lesson ids in `localStorage` (`ofs:lessons-done`), falling back to memory when storage is unavailable.
 - `Coach.tsx` — in the editor the card is **docked** along the bottom of the canvas area: `.ed-center.is-coach-open` shortens the canvas by the dock height, so the slide is re-fitted instead of covered (16:9 slides usually keep their size); on the start screen it floats. The spotlight is a fixed-position outline that follows its target's bounding box.
 
+## Public site and routing (v0.6)
+
+The public website is built **separately** from the editor so each stays simple:
+
+```
+dist/index.html            the editor — one self-contained file (committed; the offline distribution)
+dist-site/                 the public site (built by `npm run build:site`, deployed to GitHub Pages)
+  index.html, assets/      the landing page (site/ → vite.site.config.ts): static HTML + ~8 KB of JS
+  media/                   videos, posters, captions, template pictures (site/public/media, committed)
+  studio/index.html        a copy of dist/index.html — the editor, unchanged
+  showcase/<id>.html       each showcase exported as a genuine OneFile at build time
+  examples/index.html      redirect to ../#examples
+```
+
+- **Routing is plain folders**, so GitHub Pages (or any static host, or a folder on disk) serves every route directly and a refresh or bookmark always works: `/` (landing), `/studio/` (editor), `/showcase/<id>.html` (a OneFile), `/examples/`. The landing page's “Try it” dialog uses the hash (`#try/<id>`), so it can be linked to and the Back button closes it.
+- **The landing page is custom-built** (HTML/CSS + a small TypeScript module in `site/src/`), not a OneFile. It never loads the editor, the runtime or three.js: videos are `preload="none"`/`metadata` with posters and play on demand, and “Try it” embeds the exported file in an iframe only when opened. Showcase cards are generated at build time from the registry (`site/src/cards.ts` via a `transformIndexHtml` hook), so the page works without JavaScript and can't list a showcase that doesn't exist.
+- **Showcases** (`src/showcase/`): `meta.ts` is plain data (id, title, copy, chips, accent, file name) that the landing page imports; each entry points at an ordinary example project (`src/examples`). `buildShowcase(id)` calls the example's own factory. `scripts/export-showcases.mjs` loads `exportShowcase()` through Vite's SSR loader — the same `pruneUnusedAssets` + `buildStandaloneHtml` and the same `virtual:ofs-runtime`/3D add-on bundles as the Export dialog — and writes `showcase/<id>.html`. So “Try it” plays exactly what a user would get by exporting the project.
+- **Editor entry links** (`src/editor/deepLink.ts`, read once in `App.tsx`): `?open=<showcase>` opens an independent copy (fresh project id, like opening an example) and then removes the parameter with `history.replaceState`, so a refresh keeps editing that copy instead of making another; `?panel=templates|learn` opens the start screen with the gallery or the Learn hub; `?home` is unchanged. Without parameters the editor re-opens the last draft, as before. On the site the start screen shows a “Showcase” link back to the landing page (only when served from a `/studio/` folder over http(s), never in the offline file).
+- **Drafts are untouched**: the landing page and `studio/` share an origin, so the editor's IndexedDB drafts and `localStorage` keys (`ofs:*`) are the same ones as before. The landing page only *reads* `ofs:` keys to greet returning users (“Open the studio”); old bookmarks of the editor at the site root (`/?home`) are redirected to `studio/?home`.
+- **Videos** are produced by the scripts in `video/` from the real app (see [VIDEO.md](VIDEO.md)).
+
 ## Export pipeline
 
 1. `pruneUnusedAssets` drops images nothing references.
@@ -134,5 +155,6 @@ The file never references remote URLs; the CSP makes network access impossible e
 
 ## Builds
 
-- `vite build` produces `dist/index.html` with all JS/CSS/fonts inlined (`singleFilePlugin`), using a relative base so it works from GitHub Pages sub-paths and from disk.
+- `vite build` produces `dist/index.html` with all JS/CSS/fonts inlined (`singleFilePlugin`), using a relative base so it works from GitHub Pages sub-paths and from disk. This file is the offline editor: copy it anywhere (including an isolated network) and open it — it depends on nothing else.
 - The output is deterministic; CI fails if the committed `dist/` differs from a fresh build.
+- `npm run build:site` (= `npm run build` + `scripts/build-site.mjs`) builds the public site into `dist-site/` (not committed): the landing page, `studio/` (a byte-for-byte copy of `dist/index.html`) and the exported showcases. GitHub Pages deploys `dist-site/`.

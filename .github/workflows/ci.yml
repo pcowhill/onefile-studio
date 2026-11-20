@@ -16,7 +16,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -34,9 +34,11 @@ jobs:
         run: npm run build
       - name: Committed dist/ matches the source
         run: git diff --exit-code --stat dist/ || (echo "::error::dist/ is out of date. Run 'npm run build' and commit dist/." && exit 1)
+      - name: Build the public site (landing page, studio/, exported showcases)
+        run: node scripts/build-site.mjs
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
-      - name: End-to-end tests (including exported files opened via file://)
+      - name: End-to-end tests (editor, exported files via file://, landing page and showcases)
         run: npm run test:e2e
       - name: Upload exported test files and report
         if: always()
