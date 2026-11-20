@@ -354,3 +354,10 @@ describe('friendly errors and the recorded-time clock', () => {
     expect(pausedClock(pausedClock(c, 12000), 13000)).toEqual(pausedClock(c, 12000));
   });
 });
+
+describe('asset errors', () => {
+  it('passes the asset pipeline’s own friendly sentence through', () => {
+    const err = Object.assign(new Error('“Screen recording 1.webm” is 160 MB, more than the 150 MB a single file can embed.'), { name: 'AssetError' });
+    expect(friendlyCaptureError(err, 'screen')).toMatch(/more than the 150 MB/);
+  });
+});

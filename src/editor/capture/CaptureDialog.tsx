@@ -10,6 +10,7 @@ import { describeEdit, editedSize, isIdentity, orientationMatrix, orientedSize }
 import type { CaptureSource, PairSession, RecordingClock, RecordingSession } from '../../io/capture';
 import {
   browserDeps,
+  CaptureError,
   CAPTURE_PREFIX,
   captureName,
   captureScreenshot,
@@ -42,6 +43,8 @@ import '../../styles/capture.css';
 
 /** Seconds counted down before a recording starts (Start now skips it). */
 export const COUNTDOWN_SECONDS = 3;
+/** After this many recorded seconds, a gentle note about file size appears. */
+const LONG_RECORDING_S = 5 * 60;
 
 const TITLES: Record<CaptureSource, string> = {
   screenshot: 'Screenshot',
@@ -147,7 +150,9 @@ function CaptureDialog({ source, replaceElementId }: { source: CaptureSource; re
         await verifyPlayable(blob, kind === 'audio' ? 'audio' : 'video');
       }
       const file = new File([blob], it.name, { type: blob.type });
-      const asset = await fileToAsset(file);
+      const asset = await fileToAsset(file).catch((err: Error) => {
+        throw new CaptureError('AssetError', err.message);
+      });
       const url = URL.createObjectURL(blob);
       urls.current.push(url);
       out.push({ asset, url, edit: {}, role: it.role });
@@ -432,7 +437,7 @@ function CaptureDialog({ source, replaceElementId }: { source: CaptureSource; re
           </span>
           <div>
             <h2>{title}</h2>
-            <p className="ed-cap-status" aria-live="polite" data-testid="capture-status">
+            <p className="ed-cap-status" aria-live={phase === 'recording' ? 'off' : 'polite'} data-testid="capture-status">
               {phase === 'acquire' && WAITING[source]}
               {phase === 'live' && 'Smile! Take the photo when you’re ready.'}
               {phase === 'countdown' && `Starting in ${countdown}…`}
@@ -505,6 +510,12 @@ function CaptureDialog({ source, replaceElementId }: { source: CaptureSource; re
           </div>
         )}
 
+        {(phase === 'recording' || phase === 'paused') && elapsed > LONG_RECORDING_S && (
+          <p className="ed-note ed-cap-long" data-testid="record-long">
+            <Icon name="info" size={14} /> Long recordings make big files: everything you record is embedded in your exported page. Shorter clips share more
+            easily.
+          </p>
+        )}
         {recordingish && hasAudioMeter && (
           <div className="ed-cap-meter" aria-label="Microphone level" role="img">
             <Icon name="mic" size={14} />

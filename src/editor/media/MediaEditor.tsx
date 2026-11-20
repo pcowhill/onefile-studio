@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import type { Asset, Project } from '../../model/types';
 import { assetKind } from '../../model/types';
 import type { CropRect, MediaEdit } from '../../model/mediaEdit';
-import { editedSize, flipEdit, isIdentity, MIN_TRIM, orientationMatrix, orientedSize, rotateEdit, sanitizeEdit } from '../../model/mediaEdit';
+import { editedSize, flipEdit, isIdentity, orientationMatrix, orientedSize, rotateEdit, sanitizeEdit } from '../../model/mediaEdit';
 import { mediaUrl, dataUrlToBlob } from '../../runtime/env';
 import { Icon } from '../ui/Icon';
 import type { Handle } from './cropMath';
@@ -702,10 +702,3 @@ export function MediaEditBody({
     </>
   );
 }
-
-export function useEditState(initial: MediaEdit) {
-  const [edit, setEdit] = useState<MediaEdit>(initial);
-  return useMemo(() => ({ edit, setEdit }), [edit]);
-}
-
-export { MIN_TRIM };

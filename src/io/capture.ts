@@ -169,6 +169,9 @@ export function friendlyCaptureError(err: unknown, source: CaptureSource): strin
       return 'This page isn’t allowed to capture media. Open OneFile Studio from a secure address (https://) and try again.';
     case 'EmptyRecording':
       return 'Nothing was recorded. Try recording for a little longer.';
+    case 'AssetError':
+      // Already a friendly sentence from the asset pipeline (e.g. "too large to embed").
+      return (err as Error).message || 'This capture couldn’t be added to your project.';
     case 'UnplayableRecording':
       return 'The recording couldn’t be played back in this browser, so it wasn’t added.';
     case 'NotSupportedError':

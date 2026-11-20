@@ -1,6 +1,4 @@
 import { create } from 'zustand';
-import type { Asset } from '../../model/types';
-import type { MediaEdit } from '../../model/mediaEdit';
 import type { CaptureSource } from '../../io/capture';
 
 /**
@@ -12,8 +10,6 @@ export interface EditRequest {
   assetId?: string;
   /** …or one element's own adjustments of its file. */
   elementId?: string;
-  /** …or a fresh capture that is not in the library yet (edited before it is added). */
-  pending?: { asset: Asset; edit: MediaEdit; onDone(edit: MediaEdit): void };
 }
 
 export interface CaptureRequest {

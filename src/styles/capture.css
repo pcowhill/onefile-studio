@@ -875,3 +875,10 @@
   border-radius: inherit;
   box-shadow: none;
 }
+.ed-cap-long {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 12px 0 0;
+}
