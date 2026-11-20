@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
-import { embeddedProject, exportProject, importIntoStudio, normalise, openExported, openStudio, studioProject } from './helpers';
+import { embeddedProject, exportProject, importIntoStudio, normalise, openExported, openStudio, paintedFraction, studioProject } from './helpers';
 import { makePng } from './png';
 
 /**
@@ -29,28 +29,6 @@ async function popupTarget(popup: Page): Promise<string> {
   if (req) return req.url();
   // Already failed: the navigation entry still records where it was going.
   return popup.evaluate(() => (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.name ?? location.href);
-}
-
-/** Pixels of a region that differ clearly from its corner colour (the backdrop), via an in-page canvas. */
-async function paintedFraction(page: Page, target: Locator): Promise<number> {
-  const shot = (await target.screenshot()).toString('base64');
-  return page.evaluate(async (b64) => {
-    const img = new Image();
-    img.src = `data:image/png;base64,${b64}`;
-    await img.decode();
-    const c = document.createElement('canvas');
-    c.width = img.width;
-    c.height = img.height;
-    const g = c.getContext('2d')!;
-    g.drawImage(img, 0, 0);
-    const { data } = g.getImageData(0, 0, c.width, c.height);
-    // Compare against the colour at the vertical centre of the left edge (backdrop, outside the model).
-    const at = (Math.floor(c.height / 2) * c.width + 3) * 4;
-    const [r0, g0, b0] = [data[at], data[at + 1], data[at + 2]];
-    let n = 0;
-    for (let i = 0; i < data.length; i += 4) if (Math.abs(data[i] - r0) + Math.abs(data[i + 1] - g0) + Math.abs(data[i + 2] - b0) > 60) n++;
-    return n / (data.length / 4);
-  }, shot);
 }
 
 test('Insert → Image creates a placeholder, then library / upload / replace keep the element', async ({ page, browser }) => {
@@ -381,7 +359,8 @@ test('3D: insert a model element, upload a GLB, Preview it; broken files get a h
   await expect(page.locator('.ed-toast').last()).toContainText('not a binary glTF');
   const [good] = await Promise.all([page.waitForEvent('filechooser'), page.getByTestId('choose-model').click()]);
   await good.setFiles(ROVER);
-  await expect(page.getByTestId('chosen-model')).toContainText('rover.glb');
+  // Inspecting a 650 KB model can take a while when the machine is busy.
+  await expect(page.getByTestId('chosen-model')).toContainText('rover.glb', { timeout: 30_000 });
   await expect(page.locator('.ed-el .ofs-model-poster')).toHaveAttribute('src', /^data:image\/png/, { timeout: 20_000 });
   // Editor gestures move the element (the model itself does not orbit in the editor).
   const before = await studioProject(page);

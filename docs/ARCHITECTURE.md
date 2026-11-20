@@ -97,6 +97,25 @@ Interactions belong to an **owner**: an element, a page (`page.interactions`) or
 - **Offline under the export CSP.** GLB bytes are decoded from the embedded data URL; textures load from `blob:` URLs through `<img>` (a GLTFLoader plugin swaps the default `ImageBitmapLoader`, which would need `fetch`, for `TextureLoader`). No workers, decoders or network.
 - **Editor vs playback.** In the editor canvas and thumbnails, models are stills rendered by one shared, cached renderer (`poster()`), so editing many models never exhausts WebGL contexts and normal drag/resize gestures apply. In playback each viewer has its own renderer with OrbitControls (rotate, zoom, pan), damping, auto-rotate, named views and overlay buttons. It renders only when something moves, pauses off-screen, renders at the on-screen size, keeps orbit gestures from reaching drag modes and click triggers, and on scrolling webpages only zooms with the wheel after the viewer was touched. Failures (no WebGL, invalid model, lost context) show a message in the frame, with "Try again" where recovery is possible; `destroy()` releases geometry, materials, textures, the environment map and the context.
 
+## Templates (v0.5)
+
+`src/templates/` holds the template **registry** (`index.ts`: id, title, description, category, kind, theme, difficulty, feature chips, a `build(theme?)` factory and a quick-start `guide`), the **factories** (`projects.ts`) and original **artwork** (`art.ts`). A template is not a document format: `build()` returns an ordinary v4 `Project` made with the editor's own factories and theme roles (the same `kit()` the examples use), so it is previewed, edited, re-themed, exported and imported like any other project. Element ids are stable (guides point at them); element names are meaningful ("Presentation Title", "Feature Screenshot", "Event Date"…).
+
+- `instantiateTemplate(def, theme?)` builds a fresh project, optionally applies another theme (`applyProjectTheme`, so explicit customisations survive), runs it through `validateProject` (exactly like an import) and gives it a new project id and timestamps — the registry is never mutated and nothing is shared between copies.
+- Assets are embedded once per project and referenced by id from every element that shows them; pictures that appear on several slides share one asset. `replaceElementImage` offers (via a toast action) to point the other image elements that showed the old picture at the new one in one undoable step.
+- Time-sensitive content is computed when the template is built: the event countdown targets a Saturday noon three to four weeks ahead in the author's time zone, and the "Event Date" text is formatted from the same instant.
+- The gallery (`src/editor/start/TemplateGallery.tsx`) renders each card's picture with `renderPageStatic` (via `PageThumb`) from the template's real first page — previews cannot drift from the templates. Template Preview runs `createPlayer` on a freshly built copy (nothing is saved) and can rebuild it in any theme.
+
+## Guided learning (v0.5)
+
+The **coach** (`src/editor/learn/`) is editor-only UI; nothing in it is imported by the runtime, so exports never contain it (a unit test checks the runtime bundle).
+
+- `coach.ts` — a small zustand store with the active run (`guide` for a template checklist, `lesson` for a lesson): steps, current index, the project when the run and the current step started, editor events (`preview` from the store, `theme`, `export` from the Export dialog, `import` from `importFile`) and steps confirmed by the user. `watchEditor()` turns store changes into events; guides close when their project is closed or replaced.
+- Steps are **declarative** (`CoachStep` in `src/templates/index.ts`): `title`, a short `body`, an optional `element` ("Show me" selects it and switches to its slide), an optional `control` (a CSS selector of a stable `data-testid` to spotlight) and an optional `done(ctx)` check. Checks are **semantic**: they compare the live project with the project when the run/step started (element counts by type, changed props, interactions with a given action, conditions, variables) or look for events. A failing or throwing check only means "not done yet"; every step can be skipped ("Skip step", "Mark as done"), so nobody is trapped.
+- `lessons.ts` — eight lessons (`setup()` builds a separate *Practice — …* project; `steps`). `session.ts` opens templates/lessons, restarts a lesson in a fresh practice project and returns to the Learn hub. User drafts are never opened, changed or overwritten by a lesson.
+- `progress.ts` — completed lesson ids in `localStorage` (`ofs:lessons-done`), falling back to memory when storage is unavailable.
+- `Coach.tsx` — in the editor the card is **docked** along the bottom of the canvas area: `.ed-center.is-coach-open` shortens the canvas by the dock height, so the slide is re-fitted instead of covered (16:9 slides usually keep their size); on the start screen it floats. The spotlight is a fixed-position outline that follows its target's bounding box.
+
 ## Export pipeline
 
 1. `pruneUnusedAssets` drops images nothing references.

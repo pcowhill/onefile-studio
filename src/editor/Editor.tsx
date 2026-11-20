@@ -10,21 +10,25 @@ import { useShortcuts } from './shortcuts';
 import { Icon } from './ui/Icon';
 import { CaptureHost } from './capture/CaptureDialog';
 import { MediaEditHost } from './media/MediaEditDialog';
+import { Coach } from './learn/Coach';
+import { useCoach } from './learn/coach';
 
 export function Editor() {
   const previewOpen = useEditor((s) => s.previewOpen);
   const exportOpen = useEditor((s) => s.exportOpen);
   const themeOpen = useEditor((s) => s.themeOpen);
+  const coach = useCoach((s) => (s.run ? (s.run.minimized ? 'min' : 'open') : null));
   useShortcuts();
   return (
     <div className="ed-app">
       <Toolbar />
       <div className="ed-main">
         <LeftPanel />
-        <div className="ed-center">
+        <div className={`ed-center ${coach ? `has-coach is-coach-${coach}` : ''}`}>
           <Canvas />
           <ZoomControls />
           <PageNav />
+          <Coach dock />
         </div>
         <Inspector />
       </div>

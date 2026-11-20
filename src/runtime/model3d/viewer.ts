@@ -30,7 +30,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import type { Model3dRuntime, ModelViewerHandle, ModelViewerOptions, ModelViewOptions, PosterOptions } from './contract';
-import { MODEL_VIEWS } from './contract';
+import { MODEL_VIEWS, zoomedDistance } from './contract';
 
 const FOV = 32;
 const DEG = Math.PI / 180;
@@ -404,9 +404,21 @@ function createViewer(container: HTMLElement, opts: ModelViewerOptions): ModelVi
     },
     zoomBy(factor) {
       if (!stage) return;
-      if (factor > 1) controls.dollyIn(factor);
-      else controls.dollyOut(1 / factor);
-      controls.update();
+      // Move the camera along its line of sight (smoothly, like the named views);
+      // the same distance limits as wheel zooming apply.
+      const fromT = tween ? tween.toT.clone() : controls.target.clone();
+      const fromP = tween ? tween.to.clone() : camera.position.clone();
+      const offset = fromP.clone().sub(fromT);
+      const dist = offset.length() || baseDist;
+      offset.setLength(zoomedDistance(dist, factor, controls.minDistance, controls.maxDistance));
+      tween = {
+        from: camera.position.clone(),
+        to: fromT.clone().add(offset),
+        fromT: controls.target.clone(),
+        toT: fromT,
+        start: win.performance.now(),
+        dur: 280,
+      };
       invalidate();
     },
     destroy() {

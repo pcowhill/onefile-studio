@@ -35,9 +35,21 @@ export interface ModelViewerOptions extends ModelViewOptions {
   onError(message: string, retry?: () => void): void;
 }
 
+/**
+ * Camera distance after zooming by `factor`: a factor above 1 zooms IN (the
+ * camera moves closer, so the model looks bigger), below 1 zooms out. The result
+ * stays within the viewer's distance limits. (three.js's own `dollyIn(s)` takes
+ * the *inverse* scale, which is how the + and − buttons once ended up reversed.)
+ */
+export function zoomedDistance(distance: number, factor: number, min: number, max: number): number {
+  const f = Number.isFinite(factor) && factor > 0 ? factor : 1;
+  return Math.max(min, Math.min(max, distance / f));
+}
+
 export interface ModelViewerHandle {
   view(name: string): void;
   spin(on?: boolean): void;
+  /** `factor` > 1 zooms in (model looks bigger), < 1 zooms out. See `zoomedDistance`. */
   zoomBy(factor: number): void;
   destroy(): void;
 }

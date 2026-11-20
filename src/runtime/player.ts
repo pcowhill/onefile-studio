@@ -365,6 +365,10 @@ export function createPlayer(container: HTMLElement, project: Project, opts: Pla
     if (!stageEl) return;
     finishOutgoing();
     const prev = activeView;
+    // Focus never stays on a slide that is leaving: otherwise Space/Enter would
+    // activate its (still animating out) button instead of the new slide's keys.
+    const focused = doc.activeElement;
+    if (prev && focused && prev.node.contains(focused)) root.focus({ preventScroll: true });
     deactivate(prev);
     const view = buildView(index);
     stageEl.appendChild(view.node);

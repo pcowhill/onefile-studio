@@ -14,6 +14,8 @@ const P: Record<string, string> = {
   upload: 'M12 16V5M7 9.5l5-5 5 5M4.5 19.5h15',
   plus: 'M12 5v14M5 12h14',
   minus: 'M5 12h14',
+  learn: 'M2.5 9.5L12 5l9.5 4.5L12 14zM6.5 11.5v4.5c0 1.5 2.5 3 5.5 3s5.5-1.5 5.5-3v-4.5M21.5 9.5v5.5',
+  template: 'M4 4.5h16v15H4zM4 9.5h16M10 9.5v10M13 13h4M13 16h3',
   trash: 'M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 12.5h9l1-12.5M10 11v5M14 11v5',
   copy: 'M8.5 8.5h11v11h-11zM15.5 8.5v-4h-11v11h4',
   duplicate: 'M8 8h11v11H8zM16 8V5H5v11h3M13.5 11v5M11 13.5h5',

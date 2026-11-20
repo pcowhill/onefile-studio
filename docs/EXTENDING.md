@@ -69,3 +69,13 @@ The renderer lives in `src/runtime/model3d/viewer.ts` (three.js) behind the `Mod
 ## Add a capture source
 
 Capture lives in `src/io/capture.ts` (framework-free, injectable `CaptureDeps`). A new source needs: an id in `CaptureSource` with a reason in `captureSupport()`, a starter returning a `RecordingSession` built with `recordStream()` (so release-on-every-path comes for free), a card in `CAPTURE_CARDS` with an illustration (`src/editor/capture/illustrations.tsx`), and its acquire step in `CaptureDialog.start()`. Add a fake-device e2e test in `tests/e2e/capture.spec.ts` that asserts no track is left live.
+
+## Add a template
+
+1. Write a factory in `src/templates/projects.ts` that returns a project built with `createProject` and the `kit(theme)` helpers (`el`, `text`, `page` with theme roles), so it follows the theme and stays editable. Give elements **meaningful names** and **stable ids**, keep layouts simple enough to edit (prefer one element per idea: a button as a clickable box, a `label` text as a callout), and compute anything date-dependent when the factory runs. Put new artwork in `src/templates/art.ts` (original SVG, via `svgAsset`) and reuse one asset for every place a picture appears.
+2. Register it in `TEMPLATES` (`src/templates/index.ts`) with a category, kind, default theme, difficulty, two to four feature chips and a short `guide` (three to five steps: what to change first, then the shared `previewStep` and `exportStep`). Build checks with `changed(id, ...props)`, `anyChanged(...)` and `happened(event)`.
+3. `tests/unit/templates.test.ts` runs every registered template automatically (validity, names, guide targets, independence, all four themes, export ↔ import, playback). Add an end-to-end test in `tests/e2e/v05.spec.ts` that exports it, opens the file offline and exercises its interactions.
+
+## Add a lesson
+
+Add a `Lesson` to `LESSONS` in `src/editor/learn/lessons.ts`: `level`, `title`, a one-line `summary`, `minutes`, a `setup()` that builds a practice project (title starting with *Practice —*) and four to seven `steps`. Keep each instruction to one or two sentences that name the control the way the UI labels it, point at it with `control` (a stable `data-testid`) or `element`, and give a semantic `done` check where one exists (`added(type)`, `hasAction(...)`, `stepEvent('preview')`…). End with a `finale`. Add a small illustration in `LessonArt` (`src/editor/start/LearnHub.tsx`) and check the step logic in `tests/unit/lessons.test.ts`.

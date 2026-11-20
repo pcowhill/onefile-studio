@@ -8,6 +8,11 @@ import { Logo } from '../ui/Logo';
 import { ThemeGrid } from '../theme/ThemePicker';
 import type { ThemeId } from '../../model/types';
 import { DEFAULT_THEME, isThemeId } from '../../model/theme';
+import { TEMPLATES } from '../../templates';
+import { LESSONS } from '../learn/lessons';
+import { TemplateGallery } from './TemplateGallery';
+import { LearnHub } from './LearnHub';
+import { useStartUi } from './startUi';
 
 const THEME_KEY = 'ofs:start-theme';
 function initialTheme(): ThemeId {
@@ -23,6 +28,8 @@ export function StartScreen() {
   const [drafts, setDrafts] = useState<DraftSummary[]>([]);
   const [over, setOver] = useState(false);
   const [theme, setTheme] = useState<ThemeId>(initialTheme);
+  const panel = useStartUi((s) => s.panel);
+  const setPanel = (p: 'templates' | 'learn' | null) => useStartUi.setState({ panel: p });
   const pickTheme = (id: ThemeId) => {
     setTheme(id);
     try {
@@ -60,9 +67,14 @@ export function StartScreen() {
             OneFile <b>Studio</b>
           </span>
         </div>
-        <button className="ed-btn ed-btn-ghost" onClick={pickAndImport} data-testid="open-file">
-          <Icon name="folder" size={18} /> Open a file
-        </button>
+        <div className="st-head-actions">
+          <button className="ed-btn ed-btn-ghost" onClick={() => setPanel('learn')} data-testid="open-learn">
+            <Icon name="learn" size={18} /> Learn
+          </button>
+          <button className="ed-btn ed-btn-ghost" onClick={pickAndImport} data-testid="open-file">
+            <Icon name="folder" size={18} /> Open a file
+          </button>
+        </div>
       </header>
       <main className="st-main">
         <section className="st-hero">
@@ -97,6 +109,26 @@ export function StartScreen() {
             <span className="st-card-go">
               <Icon name="right" size={20} />
             </span>
+          </button>
+          <button className="st-card st-card-templates" onClick={() => setPanel('templates')} data-testid="browse-templates">
+            <TemplatesArt />
+            <span className="st-card-text">
+              <strong>Start from a template</strong>
+              <span>{TEMPLATES.length} polished starting points — walkthroughs, meetings, invitations and more.</span>
+            </span>
+            <span className="st-card-go">
+              <Icon name="right" size={20} />
+            </span>
+          </button>
+        </section>
+        <section className="st-learn" aria-label="Learn">
+          <LearnArt />
+          <p>
+            <strong>New to OneFile Studio?</strong> Learn by doing with {LESSONS.length} short, hands-on lessons — from your first slide to interactive
+            challenges.
+          </p>
+          <button className="ed-btn ed-btn-soft" onClick={() => setPanel('learn')} data-testid="start-learning">
+            <Icon name="learn" size={17} /> Start learning
           </button>
         </section>
         <div className="st-columns">
@@ -174,6 +206,8 @@ export function StartScreen() {
           </aside>
         </div>
       </main>
+      {panel === 'templates' && <TemplateGallery onClose={() => setPanel(null)} />}
+      {panel === 'learn' && <LearnHub onClose={() => setPanel(null)} />}
       {over && (
         <div className="st-dropzone">
           <Icon name="upload" size={40} />
@@ -210,6 +244,47 @@ function SlidesArt() {
       <rect x="44" y="88" width="40" height="12" rx="6" fill="#ff7eb3" />
       <rect x="30" y="122" width="150" height="6" rx="3" fill="#ece6ff" />
       <rect x="30" y="122" width="90" height="6" rx="3" fill="#ff7eb3" />
+    </svg>
+  );
+}
+
+function TemplatesArt() {
+  return (
+    <svg viewBox="0 0 220 150" className="st-art" aria-hidden="true">
+      <rect x="22" y="34" width="96" height="64" rx="9" fill="#0b1f44" transform="rotate(-8 70 66)" />
+      <rect x="36" y="44" width="40" height="7" rx="3.5" fill="#e8effd" transform="rotate(-8 70 66)" />
+      <rect x="36" y="56" width="28" height="5" rx="2.5" fill="#7aa2f7" transform="rotate(-8 70 66)" />
+      <rect x="102" y="30" width="96" height="64" rx="9" fill="#fff3d6" transform="rotate(7 150 62)" />
+      <rect x="114" y="44" width="46" height="7" rx="3.5" fill="#5a3426" transform="rotate(7 150 62)" />
+      {[0, 1, 2].map((i) => (
+        <rect key={i} x={116 + i * 18} y="58" width="13" height="16" rx="3" fill="#2b2320" transform="rotate(7 150 62)" />
+      ))}
+      <rect x="58" y="58" width="104" height="70" rx="10" fill="#ff7eb3" />
+      <rect x="58" y="58" width="104" height="70" rx="10" fill="url(#tpa)" />
+      <defs>
+        <linearGradient id="tpa" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#8b6cff" />
+          <stop offset="1" stopColor="#ff7eb3" />
+        </linearGradient>
+      </defs>
+      <rect x="72" y="72" width="52" height="8" rx="4" fill="#fff" />
+      <rect x="72" y="86" width="36" height="5" rx="2.5" fill="#ffe1ef" />
+      <rect x="72" y="104" width="30" height="12" rx="6" fill="#ffd23f" />
+      <circle cx="140" cy="100" r="12" fill="#fff" opacity=".9" />
+      <path d="M135 100l4 4 7-8" stroke="#6d4aff" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function LearnArt() {
+  return (
+    <svg viewBox="0 0 96 64" className="st-learn-art" aria-hidden="true">
+      <rect x="6" y="30" width="22" height="26" rx="6" fill="#2bb673" />
+      <rect x="37" y="18" width="22" height="38" rx="6" fill="#3d8bff" />
+      <rect x="68" y="6" width="22" height="50" rx="6" fill="#6d4aff" />
+      <path d="M12 43l4 4 7-8" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M44 37h8M48 33v8" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+      <path d="M79 24l2.4 4.8 5.3.8-3.8 3.7.9 5.3-4.8-2.5-4.8 2.5.9-5.3-3.8-3.7 5.3-.8z" fill="#ffd23f" />
     </svg>
   );
 }

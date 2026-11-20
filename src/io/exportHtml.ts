@@ -4,7 +4,7 @@ import { fontCssForProject } from './fonts';
 import { isSafeColor } from '../model/paint';
 
 export const GENERATOR = 'OneFile Studio';
-export const APP_VERSION = '0.4.0';
+export const APP_VERSION = '0.5.0';
 
 /**
  * Restrictive Content-Security-Policy for exported files: scripts and styles
