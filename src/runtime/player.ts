@@ -1,11 +1,15 @@
-import type { Page, Project, SceneElement } from '../model/types';
+import type { Interaction, InteractionOwner, Page, Project, SceneElement } from '../model/types';
 import type { Direction } from '../model/types';
 import { NavStore, VarStore } from './env';
 import type { RuntimeEnv } from './env';
 import { applyBackground, mountElement, pageHeight, unmountElement } from './mount';
 import type { MountedElement } from './mount';
 import { ensureRuntimeStyles } from './styles';
-import { triggerRegistry } from './triggers';
+import { triggerAllows, triggerRegistry } from './triggers';
+import type { TriggerContext } from './triggers';
+import type { KeySpec } from './keys';
+import { isTypingTarget, keyActivatesFocused, keyIdFromEvent, matchesKey } from './keys';
+import { opensExternally } from '../model/links';
 import { HIDE_EFFECTS, runInteraction, SHOW_EFFECTS } from './actions';
 import type { PlayerControl } from './actions';
 import { playAnimation } from './animations';
@@ -20,6 +24,8 @@ export interface PlayerOptions {
   /** Show a fullscreen button in the slide controls (standalone exports). */
   fullscreenButton?: boolean;
   onPageChange?(index: number): void;
+  /** Opens a validated link (v4). Default: a new tab with noopener/noreferrer, or this tab. */
+  openLink?(href: string, newTab: boolean): void;
 }
 
 export interface Player {
@@ -41,6 +47,18 @@ interface PageView {
   stage: HTMLElement;
   mounted: MountedElement[];
   observer?: IntersectionObserver;
+  /** True while this is the current slide/section (page-level triggers run only then). */
+  active: boolean;
+  enter: Set<() => void>;
+  leave: Set<() => void>;
+  /** Page-level interaction bindings. */
+  cleanups: Array<() => void>;
+}
+
+interface KeyBinding {
+  spec: KeySpec;
+  active(): boolean;
+  fire(e: KeyboardEvent): void;
 }
 
 /**
@@ -104,7 +122,114 @@ export function createPlayer(container: HTMLElement, project: Project, opts: Pla
       if (!m || m.wrapper.classList.contains('ofs-hidden')) return Promise.resolve();
       return playAnimation(m.anim, preset, { duration: o.duration, direction: o.direction as Direction });
     },
+    openLink(href, newTab) {
+      if (destroyed) return;
+      if (opts.openLink) return opts.openLink(href, newTab);
+      if (newTab && !opensExternally(href)) win.open(href, '_blank', 'noopener,noreferrer');
+      else win.location.assign(href);
+    },
   };
+
+  // ---------- interactions ----------
+  const keyBindings = new Set<KeyBinding>();
+
+  /**
+   * Binds an owner's interactions (an element, a page or the project).
+   * Interactions with the same trigger run in list order, one after another.
+   */
+  function bindInteractions(
+    list: Interaction[] | undefined,
+    owner: InteractionOwner,
+    node: HTMLElement,
+    selfId: string,
+    view: PageView | null,
+    cleanups: Array<() => void>,
+    el?: SceneElement,
+  ) {
+    const groups = new Map<string, Interaction[]>();
+    for (const ix of list ?? []) {
+      if (!ix.actions?.length) continue;
+      const def = triggerRegistry.get(ix.trigger);
+      if (!triggerAllows(def, owner)) continue;
+      // Triggers with options (keys, delays) bind once per interaction; others are grouped.
+      const key = def!.options ? `${ix.trigger}#${ix.id}` : ix.trigger;
+      const group = groups.get(key) ?? [];
+      group.push(ix);
+      groups.set(key, group);
+    }
+    const isActive = () => !destroyed && (!view || view.active);
+    for (const group of groups.values()) {
+      const def = triggerRegistry.get(group[0].trigger)!;
+      if (def.clickable && el) {
+        node.classList.add('ofs-clickable');
+        if (!node.querySelector('button')) {
+          node.tabIndex = 0;
+          const link = group[0].actions[0]?.type === 'openLink';
+          node.setAttribute('role', link ? 'link' : 'button');
+          node.setAttribute('aria-label', (link && String(group[0].actions[0].params.label ?? '')) || el.name);
+        }
+      }
+      const ctx: TriggerContext = {
+        options: group[0].options ?? {},
+        win,
+        onKey(spec, fire) {
+          const b: KeyBinding = { spec, active: isActive, fire };
+          keyBindings.add(b);
+          return () => void keyBindings.delete(b);
+        },
+        onEnter(fn) {
+          if (!view) return () => undefined;
+          view.enter.add(fn);
+          return () => void view.enter.delete(fn);
+        },
+        onLeave(fn) {
+          if (!view) return () => undefined;
+          view.leave.add(fn);
+          return () => void view.leave.delete(fn);
+        },
+      };
+      cleanups.push(
+        def.bind(
+          node,
+          (event) => {
+            if (destroyed) return;
+            void (async () => {
+              for (const ix of group) await runInteraction(ix, { player: control, selfId, event });
+            })();
+          },
+          ctx,
+        ),
+      );
+    }
+  }
+
+  function activate(v: PageView | null | undefined) {
+    if (!v || v.active || destroyed) return;
+    v.active = true;
+    for (const fn of [...v.enter]) fn();
+  }
+
+  function deactivate(v: PageView | null | undefined) {
+    if (!v || !v.active) return;
+    v.active = false;
+    for (const fn of [...v.leave]) fn();
+  }
+
+  /**
+   * Key triggers take precedence over built-in navigation: a matching rule
+   * consumes the key (so "→ shows the next step" can replace "→ next slide"
+   * on one slide). Typing in fields and browser shortcuts are left alone.
+   */
+  function dispatchKey(e: KeyboardEvent): boolean {
+    if (!keyBindings.size || e.defaultPrevented || e.isComposing) return false;
+    if (isTypingTarget(e.target)) return false;
+    const matches = [...keyBindings].filter((b) => b.active() && matchesKey(b.spec, e));
+    if (!matches.length) return false;
+    if (keyActivatesFocused(e.target, keyIdFromEvent(e))) return false;
+    e.preventDefault();
+    for (const b of matches) b.fire(e);
+    return true;
+  }
 
   // ---------- element mounting ----------
   function mount(el: SceneElement, view: PageView) {
@@ -161,32 +286,7 @@ export function createPlayer(container: HTMLElement, project: Project, opts: Pla
         );
       }
     }
-    const byTrigger = new Map<string, typeof el.interactions>();
-    for (const ix of el.interactions ?? []) {
-      if (!ix.actions?.length) continue;
-      const list = byTrigger.get(ix.trigger) ?? [];
-      list.push(ix);
-      byTrigger.set(ix.trigger, list);
-    }
-    for (const [trig, list] of byTrigger) {
-      const def = triggerRegistry.get(trig);
-      if (!def) continue;
-      if (def.clickable) {
-        m.wrapper.classList.add('ofs-clickable');
-        if (!m.wrapper.querySelector('button')) {
-          m.wrapper.tabIndex = 0;
-          m.wrapper.setAttribute('role', 'button');
-          m.wrapper.setAttribute('aria-label', el.name);
-        }
-      }
-      m.cleanups.push(
-        def.bind(m.wrapper, (event) => {
-          void (async () => {
-            for (const ix of list) await runInteraction(ix, { player: control, selfId: el.id, event });
-          })();
-        }),
-      );
-    }
+    bindInteractions(el.interactions, 'element', m.wrapper, el.id, view, m.cleanups, el);
     view.stage.appendChild(m.wrapper);
     return m;
   }
@@ -204,12 +304,17 @@ export function createPlayer(container: HTMLElement, project: Project, opts: Pla
       inner.appendChild(stage);
       node.appendChild(inner);
     }
-    const view: PageView = { page, index, node, stage, mounted: [] };
+    const view: PageView = { page, index, node, stage, mounted: [], active: false, enter: new Set(), leave: new Set(), cleanups: [] };
     for (const el of page.elements) mount(el, view);
+    bindInteractions(page.interactions, 'page', node, '', view, view.cleanups);
     return view;
   }
 
   function destroyView(v: PageView) {
+    deactivate(v);
+    for (const fn of v.cleanups.splice(0)) fn();
+    v.enter.clear();
+    v.leave.clear();
     v.observer?.disconnect();
     for (const m of v.mounted) {
       if (mounted.get(m.el.id) === m) mounted.delete(m.el.id);
@@ -260,6 +365,7 @@ export function createPlayer(container: HTMLElement, project: Project, opts: Pla
     if (!stageEl) return;
     finishOutgoing();
     const prev = activeView;
+    deactivate(prev);
     const view = buildView(index);
     stageEl.appendChild(view.node);
     activeView = view;
@@ -288,6 +394,7 @@ export function createPlayer(container: HTMLElement, project: Project, opts: Pla
       destroyView(prev);
     }
     playEntrances(view);
+    activate(view);
   }
 
   function updateNavUi() {
@@ -313,6 +420,8 @@ export function createPlayer(container: HTMLElement, project: Project, opts: Pla
   }
 
   // ---------- webpage ----------
+  /** Sections become "active" (page triggers) only once the start position is settled. */
+  let sectionsReady = false;
   function layoutPage() {
     const cw = root.clientWidth || win.innerWidth;
     scale = Math.min(1, cw / W);
@@ -344,6 +453,10 @@ export function createPlayer(container: HTMLElement, project: Project, opts: Pla
         current = idx;
         opts.onPageChange?.(idx);
       }
+    }
+    if (sectionsReady && !views[current]?.active) {
+      views.forEach((v) => v !== views[current] && deactivate(v));
+      activate(views[current]);
     }
   }
 
@@ -435,8 +548,21 @@ export function createPlayer(container: HTMLElement, project: Project, opts: Pla
       v.observer = observer;
     }
     layoutPage();
-    if (current > 0) requestAnimationFrame(() => (root.scrollTop = views[current]?.node.offsetTop ?? 0));
+    const ready = () => {
+      if (destroyed) return;
+      sectionsReady = true;
+      onScroll();
+    };
+    if (current > 0)
+      win.requestAnimationFrame(() => {
+        root.scrollTop = views[current]?.node.offsetTop ?? 0;
+        ready();
+      });
+    else ready();
   }
+
+  // Project-wide interactions (keyboard shortcuts on every slide/section).
+  bindInteractions(project.interactions, 'project', root, '', null, cleanups);
 
   const layout = () => (slides ? layoutSlides() : layoutPage());
   const RO = (win as typeof window).ResizeObserver;
@@ -449,23 +575,23 @@ export function createPlayer(container: HTMLElement, project: Project, opts: Pla
     cleanups.push(() => win.removeEventListener('resize', layout));
   }
 
-  if (slides && opts.keyboard !== false) {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
-      const t = e.target as HTMLElement | null;
-      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-      if (['ArrowRight', 'PageDown'].includes(e.key) || (e.key === ' ' && t?.tagName !== 'BUTTON')) {
-        e.preventDefault();
-        goTo('next');
-      } else if (['ArrowLeft', 'PageUp'].includes(e.key)) {
-        e.preventDefault();
-        goTo('prev');
-      } else if (e.key === 'Home') goTo('first');
-      else if (e.key === 'End') goTo('last');
-    };
-    doc.addEventListener('keydown', onKey);
-    cleanups.push(() => doc.removeEventListener('keydown', onKey));
-  }
+  const navKeys = slides && opts.keyboard !== false;
+  const onKey = (e: KeyboardEvent) => {
+    if (dispatchKey(e) || !navKeys) return;
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+    const t = e.target as HTMLElement | null;
+    if (isTypingTarget(t)) return;
+    if (['ArrowRight', 'PageDown'].includes(e.key) || (e.key === ' ' && t?.tagName !== 'BUTTON')) {
+      e.preventDefault();
+      goTo('next');
+    } else if (['ArrowLeft', 'PageUp'].includes(e.key)) {
+      e.preventDefault();
+      goTo('prev');
+    } else if (e.key === 'Home') goTo('first');
+    else if (e.key === 'End') goTo('last');
+  };
+  doc.addEventListener('keydown', onKey);
+  cleanups.push(() => doc.removeEventListener('keydown', onKey));
 
   return {
     root,
@@ -478,6 +604,7 @@ export function createPlayer(container: HTMLElement, project: Project, opts: Pla
     destroy() {
       destroyed = true;
       cleanups.forEach((fn) => fn());
+      keyBindings.clear();
       finishOutgoing();
       if (activeView) destroyView(activeView);
       views.forEach(destroyView);

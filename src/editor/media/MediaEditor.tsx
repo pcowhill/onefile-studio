@@ -19,7 +19,7 @@ import '../../styles/capture.css';
 /** A playable URL for an asset (images: the data URL; media: a cached Blob URL). */
 export function assetSrc(asset: Asset): string {
   const kind = assetKind(asset.mime);
-  if (kind === 'image') return asset.data;
+  if (kind === 'image' || kind === 'model') return asset.data;
   const fake = { assets: { [asset.id]: asset } } as unknown as Project;
   return mediaUrl(fake, asset.id, kind) ?? asset.data;
 }
@@ -658,7 +658,7 @@ export function cleanEdit(asset: Asset, edit: MediaEdit): MediaEdit {
   return sanitizeEdit(edit, assetKind(asset.mime), asset.duration);
 }
 
-export const KIND_NOUN = { image: 'picture', video: 'video', audio: 'sound' } as const;
+export const KIND_NOUN = { image: 'picture', video: 'video', audio: 'sound', model: '3D model' } as const;
 
 /** Title + editing surface + footer, inside an existing dialog body. */
 export function MediaEditBody({

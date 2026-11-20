@@ -70,7 +70,7 @@ export interface AssetIssue {
   message: string;
 }
 
-const KIND_WORD: Record<AssetKind, string> = { image: 'an image', video: 'a video', audio: 'a sound' };
+const KIND_WORD: Record<AssetKind, string> = { image: 'an image', video: 'a video', audio: 'a sound', model: 'a 3D model' };
 
 function checkRef(project: Project, id: unknown, want: AssetKind): string | null {
   if (typeof id !== 'string' || !id) return null;

@@ -146,7 +146,7 @@ export function addImageFiles(files: File[]): Promise<Asset[]> {
   return addMediaFiles(files);
 }
 
-const KIND_LABEL: Record<AssetKind, string> = { image: 'an image', video: 'a video', audio: 'a sound file' };
+const KIND_LABEL: Record<AssetKind, string> = { image: 'an image', video: 'a video', audio: 'a sound file', model: 'a 3D model' };
 
 /**
  * Embeds local files as project assets (de-duplicated by content). Shows a

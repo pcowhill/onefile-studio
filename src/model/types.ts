@@ -1,5 +1,5 @@
 /**
- * OneFile Studio project model (schema version 3).
+ * OneFile Studio project model (schema version 4).
  *
  * Everything an experience needs — pages, elements, interactions, variables and
  * embedded assets — lives in a single JSON-serialisable `Project` object. The
@@ -10,7 +10,7 @@
 import type { MediaEdit } from './mediaEdit';
 
 export const SCHEMA_ID = 'onefile-studio/project';
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /** Built-in project themes (see src/model/theme). */
 export type ThemeId = 'playful' | 'professional' | 'technical' | 'editorial';
@@ -29,6 +29,11 @@ export interface Project {
   variables: Variable[];
   /** Embedded assets keyed by asset id. */
   assets: Record<string, Asset>;
+  /**
+   * Project-wide interactions (v4): keyboard shortcuts that work on every
+   * slide or section. Absent in older files.
+   */
+  interactions?: Interaction[];
 }
 
 export interface ProjectMeta {
@@ -79,6 +84,11 @@ export interface Page {
   height?: number;
   /** Ordered back-to-front. */
   elements: SceneElement[];
+  /**
+   * Page-level interactions (v4): keyboard shortcuts, "when the slide opens",
+   * "after a delay". They run while this slide/section is the current one.
+   */
+  interactions?: Interaction[];
 }
 
 export type Direction = 'left' | 'right' | 'up' | 'down';
@@ -133,9 +143,17 @@ export interface SceneElement<P = Record<string, unknown>> {
 export interface Interaction {
   id: string;
   trigger: string;
+  /**
+   * Trigger settings (v4), e.g. `{ key: "Space", shift: false }` for a key
+   * press or `{ seconds: 3 }` for a delay. Absent for triggers without settings.
+   */
+  options?: Record<string, ParamValue>;
   conditions: Condition[];
   actions: Action[];
 }
+
+/** Who owns an interaction list: an element, a page (slide/section) or the whole project. */
+export type InteractionOwner = 'element' | 'page' | 'project';
 
 export type CompareOp = 'eq' | 'neq' | 'lt' | 'lte' | 'gt' | 'gte';
 
@@ -165,7 +183,7 @@ export interface Variable {
 export interface Asset {
   id: string;
   name: string;
-  /** image/*, video/* (MP4, WebM) or audio/* (MP3, WAV, OGG, M4A). */
+  /** image/*, video/* (MP4, WebM), audio/* (MP3, WAV, OGG, M4A) or model/gltf-binary (GLB, v4). */
   mime: string;
   /** Base64 data URL. Never a blob: or remote URL. */
   data: string;
@@ -188,10 +206,10 @@ export interface Asset {
   edit?: MediaEdit;
 }
 
-export type AssetKind = 'image' | 'video' | 'audio';
+export type AssetKind = 'image' | 'video' | 'audio' | 'model';
 
 export function assetKind(mime: string): AssetKind {
-  return mime.startsWith('video/') ? 'video' : mime.startsWith('audio/') ? 'audio' : 'image';
+  return mime.startsWith('video/') ? 'video' : mime.startsWith('audio/') ? 'audio' : mime.startsWith('model/') ? 'model' : 'image';
 }
 
 /** Special element target meaning "the element that owns this interaction". */

@@ -69,6 +69,7 @@ export const EDIT_CAPS: Record<AssetKind, { crop: boolean; orient: boolean; trim
   image: { crop: true, orient: true, trim: false },
   video: { crop: true, orient: false, trim: true },
   audio: { crop: false, orient: false, trim: true },
+  model: { crop: false, orient: false, trim: false },
 };
 
 /** A crop clamped inside the picture with at least MIN_CROP per side; undefined for the full picture or invalid input. */

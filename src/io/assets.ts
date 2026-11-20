@@ -1,4 +1,5 @@
 import type { Asset, AssetKind, Project } from '../model/types';
+import { GLB_MIME, inspectGlb } from '../model/glb';
 import { assetKind } from '../model/types';
 import { uid } from '../model/ids';
 
@@ -14,9 +15,13 @@ import { uid } from '../model/ids';
 export const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml', 'image/avif', 'image/bmp'];
 export const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/ogg'];
 export const ACCEPTED_AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/aac', 'audio/webm', 'audio/flac'];
+/** 3D models (v4): binary glTF only. */
+export const ACCEPTED_MODEL_TYPES = [GLB_MIME];
 
 const MB = 1024 * 1024;
 export const MAX_IMAGE_BYTES = 40 * MB;
+/** 3D models (GLB). */
+export const MAX_MODEL_BYTES = 100 * MB;
 /** Videos and sounds. Base64 grows this by a third; exports must stay below ~450 M characters. */
 export const MAX_MEDIA_BYTES = 150 * MB;
 /** Files above this size get a gentle export-size warning. */
@@ -49,6 +54,7 @@ const MIME_ALIASES: Record<string, string> = {
   'video/x-m4v': 'video/mp4',
   'video/m4v': 'video/mp4',
   'video/x-webm': 'video/webm',
+  'model/gltf+binary': GLB_MIME,
 };
 
 const EXTENSIONS: Record<string, string> = {
@@ -76,9 +82,10 @@ const EXTENSIONS: Record<string, string> = {
   aac: 'audio/aac',
   flac: 'audio/flac',
   weba: 'audio/webm',
+  glb: GLB_MIME,
 };
 
-const ACCEPTED = new Set([...ACCEPTED_IMAGE_TYPES, ...ACCEPTED_VIDEO_TYPES, ...ACCEPTED_AUDIO_TYPES]);
+const ACCEPTED = new Set([...ACCEPTED_IMAGE_TYPES, ...ACCEPTED_VIDEO_TYPES, ...ACCEPTED_AUDIO_TYPES, ...ACCEPTED_MODEL_TYPES]);
 
 /**
  * The canonical MIME type for a file, from its reported type or (when that is
@@ -96,7 +103,7 @@ export function normalizeMime(type: string | undefined, name = ''): string | nul
   const byExt = ext ? EXTENSIONS[ext] : undefined;
   if (!byExt) return null;
   // Trust the extension only when the reported type is missing, generic, or the same family.
-  if (!t || t === 'application/octet-stream' || t === 'application/ogg' || t.split('/')[0] === byExt.split('/')[0]) return byExt;
+  if (!t || t === 'application/octet-stream' || t === 'application/ogg' || t === 'model/gltf-binary' || t.split('/')[0] === byExt.split('/')[0]) return byExt;
   return null;
 }
 
@@ -106,6 +113,7 @@ export function acceptAttribute(kinds: AssetKind[]): string {
   if (kinds.includes('image')) parts.push(...ACCEPTED_IMAGE_TYPES, '.gif');
   if (kinds.includes('video')) parts.push('video/mp4', 'video/webm', '.mp4', '.m4v', '.webm');
   if (kinds.includes('audio')) parts.push('audio/*', '.mp3', '.wav', '.ogg', '.oga', '.opus', '.m4a', '.aac', '.flac');
+  if (kinds.includes('model')) parts.push('.glb', GLB_MIME);
   return parts.join(',');
 }
 
@@ -120,11 +128,16 @@ const UNSUPPORTED_HINTS: Record<string, string> = {
   tiff: 'TIFF images are not supported by browsers. Please save it as PNG or JPEG first.',
   aiff: 'AIFF sounds do not play in every browser. Please convert it to MP3 or WAV first.',
   wma: 'WMA sounds do not play in browsers. Please convert it to MP3 first.',
+  gltf: 'Text glTF (.gltf) models usually come with separate files. Please export a single binary .glb file instead.',
+  obj: 'OBJ models are not supported. Please convert it to a binary glTF (.glb) file first (e.g. with Blender).',
+  fbx: 'FBX models are not supported. Please convert it to a binary glTF (.glb) file first (e.g. with Blender).',
+  stl: 'STL models are not supported. Please convert it to a binary glTF (.glb) file first (e.g. with Blender).',
+  usdz: 'USDZ models are not supported. Please convert it to a binary glTF (.glb) file first.',
 };
 
 function unsupportedMessage(name: string): string {
   const ext = /\.([a-z0-9]{2,5})$/i.exec(name)?.[1]?.toLowerCase() ?? '';
-  return `“${name}” can't be added. ${UNSUPPORTED_HINTS[ext] ?? 'Supported files: images (PNG, JPEG, GIF, WebP, SVG), videos (MP4, WebM) and sounds (MP3, WAV, OGG, M4A).'}`;
+  return `“${name}” can't be added. ${UNSUPPORTED_HINTS[ext] ?? 'Supported files: images (PNG, JPEG, GIF, WebP, SVG), videos (MP4, WebM), sounds (MP3, WAV, OGG, M4A) and 3D models (GLB).'}`;
 }
 
 export function formatMegabytes(bytes: number): string {
@@ -445,7 +458,7 @@ export async function fileToAsset(file: File, opts: FileToAssetOptions = {}): Pr
   let mime = normalizeMime(file.type, name);
   if (!mime) throw new Error(unsupportedMessage(name));
   const kind = assetKind(mime);
-  const limit = kind === 'image' ? MAX_IMAGE_BYTES : MAX_MEDIA_BYTES;
+  const limit = kind === 'image' ? MAX_IMAGE_BYTES : kind === 'model' ? MAX_MODEL_BYTES : MAX_MEDIA_BYTES;
   if (file.size === 0) throw new Error(`“${name}” is empty.`);
   if (file.size > limit) {
     const advice =
@@ -453,10 +466,17 @@ export async function fileToAsset(file: File, opts: FileToAssetOptions = {}): Pr
         ? 'Try a shorter clip or a smaller resolution (720p is plenty for most screens).'
         : kind === 'audio'
           ? 'Try a shorter clip or saving it as MP3.'
-          : 'Try saving it at a smaller size.';
+          : kind === 'model'
+            ? 'Try simplifying it (fewer polygons, smaller textures) before exporting the .glb.'
+            : 'Try saving it at a smaller size.';
     throw new Error(`“${name}” is ${formatMegabytes(file.size)}, more than the ${formatMegabytes(limit)} a single file can embed. ${advice}`);
   }
 
+  if (kind === 'model') {
+    // Check the structure first so authors get a useful message instead of a blank viewer later.
+    const check = inspectGlb(await readBytes(file), name);
+    if (!check.ok) throw new Error(check.error);
+  }
   const typed = file.type === mime ? file : new Blob([file], { type: mime });
   let data = await readAsDataUrl(typed);
   const head = `data:${mime};base64,`;
@@ -480,7 +500,7 @@ export async function fileToAsset(file: File, opts: FileToAssetOptions = {}): Pr
       const bytes = await readBytes(mime === 'image/gif' ? file : file.slice(0, 256 * 1024));
       if (isAnimatedImage(mime, bytes)) asset.animated = true;
     }
-  } else {
+  } else if (kind !== 'model') {
     const probed = await probeContainer(file, mime);
     let src = data;
     let objectUrl = '';

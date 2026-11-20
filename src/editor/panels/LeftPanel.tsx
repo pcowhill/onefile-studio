@@ -247,7 +247,7 @@ function CatalogCard({ item }: { item: CatalogItem }) {
 }
 
 type MediaFilter = 'all' | AssetKind;
-const FILTER_LABEL: Record<MediaFilter, string> = { all: 'All', image: 'Images', video: 'Videos', audio: 'Sounds' };
+const FILTER_LABEL: Record<MediaFilter, string> = { all: 'All', image: 'Images', video: 'Videos', audio: 'Sounds', model: '3D' };
 
 function MediaPanel() {
   const project = useEditor((s) => s.project)!;
@@ -291,7 +291,7 @@ function MediaPanel() {
         <CaptureCards />
         {kinds.size > 1 && (
           <div className="ed-media-filter" role="radiogroup" aria-label="Show">
-            {(['all', 'image', 'video', 'audio'] as MediaFilter[])
+            {(['all', 'image', 'video', 'audio', 'model'] as MediaFilter[])
               .filter((f) => f === 'all' || kinds.has(f))
               .map((f) => (
                 <button key={f} role="radio" aria-checked={filter === f} className={filter === f ? 'is-on' : ''} onClick={() => setFilter(f)}>

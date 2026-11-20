@@ -504,8 +504,8 @@ export function ImageChooser({
   );
 }
 
-const KIND_ICON: Record<AssetKind, string> = { image: 'image', video: 'video', audio: 'audio' };
-const KIND_NOUN: Record<AssetKind, string> = { image: 'image', video: 'video', audio: 'sound' };
+const KIND_ICON: Record<AssetKind, string> = { image: 'image', video: 'video', audio: 'audio', model: 'cube' };
+const KIND_NOUN: Record<AssetKind, string> = { image: 'image', video: 'video', audio: 'sound', model: '3D model' };
 
 /** Library tile for any asset: picture thumbnail, or an icon with the duration for video/audio. */
 export function AssetTile({ asset, className = '' }: { asset: Asset; className?: string }) {

@@ -1,10 +1,12 @@
-import type { Action, AnimationRef, Asset, Background, Condition, Interaction, Page, Paint, Project, SceneElement, Variable } from './types';
+import type { Action, AnimationRef, Asset, Background, Condition, DragBehavior, Interaction, InteractionOwner, Page, Paint, Project, SceneElement, Variable } from './types';
 import { assetKind, SCHEMA_ID, SCHEMA_VERSION, SELF_TARGET } from './types';
 import { isIdentity, sanitizeEdit } from './mediaEdit';
 import { SAFE_ID, uid } from './ids';
 import { isSafeColor } from './paint';
 import { elementRegistry } from '../runtime/elements';
-import { triggerRegistry } from '../runtime/triggers';
+import { triggerAllows, triggerRegistry } from '../runtime/triggers';
+import { normalizeLink } from './links';
+import { isGlbDataUrl } from './glb';
 import { actionRegistry } from '../runtime/actions';
 import { animationRegistry } from '../runtime/animations';
 import { dragRegistry } from '../runtime/drag';
@@ -18,7 +20,8 @@ export type ValidationResult = { ok: true; project: Project; warnings: string[] 
 export class ProjectError extends Error {}
 
 /** Embedded asset MIME types accepted on import. */
-const DATA_URL_HEAD = /^data:(image\/(?:png|jpeg|jpg|gif|webp|svg\+xml|avif|bmp)|video\/(?:mp4|webm|ogg)|audio\/(?:mpeg|wav|ogg|mp4|aac|webm|flac));base64,/;
+const DATA_URL_HEAD =
+  /^data:(image\/(?:png|jpeg|jpg|gif|webp|svg\+xml|avif|bmp)|video\/(?:mp4|webm|ogg)|audio\/(?:mpeg|wav|ogg|mp4|aac|webm|flac)|model\/gltf-binary);base64,/;
 const B64_BODY = /[A-Za-z0-9+/]*={0,2}$/y;
 const COLOR_KEYS = new Set([
   'color',
@@ -114,7 +117,11 @@ export function validateProject(raw: unknown): ValidationResult {
         }
         const data = typeof a.data === 'string' ? a.data : '';
         if (!isEmbeddedDataUrl(data)) {
-          warnings.push(`Skipped asset "${str(a.name, key, 60)}" (not a supported embedded image, video or audio file).`);
+          warnings.push(`Skipped asset "${str(a.name, key, 60)}" (not a supported embedded image, video, audio or 3D model file).`);
+          continue;
+        }
+        if (data.startsWith('data:model/') && !isGlbDataUrl(data)) {
+          warnings.push(`Skipped 3D model "${str(a.name, key, 60)}" (not a valid GLB file).`);
           continue;
         }
         const asset: Asset = {
@@ -191,9 +198,15 @@ export function validateProject(raw: unknown): ValidationResult {
       const rawEls = Array.isArray(rp?.elements) ? (rp.elements as unknown[]) : [];
       for (const el of page.elements) {
         const re = rawEls.find((x) => isObj(x) && x.id === el.id) as Record<string, unknown> | undefined;
-        el.interactions = interactions(re?.interactions, { elIds: allElIds, varIds, pageIds }, warnings);
+        el.interactions = interactions(re?.interactions, 'element', { elIds: allElIds, varIds, pageIds }, warnings);
       }
+      // v4: page-level interactions (keys, "slide opens", delays).
+      const pageIx = interactions(rp?.interactions, 'page', { elIds: allElIds, varIds, pageIds }, warnings);
+      if (pageIx.length) page.interactions = pageIx;
     });
+    // v4: project-wide interactions (keyboard shortcuts on every page).
+    const projectIx = interactions(migrated.interactions, 'project', { elIds: allElIds, varIds, pageIds }, warnings);
+    if (projectIx.length) project.interactions = projectIx;
     return { ok: true, project, warnings };
   } catch (err) {
     if (err instanceof ProjectError) return { ok: false, errors: [err.message] };
@@ -212,6 +225,10 @@ export function validateProject(raw: unknown): ValidationResult {
  * v2 → v3: adds nondestructive media edits (`asset.edit`, and an `edit` prop on
  * image, video and audio elements). Older files simply have none: elements get
  * `edit: null` (follow the library version) from the registry defaults.
+ *
+ * v3 → v4: adds page/project interactions, trigger options (keys, delays), the
+ * "Open link" action, floaty/weighted drag modes with feel settings, GLB model
+ * assets and the 3D model element. All additive: v3 files need no changes.
  */
 export function migrate(raw: Record<string, unknown>, version: number): Record<string, unknown> {
   let out = raw;
@@ -220,6 +237,7 @@ export function migrate(raw: Record<string, unknown>, version: number): Record<s
     out = { ...out, version: 2, settings: { ...settings, theme: DEFAULT_THEME, backdropThemed: false } };
   }
   if (Number(out.version) < 3) out = { ...out, version: 3 };
+  if (Number(out.version) < 4) out = { ...out, version: 4 };
   return out;
 }
 
@@ -311,12 +329,22 @@ function element(raw: unknown, ctx: SanitizeCtx, ids: Set<string>, warnings: str
     props,
     interactions: [],
     entrance: animationRef(raw.entrance),
-    drag: isObj(raw.drag) && typeof raw.drag.mode === 'string' && dragRegistry.has(raw.drag.mode) ? { mode: raw.drag.mode } : null,
+    drag: dragBehavior(raw.drag),
   };
   if (typeof raw.role === 'string' && ROLE.test(raw.role)) out.role = raw.role;
   if (Array.isArray(raw.themed)) {
     const keys = [...new Set(raw.themed.filter((k): k is string => typeof k === 'string' && k in defaults))];
     if (keys.length) out.themed = keys;
+  }
+  return out;
+}
+
+function dragBehavior(v: unknown): DragBehavior | null {
+  if (!isObj(v) || typeof v.mode !== 'string' || !dragRegistry.has(v.mode)) return null;
+  const out: DragBehavior = { mode: v.mode };
+  if (v.mode !== 'rigid') {
+    if (typeof v.amount === 'number' && Number.isFinite(v.amount)) out.amount = finite(v.amount, 0.5, 0, 1);
+    if (typeof v.settle === 'number' && Number.isFinite(v.settle)) out.settle = finite(v.settle, 0.5, 0, 1);
   }
   return out;
 }
@@ -358,13 +386,14 @@ interface Refs {
   pageIds: Set<string>;
 }
 
-function interactions(v: unknown, refs: Refs, warnings: string[]): Interaction[] {
+function interactions(v: unknown, owner: InteractionOwner, refs: Refs, warnings: string[]): Interaction[] {
   if (!Array.isArray(v)) return [];
   const out: Interaction[] = [];
   for (const ri of v.slice(0, 100)) {
     if (!isObj(ri)) continue;
     const trigger = typeof ri.trigger === 'string' ? ri.trigger : '';
-    if (!triggerRegistry.has(trigger)) {
+    const def = triggerRegistry.get(trigger);
+    if (!def || !triggerAllows(def, owner)) {
       warnings.push(`Removed an interaction with unsupported trigger "${trigger.slice(0, 40)}".`);
       continue;
     }
@@ -387,17 +416,28 @@ function interactions(v: unknown, refs: Refs, warnings: string[]): Interaction[]
         if (isObj(ra.params)) {
           for (const [k, pv] of Object.entries(ra.params)) {
             if (!/^[a-zA-Z]{1,30}$/.test(k)) continue;
-            if (typeof pv === 'string') params[k] = pv.slice(0, 200);
+            if (typeof pv === 'string') params[k] = pv.slice(0, k === 'url' ? 2000 : 200);
             else if (typeof pv === 'number' && Number.isFinite(pv)) params[k] = pv;
             else if (typeof pv === 'boolean') params[k] = pv;
           }
         }
         if (typeof params.target === 'string' && params.target !== SELF_TARGET && !refs.elIds.has(params.target)) params.target = '';
+        if (owner !== 'element' && params.target === SELF_TARGET) params.target = '';
         if (typeof params.variable === 'string' && params.variable !== '@all' && !refs.varIds.has(params.variable)) params.variable = '';
+        if (ra.type === 'openLink') {
+          // Only http(s), mailto and tel links survive; anything else (javascript:, data:…) is dropped.
+          const url = typeof params.url === 'string' ? params.url : '';
+          if (url && !normalizeLink(url)) {
+            warnings.push('Removed a link that was not a web, e-mail or phone address.');
+            params.url = '';
+          }
+        }
         actions.push({ id: safeId(ra.id, 'ac'), type: ra.type, params });
       }
     }
-    out.push({ id: safeId(ri.id, 'ix'), trigger, conditions, actions });
+    const ix: Interaction = { id: safeId(ri.id, 'ix'), trigger, conditions, actions };
+    if (def.options) ix.options = def.options(isObj(ri.options) ? ri.options : {});
+    out.push(ix);
   }
   return out;
 }
