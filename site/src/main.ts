@@ -22,20 +22,31 @@ const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
 
 // ---------------------------------------------------------------- returning users
-/** True when this browser has an editor draft (same origin as studio/). */
-function hasDraft(): boolean {
+/**
+ * Has this browser used the editor before (same origin as studio/)? A project
+ * left open, or the editor's draft database. Read-only: the database is only
+ * listed, never opened (opening would create it).
+ */
+async function usedStudio(): Promise<boolean> {
   try {
-    return !!localStorage.getItem('ofs:last-project') || Object.keys(localStorage).some((k) => k.startsWith('ofs:'));
+    if (localStorage.getItem('ofs:last-project')) return true;
+  } catch {
+    /* storage blocked */
+  }
+  try {
+    const dbs = await indexedDB.databases?.();
+    return !!dbs?.some((d) => d.name === 'onefile-studio');
   } catch {
     return false;
   }
 }
-if (hasDraft()) {
+void usedStudio().then((back) => {
+  if (!back) return;
   const label = document.querySelector('.nav-cta-label');
   if (label) label.textContent = 'Open the studio';
   const wb = document.querySelector<HTMLElement>('.welcome-back');
   if (wb) wb.hidden = false;
-}
+});
 
 // ---------------------------------------------------------------- nav
 const nav = document.querySelector<HTMLElement>('.nav')!;

@@ -48,6 +48,9 @@ test('the landing page loads: hero, value strip, six showcase cards, templates, 
   await expect(page.getByTestId('template-row').locator('li')).toHaveCount(5);
   await expect(page.getByTestId('lesson-levels').locator('li')).toHaveCount(8);
   await expect(page.getByTestId('download-editor')).toHaveAttribute('download', 'OneFile-Studio.html');
+  // A first-time visitor (fresh browser) is not greeted as a returning user.
+  await expect(page.getByTestId('welcome-back')).toBeHidden();
+  await expect(page.getByTestId('nav-start')).toHaveText('Start creating');
   // Every image has alt text and every button an accessible name.
   for (const img of await page.locator('img').all()) expect(await img.getAttribute('alt')).toBeTruthy();
   for (const b of await page.locator('button').all()) expect((await b.getAttribute('aria-label')) ?? (await b.innerText()).trim()).toBeTruthy();
