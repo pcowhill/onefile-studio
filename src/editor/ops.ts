@@ -671,6 +671,36 @@ export function renameAsset(id: string, name: string) {
  * made for the old picture, so it goes back to following the library version.
  */
 export function replaceElementImage(elementId: string, asset: Asset) {
+  const project = editor().project;
+  const old = project && findEl(project, elementId);
+  const oldId = old && old.el.type === 'image' ? String((old.el.props as Record<string, unknown>).assetId || '') : '';
+  replaceOne(elementId, asset);
+  // Templates often show one picture in several places: offer to swap the others in one step.
+  const others = oldId && oldId !== asset.id ? imagesShowing(editor().project!, oldId).filter((id) => id !== elementId) : [];
+  if (others.length) {
+    const name = project!.assets[oldId]?.name ?? 'the old picture';
+    toast(`${others.length} other picture${others.length > 1 ? 's' : ''} still show “${stripExt(name)}”.`, 'info', 9000, {
+      label: others.length > 1 ? 'Replace them too' : 'Replace it too',
+      run: () => {
+        editor().update((d) => {
+          for (const id of others) {
+            const f = findEl(d, id);
+            if (f && f.el.type === 'image') Object.assign(f.el.props as Record<string, unknown>, { assetId: asset.id, edit: null, alt: stripExt(asset.name) });
+          }
+        });
+      },
+    });
+  }
+}
+
+/** Ids of image elements that show asset `assetId`. */
+export function imagesShowing(project: Project, assetId: string): string[] {
+  return project.pages.flatMap((p) =>
+    p.elements.filter((e) => e.type === 'image' && (e.props as Record<string, unknown>).assetId === assetId).map((e) => e.id),
+  );
+}
+
+function replaceOne(elementId: string, asset: Asset) {
   editor().update((d) => {
     const f = findEl(d, elementId);
     if (!f || f.el.type !== 'image') return;

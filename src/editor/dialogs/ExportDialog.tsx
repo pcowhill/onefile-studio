@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { coachEvent } from '../learn/coach';
 import coreRuntime from 'virtual:ofs-runtime';
 import model3dRuntime from 'virtual:ofs-runtime-3d';
 import type { AssetKind, Project } from '../../model/types';
@@ -99,6 +100,7 @@ export function ExportDialog() {
       if (estimateExport(final, runtimeCode).chars > MAX_EXPORT_CHARS) throw new Error('the project is too large to fit in one file');
       const html = buildStandaloneHtml(final, runtimeCode);
       downloadText(html, fileNameFor(project.meta.title));
+      coachEvent('export');
       toast('Exported! Open the file in any browser — or import it here later to keep editing.', 'success', 6000);
       close();
     } catch (err) {

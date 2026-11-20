@@ -5,6 +5,7 @@ import { StartScreen } from './editor/start/StartScreen';
 import { Toasts } from './editor/ui/toast';
 import { ContextMenu } from './editor/ui/contextMenu';
 import { lastProjectId, openDraft, startAutosave } from './editor/session';
+import { Coach } from './editor/learn/Coach';
 
 export function App() {
   const hasProject = useEditor((s) => !!s.project);
@@ -18,6 +19,7 @@ export function App() {
   return (
     <>
       {hasProject ? <Editor /> : <StartScreen />}
+      <Coach />
       <ContextMenu />
       <Toasts />
     </>

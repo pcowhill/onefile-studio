@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles/editor.css';
+import './styles/learn.css';
 import { App } from './App';
 import { useEditor } from './editor/store/store';
 import { ensureRuntimeStyles } from './runtime/styles';

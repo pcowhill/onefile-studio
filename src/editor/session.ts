@@ -7,6 +7,7 @@ import { listDrafts, loadDraft, saveDraft } from '../io/storage';
 import { editor, useEditor } from './store/store';
 import { toast } from './ui/toast';
 import { EXAMPLES } from '../examples';
+import { coachEvent } from './learn/coach';
 
 const LAST_KEY = 'ofs:last-project';
 
@@ -25,6 +26,11 @@ export function lastProjectId(): string | null {
   } catch {
     return null;
   }
+}
+
+/** Opens a project in the editor as a new draft (templates, lessons, examples, imports). */
+export function openProject(project: Project) {
+  open(project);
 }
 
 function open(project: Project) {
@@ -67,6 +73,7 @@ export async function importFile(file: File): Promise<boolean> {
     const existing = (await listDrafts()).some((d) => d.id === project.id);
     if (existing) project.id = uid('prj');
     open(project);
+    coachEvent('import');
     toast(
       `Imported “${project.meta.title}”.${warnings.length ? ` (${warnings.length} item${warnings.length > 1 ? 's' : ''} skipped: ${warnings[0]})` : ''}`,
       warnings.length ? 'info' : 'success',
