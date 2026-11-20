@@ -43,6 +43,7 @@ import { TableEditor } from './editors/TableEditor';
 import { CountdownEditor } from './editors/CountdownEditor';
 import { QuizEditor } from './editors/QuizEditor';
 import { QuickClick } from '../behavior/QuickClick';
+import { ModelEditor } from './editors/ModelEditor';
 
 export function DesignPanel({ els }: { els: SceneElement[] }) {
   const project = useEditor((s) => s.project)!;
@@ -882,6 +883,7 @@ const EDITORS: Record<string, (p: P<any>) => React.ReactNode> = {
   table: TableEditor,
   countdown: CountdownEditor,
   quiz: QuizEditor,
+  model: ModelEditor,
 };
 
 // ---------------- page / project settings ----------------

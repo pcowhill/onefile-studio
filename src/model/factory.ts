@@ -100,14 +100,22 @@ export function clonePage(page: Page): Page {
     map.set(el.id, c.id);
     return c;
   });
+  const copy = JSON.parse(JSON.stringify(page)) as Page;
+  // Page-level interactions (v4) get fresh ids too.
+  const pageIx = copy.interactions?.map((ix) => ({
+    ...ix,
+    id: uid('ix'),
+    actions: ix.actions.map((a) => ({ ...a, id: uid('ac') })),
+    conditions: ix.conditions.map((c) => ({ ...c, id: uid('cd') })),
+  }));
   // Re-point interactions that targeted elements within the duplicated page.
-  for (const el of elements) {
-    for (const ix of el.interactions) {
+  for (const ixs of [...elements.map((e) => e.interactions), pageIx ?? []]) {
+    for (const ix of ixs) {
       for (const a of ix.actions) {
         const t = a.params.target;
         if (typeof t === 'string' && map.has(t)) a.params.target = map.get(t)!;
       }
     }
   }
-  return { ...(JSON.parse(JSON.stringify(page)) as Page), id: uid('pg'), name: `${page.name} copy`, elements };
+  return { ...copy, id: uid('pg'), name: `${page.name} copy`, elements, ...(pageIx ? { interactions: pageIx } : {}) };
 }

@@ -67,6 +67,13 @@ export const EDITOR_ELEMENTS: Record<string, EditorElementDef> = {
     builtIn: "Counts down live on each viewer's clock — even months later.",
   },
   quiz: { type: 'quiz', label: 'Quiz', icon: 'quiz', color: '#e84393', builtIn: 'Checks the answer and shows feedback by itself.' },
+  model: {
+    type: 'model',
+    label: '3D model',
+    icon: 'cube',
+    color: '#6366f1',
+    builtIn: 'Viewers drag to turn the model, scroll or pinch to zoom, and right-drag to move it. Works offline.',
+  },
 };
 
 export function elementLabel(type: string) {
@@ -207,6 +214,30 @@ export const CATALOG: CatalogItem[] = [
     color: '#10b981',
     group: 'media',
     build: () => ({ element: createElement('audio', { w: 420, h: 96 }) }),
+  },
+  {
+    id: 'model',
+    label: '3D model',
+    hint: 'A GLB model viewers can turn and zoom',
+    icon: 'cube',
+    color: '#6366f1',
+    group: 'media',
+    build: () => ({ element: createElement('model', { w: 560, h: 420 }) }),
+  },
+  {
+    id: 'link-button',
+    label: 'Link button',
+    hint: 'Opens a website or document',
+    icon: 'external',
+    color: '#0891b2',
+    group: 'media',
+    build: () => {
+      const element = createElement('button', { w: 240, h: 64, props: { label: 'Learn more', icon: 'arrow-right', iconSide: 'right' } });
+      element.interactions = [
+        { id: uid('ix'), trigger: 'click', conditions: [], actions: [{ id: uid('ac'), type: 'openLink', params: { url: 'https://example.com', newTab: true } }] },
+      ];
+      return { element };
+    },
   },
   {
     id: 'button',

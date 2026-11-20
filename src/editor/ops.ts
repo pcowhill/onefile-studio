@@ -13,6 +13,7 @@ import { nameFor } from './catalog';
 import { acceptAttribute, addAssetDedup, fileToAsset, formatMegabytes, LARGE_FILE_BYTES, normalizeMime } from '../io/assets';
 import { toast } from './ui/toast';
 import { uid } from '../model/ids';
+import { allInteractionLists } from '../model/interactions';
 import type { MediaEdit } from '../model/mediaEdit';
 import { editedAspect, isIdentity, sanitizeEdit } from '../model/mediaEdit';
 import {
@@ -116,7 +117,7 @@ export function pickImages(multiple = true): Promise<Asset[]> {
   return pickMedia(['image'], multiple);
 }
 
-const ALL_KINDS: AssetKind[] = ['image', 'video', 'audio'];
+const ALL_KINDS: AssetKind[] = ['image', 'video', 'audio', 'model'];
 
 /**
  * Opens the OS file picker for the given kinds of media (images, GIFs, videos,
@@ -213,6 +214,7 @@ export function insertMedia(asset: Asset): string | undefined {
     const size = videoSize(asset, portrait ? Math.min(320, W * 0.4) : Math.min(640, W * 0.6), 'none');
     return insertBuilt({ element: createElement('video', { ...size, props: { assetId: asset.id, alt: stripExt(asset.name) } }) });
   }
+  if (kind === 'model') return insertBuilt({ element: createElement('model', { w: 560, h: 420, props: { assetId: asset.id, alt: stripExt(asset.name) } }) });
   return insertBuilt({ element: createElement('audio', { w: 420, h: AUDIO_STYLE_HEIGHT.player, props: { assetId: asset.id } }) });
 }
 
@@ -519,12 +521,11 @@ export function renameVariable(id: string, name: string) {
 export function deleteVariable(id: string) {
   editor().update((d) => {
     d.variables = d.variables.filter((v) => v.id !== id);
-    for (const pg of d.pages)
-      for (const el of pg.elements)
-        for (const ix of el.interactions) {
-          ix.conditions = ix.conditions.filter((c) => c.variableId !== id);
-          for (const a of ix.actions) if (a.params.variable === id) a.params.variable = '';
-        }
+    for (const list of allInteractionLists(d))
+      for (const ix of list) {
+        ix.conditions = ix.conditions.filter((c) => c.variableId !== id);
+        for (const a of ix.actions) if (a.params.variable === id) a.params.variable = '';
+      }
   });
 }
 
@@ -540,10 +541,11 @@ export function variableUsage(project: Project, id: string): number {
       )
         n++;
       if ((el.props as Record<string, unknown>).variableId === id) n++;
-      for (const ix of el.interactions) {
-        n += ix.actions.filter((a) => a.params.variable === id).length;
-        n += ix.conditions.filter((c) => c.variableId === id).length;
-      }
+    }
+  for (const list of allInteractionLists(project))
+    for (const ix of list) {
+      n += ix.actions.filter((a) => a.params.variable === id).length;
+      n += ix.conditions.filter((c) => c.variableId === id).length;
     }
   return n;
 }

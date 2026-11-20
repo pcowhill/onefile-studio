@@ -118,6 +118,15 @@ export const PROP_SANITIZERS: Record<string, Record<string, Sanitizer>> = {
   image: { edit: mediaEdit('image') },
   video: { edit: mediaEdit('video') },
   audio: { edit: mediaEdit('audio') },
+  model: {
+    lighting: oneOf('studio', 'soft', 'dramatic'),
+    backdrop: oneOf('gradient', 'solid', 'none'),
+    rotateSpeed: range(0.2, 3),
+    yaw: range(-720, 720),
+    pitch: range(-80, 85),
+    zoom: range(0.4, 2.5),
+    radius: range(0, 400),
+  },
   progress: { variableId: variableRef },
   chart: {
     labels: stringList(MAX_CHART_POINTS, 60),
@@ -164,6 +173,7 @@ export const ASSET_REFS: Record<string, Record<string, AssetKind>> = {
   beforeAfter: { before: 'image', after: 'image' },
   video: { assetId: 'video', posterId: 'image' },
   audio: { assetId: 'audio' },
+  model: { assetId: 'model' },
 };
 
 export function assetOfKind(project: Project, id: unknown, kind: AssetKind): boolean {

@@ -560,3 +560,32 @@
   gap: 6px;
   flex-wrap: wrap;
 }
+
+/* ---- 3D models (v0.4) ---- */
+.ed-media-tile.is-model {
+  background: radial-gradient(90% 80% at 50% 30%, #f1efff, #dcd8f6) center/cover no-repeat;
+  color: #6366f1;
+  box-shadow: none;
+}
+.ed-media-tile.is-model[style] {
+  background-color: #ebe8fb;
+  background-size: cover;
+}
+.ed-media-big.is-model {
+  border-color: #c7c8f8;
+  background: linear-gradient(160deg, #f8f8ff, #eceafe);
+}
+.ed-media-big.is-model:hover {
+  border-color: #6366f1;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.14);
+}
+.ed-media-big.is-model .ed-media-big-icon {
+  background: #6366f1;
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.3);
+}
+.ed-model-views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 4px;
+}

@@ -104,6 +104,7 @@ const MAPPERS: Record<string, Mapper> = {
     font: t.fonts.label,
   }),
   video: (t) => ({ radius: t.radius.media, shadow: t.shadows.media, accent: t.colors.accent, background: t.colors.mediaBg, borderColor: t.colors.border }),
+  model: (t) => ({ radius: t.radius.media, shadow: t.shadows.media, accent: t.colors.accent, background: t.colors.surfaceAlt }),
   audio: (t) => ({
     font: t.fonts.body,
     accent: t.colors.accent,

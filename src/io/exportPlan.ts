@@ -2,6 +2,7 @@ import type { Asset, AssetKind, Project } from '../model/types';
 import { assetKind } from '../model/types';
 import { ASSET_REFS } from '../model/propSchemas';
 import { buildStandaloneHtml } from './exportHtml';
+import type { ExportRuntime } from './exportHtml';
 import type { MediaEdit } from '../model/mediaEdit';
 import { isIdentity, resolveEdit } from '../model/mediaEdit';
 
@@ -30,7 +31,7 @@ export interface ExportEstimate {
  * document once with empty asset data and adding the base64 lengths (base64
  * is ASCII and never escaped, so the result is exact).
  */
-export function estimateExport(project: Project, runtime: string): ExportEstimate {
+export function estimateExport(project: Project, runtime: string | ExportRuntime): ExportEstimate {
   let dataChars = 0;
   const assets: Project['assets'] = {};
   for (const [id, a] of Object.entries(project.assets)) {
