@@ -118,11 +118,12 @@ function Guide({ run, dock }: { run: CoachRun; dock: boolean }) {
                 aria-current={i === index && !finished ? 'step' : undefined}
                 data-testid={`guide-${s.id}`}
                 data-done={states[i]}
+                title={s.title}
               >
                 <span className="co-check" aria-hidden="true">
                   {states[i] ? <Icon name="check" size={12} stroke={3.4} /> : i + 1}
                 </span>
-                {s.title}
+                <span className="co-chip-label">{s.title}</span>
                 {states[i] && <span className="sr-only"> (done)</span>}
               </button>
             </li>
