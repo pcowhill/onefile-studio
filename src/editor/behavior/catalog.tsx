@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
-import type { ParamValue, Project } from '../../model/types';
+import type { Interaction, InteractionOwner, ParamValue, Project } from '../../model/types';
 import { SELF_TARGET } from '../../model/types';
+import { describeKey, keySpec } from '../../runtime/keys';
 
 /**
  * Editor-side catalog for triggers and actions. The runtime registries
@@ -26,8 +27,9 @@ export const TRIGGER_CATEGORIES: Record<string, Category> = {
 
 export interface TriggerUi {
   id: string;
+  /** "{page}" is replaced with "slide" or "section". */
   label: string;
-  /** Completes "When <element> …". */
+  /** Completes "When <element> …" ("When …" for page triggers). "{page}" as above. */
   sentence: string;
   description: string;
   category: keyof typeof TRIGGER_CATEGORIES;
@@ -35,8 +37,45 @@ export interface TriggerUi {
   primary?: boolean;
   /** Only offered for these element types (and then shown first). */
   forTypes?: string[];
+  /** Who can own it (default: elements). Must match the runtime trigger's owners. */
+  owners?: InteractionOwner[];
+  /** The sentence does not start with the element's name ("When Space is pressed"). */
+  standalone?: boolean;
   art: ReactNode;
 }
+
+const Keyboard = () => (
+  <svg viewBox="0 0 120 90" className="ed-trigger-art">
+    <circle cx="60" cy="45" r="38" fill="currentColor" opacity=".12" />
+    <rect x="14" y="28" width="92" height="44" rx="9" fill="#fff" stroke="#2a2340" strokeWidth="4" />
+    {[24, 38, 52, 66, 80].map((x) => (
+      <rect key={x} x={x} y="36" width="10" height="9" rx="2.5" fill="#2a2340" opacity=".22" />
+    ))}
+    <rect x="94" y="36" width="4" height="9" rx="2" fill="#2a2340" opacity=".22" />
+    <rect x="34" y="52" width="52" height="11" rx="3.5" fill="currentColor" />
+    <path d="M60 6v12M50 10l10 9 10-9" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+  </svg>
+);
+
+const Curtain = () => (
+  <svg viewBox="0 0 120 90" className="ed-trigger-art">
+    <circle cx="60" cy="45" r="38" fill="currentColor" opacity=".12" />
+    <rect x="22" y="20" width="76" height="50" rx="7" fill="#fff" stroke="#2a2340" strokeWidth="4" />
+    <path d="M52 34v22l18-11z" fill="currentColor" />
+    <path d="M14 78h92" stroke="#2a2340" strokeWidth="4" strokeLinecap="round" opacity=".25" />
+    <path d="M30 12l4 6M60 8v7M90 12l-4 6" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+  </svg>
+);
+
+const Hourglass = () => (
+  <svg viewBox="0 0 120 90" className="ed-trigger-art">
+    <circle cx="60" cy="45" r="38" fill="currentColor" opacity=".12" />
+    <path d="M42 14h36M42 76h36" stroke="#2a2340" strokeWidth="5" strokeLinecap="round" />
+    <path d="M46 16c0 16 28 18 28 29S46 58 46 74h28c0-16-28-18-28-29s28-13 28-29z" fill="#fff" stroke="#2a2340" strokeWidth="4" strokeLinejoin="round" />
+    <path d="M52 70c2-7 14-7 16 0z" fill="currentColor" />
+    <path d="M54 30h12l-6 8z" fill="currentColor" />
+  </svg>
+);
 
 const Badge = ({ kind }: { kind: 'check' | 'cross' | 'any' | 'timer' | 'end' }) => (
   <svg viewBox="0 0 120 90" className="ed-trigger-art">
@@ -104,6 +143,39 @@ const Mouse = ({ left, right, dbl, hover }: { left?: boolean; right?: boolean; d
 export const TRIGGERS: TriggerUi[] = [
   { id: 'click', label: 'Click', sentence: 'is clicked', description: 'A normal click or tap', category: 'mouse', primary: true, art: <Mouse left /> },
   {
+    id: 'key',
+    label: 'Key press',
+    sentence: 'a key is pressed',
+    description: 'Space, Enter, arrows, letters, numbers…',
+    category: 'keyboard',
+    primary: true,
+    standalone: true,
+    owners: ['element', 'page', 'project'],
+    art: <Keyboard />,
+  },
+  {
+    id: 'pageStart',
+    label: '{Page} opens',
+    sentence: 'the {page} opens',
+    description: 'Every time viewers arrive on this {page}',
+    category: 'timing',
+    primary: true,
+    standalone: true,
+    owners: ['page'],
+    art: <Curtain />,
+  },
+  {
+    id: 'pageTimer',
+    label: 'After a delay',
+    sentence: 'some time has passed',
+    description: 'A few seconds after the {page} opens — great for timed reveals',
+    category: 'timing',
+    primary: true,
+    standalone: true,
+    owners: ['page'],
+    art: <Hourglass />,
+  },
+  {
     id: 'rightclick',
     label: 'Right-click',
     sentence: 'is right-clicked',
@@ -163,9 +235,30 @@ export const TRIGGERS: TriggerUi[] = [
 
 export const triggerUi = (id: string) => TRIGGERS.find((t) => t.id === id);
 
-/** Triggers that make sense for an element type. */
+/** Triggers that make sense for an element type (or, with '@page', for a slide/section). */
 export function triggersFor(type: string): TriggerUi[] {
-  return TRIGGERS.filter((t) => !t.forTypes || t.forTypes.includes(type));
+  if (type === '@page') return TRIGGERS.filter((t) => t.owners?.includes('page'));
+  return TRIGGERS.filter((t) => (t.owners ?? ['element']).includes('element') && (!t.forTypes || t.forTypes.includes(type)));
+}
+
+/** Replaces "{page}" / "{Page}" with the project's page noun. */
+export function pageNoun(text: string, kind: Project['kind'] | undefined): string {
+  const noun = kind === 'page' ? 'section' : 'slide';
+  return text.replace(/\{page\}/g, noun).replace(/\{Page\}/g, noun[0].toUpperCase() + noun.slice(1));
+}
+
+/** The words after "When" for an interaction (uses its options, e.g. the key). */
+export function triggerSentence(ix: Pick<Interaction, 'trigger' | 'options'>, kind: Project['kind'] | undefined): string {
+  if (ix.trigger === 'key') {
+    const spec = keySpec(ix.options);
+    return spec.key ? `${describeKey(spec)} is pressed` : 'a key is pressed';
+  }
+  if (ix.trigger === 'pageTimer') {
+    const s = Number(ix.options?.seconds ?? 3);
+    return `${s} ${s === 1 ? 'second has' : 'seconds have'} passed`;
+  }
+  const t = triggerUi(ix.trigger);
+  return pageNoun(t?.sentence ?? ix.trigger, kind);
 }
 
 export const ACTION_CATEGORIES: Record<string, Category> = {
@@ -175,6 +268,8 @@ export const ACTION_CATEGORIES: Record<string, Category> = {
   animation: { id: 'animation', label: 'Animate', color: '#ff8a1f', soft: '#ffeedc' },
   media: { id: 'media', label: 'Video & audio', color: '#ef4444', soft: '#fde6e6' },
   components: { id: 'components', label: 'Components', color: '#e84393', soft: '#fde4f0' },
+  model: { id: 'model', label: '3D models', color: '#6366f1', soft: '#e7e8fe' },
+  links: { id: 'links', label: 'Links', color: '#0891b2', soft: '#dff5fa' },
   timing: { id: 'timing', label: 'Timing', color: '#d39e00', soft: '#fff4cc' },
 };
 
@@ -324,7 +419,42 @@ export const ACTIONS: ActionUi[] = [
     defaults: (p, self) => ({ target: firstOf(p, ['quiz']) === self ? SELF_TARGET : firstOf(p, ['quiz']) }),
     unavailable: (p) => (firstOf(p, ['quiz']) ? null : 'Add a Quiz first'),
   },
+  {
+    id: 'modelView',
+    label: 'Turn 3D view',
+    description: 'Show the front, top… or reset the view',
+    icon: 'orbit',
+    category: 'model',
+    defaults: (p, self) => ({ target: firstOf(p, ['model']) === self ? SELF_TARGET : firstOf(p, ['model']), view: 'reset' }),
+    unavailable: (p) => (firstOf(p, ['model']) ? null : 'Add a 3D model first'),
+  },
+  {
+    id: 'modelSpin',
+    label: 'Spin 3D model',
+    description: 'Start or stop turning by itself',
+    icon: 'rotate',
+    category: 'model',
+    defaults: (p, self) => ({ target: firstOf(p, ['model']) === self ? SELF_TARGET : firstOf(p, ['model']), mode: 'toggle' }),
+    unavailable: (p) => (firstOf(p, ['model']) ? null : 'Add a 3D model first'),
+  },
+  {
+    id: 'openLink',
+    label: 'Open a link',
+    description: 'A website, document or e-mail address',
+    icon: 'external',
+    category: 'links',
+    defaults: () => ({ url: '', newTab: true }),
+  },
   { id: 'wait', label: 'Wait', description: 'Pause before the next action', icon: 'clock', category: 'timing', defaults: () => ({ seconds: 0.5 }) },
+];
+
+export const MODEL_VIEWS = [
+  { value: 'reset', label: 'the starting view' },
+  { value: 'front', label: 'the front' },
+  { value: 'back', label: 'the back' },
+  { value: 'left', label: 'the left side' },
+  { value: 'right', label: 'the right side' },
+  { value: 'top', label: 'the top' },
 ];
 
 export const actionUi = (id: string) => ACTIONS.find((a) => a.id === id);
