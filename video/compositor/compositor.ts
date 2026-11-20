@@ -138,9 +138,7 @@ function buildFile(shot: Extract<ResolvedStoryboard['shots'][number], { type: 'f
   const icon = el(`<div class="file-icon">${FILE}</div>`);
   const name = el(`<div class="file-name">${esc(shot.name)}</div>`);
   const meta = el(`<div class="file-meta">${esc(shot.meta)}</div>`);
-  const chips = ['Slides & media', 'Interactions', 'Fonts', 'Playback engine', 'Editable project'].map((c, i) =>
-    el(`<div class="chip c${i}">${c}</div>`),
-  );
+  const chips = ['Slides & media', 'Interactions', 'Fonts', 'Playback engine', 'Editable project'].map((c, i) => el(`<div class="chip c${i}">${c}</div>`));
   const ptr = el(`<div class="ptr">${POINTER}</div>`);
   const ring = el(`<div class="ring"></div>`);
   root.append(icon, name, meta, ...chips, ring, ptr);
@@ -225,8 +223,7 @@ function setup(board: ResolvedStoryboard) {
   views = [];
   let start = 0;
   for (const shot of board.shots) {
-    const build =
-      shot.type === 'clip' ? buildClip(shot) : shot.type === 'file' ? buildFile(shot) : shot.type === 'outro' ? buildOutro(shot) : buildTitle(shot);
+    const build = shot.type === 'clip' ? buildClip(shot) : shot.type === 'file' ? buildFile(shot) : shot.type === 'outro' ? buildOutro(shot) : buildTitle(shot);
     build.root.style.display = 'none';
     stage.appendChild(build.root);
     views.push({ start, end: start + shot.dur, root: build.root, update: build });

@@ -18,7 +18,11 @@ export async function templateThumbs(ctx: SceneContext) {
   await pinClock(page);
   for (const id of TEMPLATE_THUMBS) {
     await page.goto(`${ctx.site}studio/?panel=templates`);
-    await page.getByTestId(`template-${id}`).getByRole('button', { name: /^Preview/ }).first().click();
+    await page
+      .getByTestId(`template-${id}`)
+      .getByRole('button', { name: /^Preview/ })
+      .first()
+      .click();
     const stage = page.locator('.ed-preview-stage');
     await stage.locator('.ofs-el').first().waitFor();
     await page.mouse.move(5, 400);
@@ -32,7 +36,20 @@ export async function templateThumbs(ctx: SceneContext) {
       const h = Math.min(b.height, (b.width * 9) / 16);
       await page.screenshot({ path: png, clip: { x: b.x, y: b.y, width: (h * 16) / 9, height: h } });
     }
-    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', png, '-vf', 'scale=640:360:force_original_aspect_ratio=increase,crop=640:360', '-c:v', 'libwebp', '-quality', '84', path.join(out, `${id}.webp`)]);
+    execFileSync('ffmpeg', [
+      '-y',
+      '-loglevel',
+      'error',
+      '-i',
+      png,
+      '-vf',
+      'scale=640:360:force_original_aspect_ratio=increase,crop=640:360',
+      '-c:v',
+      'libwebp',
+      '-quality',
+      '84',
+      path.join(out, `${id}.webp`),
+    ]);
   }
   await context.close();
 }

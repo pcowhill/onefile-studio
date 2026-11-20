@@ -14,11 +14,11 @@ npm run video:render -- hero             # just one
 
 Outputs (committed, served by the site):
 
-| File | What |
-| --- | --- |
-| `site/public/media/hero.mp4` · `.webp` · `.vtt` | main video (~43 s, 1920×1080), poster, captions |
-| `site/public/media/showcase/<id>.mp4` · `.webp` | one ~15 s looping clip (1280×720) and poster per showcase |
-| `site/public/media/templates/<id>.webp` | 640×360 pictures of five templates (from the gallery's own Preview) |
+| File                                            | What                                                                |
+| ----------------------------------------------- | ------------------------------------------------------------------- |
+| `site/public/media/hero.mp4` · `.webp` · `.vtt` | main video (~43 s, 1920×1080), poster, captions                     |
+| `site/public/media/showcase/<id>.mp4` · `.webp` | one ~15 s looping clip (1280×720) and poster per showcase           |
+| `site/public/media/templates/<id>.webp`         | 640×360 pictures of five templates (from the gallery's own Preview) |
 
 Raw footage lives in `video/.cache/` (git-ignored, ~300 MB): it is reproducible, so it is not committed.
 
@@ -43,18 +43,18 @@ Each scene is a Playwright script that drives the real UI the way a person would
 - Showcase footage opens `dist-site/showcase/<id>.html` **from disk via file:// with the network off**, and the editor via `studio/?open=<id>` — exactly what the landing page's “Try it” and “Open in editor” do.
 - The event's weekly countdown would read “Doors are open” on Friday evenings, so recordings pin the page clock to a Tuesday afternoon and let it run (`pinClock`): the countdown in the footage is genuinely ticking.
 
-| Scene | Footage |
-| --- | --- |
-| `hero` | a project built from a blank slide (title, theme background, heading, star dragged and resized, *when clicked → spin*, live theme switching), Preview, Export → Download; then the downloaded `Launch-Party.html` opened offline from disk |
+| Scene             | Footage                                                                                                                                                                                                                                                                 |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hero`            | a project built from a blank slide (title, theme background, heading, star dragged and resized, _when clicked → spin_, live theme switching), Preview, Export → Download; then the downloaded `Launch-Party.html` opened offline from disk                              |
 | `<showcase>-play` | the exported OneFile responding: Puff's score and win banner, the before/after slider and journal, orbiting the rover and flying the camera to parts, stepping the diagram with → / Space and dragging, the video/chart tooltips/sortable table, the countdown and RSVP |
-| `<showcase>-edit` | the same project in the editor with the element (or slide) that makes it interactive selected and its inspector open |
-| `templates` | thumbnails of five templates, played in the template gallery's Preview |
+| `<showcase>-edit` | the same project in the editor with the element (or slide) that makes it interactive selected and its inspector open                                                                                                                                                    |
+| `templates`       | thumbnails of five templates, played in the template gallery's Preview                                                                                                                                                                                                  |
 
 ### 2. Compose and encode (`video/render.ts`, `video/compositor/`, `video/storyboards.ts`)
 
 A storyboard is data: shots (`clip` of a recording from a mark at a speed, with an optional camera — centre + zoom keyframes — and a frame style: full-bleed, app window, or a browser window with an address bar and “Offline” badge), captions, an opening headline, the step rail (Create · Interact · Export · Share), a “one file” graphic and the closing card.
 
-The **compositor** is an HTML page (`video/compositor/index.html` + `compositor.ts`, bundled with esbuild) that lays out the storyboard at any time *t* as a pure function of *t* — no CSS animations or transitions — and picks for every clip the newest captured frame at or before the source time. `render.ts` steps *t* at 30 fps, screenshots each frame (JPEG q94) and pipes it into FFmpeg; clips are scaled to 1280×720 with Lanczos. The poster is a frame of the finished video (WebP), and the main video's WebVTT captions are generated from the same caption data.
+The **compositor** is an HTML page (`video/compositor/index.html` + `compositor.ts`, bundled with esbuild) that lays out the storyboard at any time _t_ as a pure function of _t_ — no CSS animations or transitions — and picks for every clip the newest captured frame at or before the source time. `render.ts` steps _t_ at 30 fps, screenshots each frame (JPEG q94) and pipes it into FFmpeg; clips are scaled to 1280×720 with Lanczos. The poster is a frame of the finished video (WebP), and the main video's WebVTT captions are generated from the same caption data.
 
 Fonts are the product's own (Nunito, Inter, Fraunces from `@fontsource-variable`). Graphics are original SVG. Speeds above 1× are used to keep the pace up; footage is cut and sped up but never staged or simulated, and every caption describes what the footage really shows.
 

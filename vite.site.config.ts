@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite';
 import type { Plugin } from 'vite';
 import path from 'node:path';
-import { SHOWCASES } from './src/showcase/meta';
-import { showcaseCards } from './site/src/cards';
+import { SHOWCASES } from './src/showcase/meta.ts';
+import { showcaseCards } from './site/src/cards.ts';
 
 /**
  * The public site (v0.6): the custom landing page, built separately from the

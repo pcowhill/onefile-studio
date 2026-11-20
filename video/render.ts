@@ -25,7 +25,8 @@ const media = path.join(root, 'site', 'public', 'media');
 
 function manifest(scene: string): Manifest {
   const file = path.join(captures, scene, 'manifest.json');
-  if (!fs.existsSync(file)) throw new Error(`No footage for "${scene}" — run \`npm run video:capture -- ${scene.replace(/-(play|edit|create|file)$/, '')}…\` first.`);
+  if (!fs.existsSync(file))
+    throw new Error(`No footage for "${scene}" — run \`npm run video:capture -- ${scene.replace(/-(play|edit|create|file)$/, '')}…\` first.`);
   return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
 
@@ -61,7 +62,14 @@ function vtt(sb: Storyboard): string {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${sec}`;
   };
   const cues = [
-    ...(sb.headlines ?? []).map((h) => ({ from: h.from, to: h.to, text: [h.kicker, ...h.lines].filter(Boolean).join(' — ').replace(/<[^>]+>/g, '') })),
+    ...(sb.headlines ?? []).map((h) => ({
+      from: h.from,
+      to: h.to,
+      text: [h.kicker, ...h.lines]
+        .filter(Boolean)
+        .join(' — ')
+        .replace(/<[^>]+>/g, ''),
+    })),
     ...sb.captions.map((c) => ({ from: c.from, to: c.to, text: c.sub ? `${c.text} — ${c.sub}` : c.text })),
   ].sort((a, b) => a.from - b.from);
   return `WEBVTT\n\n${cues.map((c, i) => `${i + 1}\n${ts(c.from)} --> ${ts(c.to)}\n${c.text}\n`).join('\n')}`;
@@ -101,20 +109,33 @@ async function main() {
         'ffmpeg',
         [
           '-y',
-          '-loglevel', 'error',
-          '-f', 'image2pipe',
-          '-framerate', String(sb.fps),
-          '-c:v', 'mjpeg',
-          '-i', '-',
+          '-loglevel',
+          'error',
+          '-f',
+          'image2pipe',
+          '-framerate',
+          String(sb.fps),
+          '-c:v',
+          'mjpeg',
+          '-i',
+          '-',
           ...scale,
-          '-c:v', 'libx264',
-          '-preset', 'slow',
-          '-crf', crf,
-          '-profile:v', 'high',
-          '-level', '4.1',
-          '-pix_fmt', 'yuv420p',
-          '-g', String(sb.fps * 2),
-          '-movflags', '+faststart',
+          '-c:v',
+          'libx264',
+          '-preset',
+          'slow',
+          '-crf',
+          crf,
+          '-profile:v',
+          'high',
+          '-level',
+          '4.1',
+          '-pix_fmt',
+          'yuv420p',
+          '-g',
+          String(sb.fps * 2),
+          '-movflags',
+          '+faststart',
           '-an',
           out,
         ],
@@ -138,7 +159,9 @@ async function main() {
       execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-ss', String(sb.poster), '-i', out, '-frames:v', '1', '-c:v', 'libwebp', '-quality', '82', poster]);
       if (!sb.name.startsWith('showcase-')) fs.writeFileSync(out.replace(/\.mp4$/, '.vtt'), vtt(sb));
       const kb = (f: string) => `${Math.round(fs.statSync(f).size / 1024)} KB`;
-      console.log(`\r  ${sb.name}: ${total} frames, ${duration(sb).toFixed(1)} s → ${path.relative(root, out)} (${kb(out)}), poster ${kb(poster)} in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+      console.log(
+        `\r  ${sb.name}: ${total} frames, ${duration(sb).toFixed(1)} s → ${path.relative(root, out)} (${kb(out)}), poster ${kb(poster)} in ${((Date.now() - t0) / 1000).toFixed(0)} s`,
+      );
     }
   } finally {
     await browser.close();

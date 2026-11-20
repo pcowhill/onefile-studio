@@ -106,7 +106,7 @@ export const release = clip({
   poster: 1.0,
   shots: [
     { type: 'clip', dur: 2.1, scene: 'feature-walkthrough-play', from: 0.3, frame: 'full', cam: drift(1, 1.05, 0.45) },
-    { type: 'clip', dur: 5.0, scene: 'feature-walkthrough-edit', from: 'selected-1.4', frame: 'full', cam: toInspector(0.4, 0.38) },
+    { type: 'clip', dur: 5.0, scene: 'feature-walkthrough-edit', from: 'selected-1.4', frame: 'full', cam: toInspector(0.4, 0.52) },
     { type: 'clip', dur: 9.4, scene: 'feature-walkthrough-play', from: 'intro', speed: 2.3, frame: 'full', cam: still() },
   ],
   captions: [
@@ -143,7 +143,6 @@ function exportedSize(): string {
     return 'one file';
   }
 }
-
 
 const CANVAS: Cam[] = [
   { at: 0, x: 0.5, y: 0.5, z: 1 },

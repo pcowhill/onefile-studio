@@ -42,7 +42,11 @@ export async function openEdit(ctx: SceneContext, id: string) {
   await page.goto(`${ctx.site}studio/?open=${id}`);
   await page.locator('.ed-el').first().waitFor();
   // The "Opened your own copy" toast would cover the canvas in the recording.
-  await page.locator('.ed-toast-close').first().click({ timeout: 2000 }).catch(() => undefined);
+  await page
+    .locator('.ed-toast-close')
+    .first()
+    .click({ timeout: 2000 })
+    .catch(() => undefined);
   await page.waitForTimeout(500);
   return { page, context };
 }

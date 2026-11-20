@@ -109,6 +109,42 @@ if (hero) {
     { threshold: 0.35 },
   ).observe(hero);
 
+  // Custom controls (native ones would cover the poster's headline while paused).
+  const frame = hero.closest('.frame')!;
+  const playBtn = document.getElementById('hv-play')!;
+  const syncState = () => {
+    frame.classList.toggle('is-playing', !hero.paused);
+    frame.classList.toggle('is-idle', hero.paused && hero.currentTime < 0.05);
+    playBtn.setAttribute('aria-label', hero.paused ? 'Play the tour' : 'Pause the tour');
+  };
+  ['play', 'pause', 'seeked', 'loadedmetadata'].forEach((ev) => hero.addEventListener(ev, syncState));
+  syncState();
+  const userPlay = () => {
+    heroUserPaused = false;
+    void exclusivePlay(hero);
+  };
+  frame.querySelector('.hv-big')!.addEventListener('click', userPlay);
+  playBtn.addEventListener('click', () => {
+    if (hero.paused) userPlay();
+    else {
+      heroUserPaused = true;
+      hero.pause();
+    }
+  });
+  hero.addEventListener('click', () => playBtn.click());
+  const cc = document.getElementById('hv-cc')!;
+  cc.addEventListener('click', () => {
+    const track = hero.textTracks[0];
+    if (!track) return;
+    const on = track.mode !== 'showing';
+    track.mode = on ? 'showing' : 'hidden';
+    cc.setAttribute('aria-pressed', String(on));
+  });
+  document.getElementById('hv-fs')!.addEventListener('click', () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void (frame as HTMLElement).requestFullscreen?.().catch(() => undefined);
+  });
+
   const starts = chapters.map((b) => Number(b.dataset.t));
   hero.addEventListener('timeupdate', () => {
     const t = hero.currentTime;
