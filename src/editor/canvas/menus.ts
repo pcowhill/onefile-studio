@@ -5,6 +5,7 @@ import { editor } from '../store/store';
 import { copySelection, deleteSelection, duplicateSelection, moveLayer, pasteClipboard, resetToTheme, selectAll, updateSelected, addPage } from '../ops';
 import { customizedKeys, getTheme } from '../../model/theme';
 import { EDITOR_ELEMENTS } from '../catalog';
+import { openMediaEdit } from '../media/mediaUi';
 
 export function elementMenu(els: SceneElement[]): MenuItem[] {
   const single = els.length === 1 ? els[0] : null;
@@ -13,6 +14,15 @@ export function elementMenu(els: SceneElement[]): MenuItem[] {
   const items: MenuItem[] = [];
   if (single && EDITOR_ELEMENTS[single.type]?.inlineText && !single.locked) {
     items.push({ label: 'Edit text', icon: 'text', shortcut: 'Enter', onClick: () => editor().set({ editingTextId: single.id }) });
+  }
+  const media = single && ['image', 'video', 'audio'].includes(single.type) ? single : null;
+  const mediaAsset = media ? editor().project?.assets[(media.props as { assetId?: string }).assetId ?? ''] : undefined;
+  if (media && mediaAsset) {
+    items.push({
+      label: media.type === 'image' ? 'Crop & rotate…' : media.type === 'video' ? 'Trim & crop…' : 'Trim…',
+      icon: media.type === 'image' ? 'crop' : 'scissors',
+      onClick: () => openMediaEdit({ elementId: media.id }),
+    });
   }
   items.push(
     { label: 'Edit properties', icon: 'palette', onClick: () => editor().set({ inspectorTab: 'design' }) },

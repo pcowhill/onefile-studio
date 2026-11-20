@@ -2,6 +2,8 @@ import type { Background, Page, Project, SceneElement } from '../model/types';
 import { paintToCss } from '../model/paint';
 import type { RuntimeEnv } from './env';
 import { assetUrl } from './env';
+import { imageFill } from './elements/editedImage';
+import { isIdentity, resolveEdit } from '../model/mediaEdit';
 import { elementRegistry } from './elements';
 import type { ElementApi } from './elements/types';
 import { h } from './elements/types';
@@ -83,10 +85,13 @@ export function applyBackground(node: HTMLElement, bg: Background | undefined, p
   node.style.background = paintToCss(bg?.paint);
   const url = assetUrl(project, bg?.imageId);
   if (url) {
-    const img = h(doc, 'div', 'ofs-bg-image', {
-      backgroundImage: `url("${url}")`,
-      backgroundSize: bg?.imageFit === 'contain' ? 'contain' : 'cover',
-    });
+    const fit = bg?.imageFit === 'contain' ? 'contain' : 'cover';
+    const edit = resolveEdit(project, bg?.imageId);
+    const img = h(doc, 'div', 'ofs-bg-image', isIdentity(edit) ? { backgroundImage: `url("${url}")`, backgroundSize: fit } : undefined);
+    if (!isIdentity(edit)) {
+      const pic = imageFill(doc, project, bg?.imageId, { fit, alt: '' });
+      if (pic) img.appendChild(pic);
+    }
     node.appendChild(img);
     const dim = Math.max(0, Math.min(0.9, Number(bg?.imageDim) || 0));
     if (dim > 0) node.appendChild(h(doc, 'div', 'ofs-bg-dim', { background: `rgba(10, 8, 30, ${dim})` }));

@@ -1,6 +1,7 @@
 import type { RuntimeElementDef } from './types';
 import { h, num, SHADOWS, svg } from './types';
-import { assetUrl } from '../env';
+import { imageFill } from './editedImage';
+import type { MediaEdit } from '../../model/mediaEdit';
 
 export interface ImageProps {
   assetId: string;
@@ -10,6 +11,8 @@ export interface ImageProps {
   borderColor: string;
   shadow: string;
   alt: string;
+  /** This element's own crop/rotate/flip (v3); null follows the media library's version. */
+  edit: MediaEdit | null;
 }
 
 export function placeholder(doc: Document, label: string): HTMLElement {
@@ -27,7 +30,7 @@ export function placeholder(doc: Document, label: string): HTMLElement {
 
 export const imageDef: RuntimeElementDef<ImageProps> = {
   id: 'image',
-  defaults: () => ({ assetId: '', fit: 'cover', radius: 16, borderWidth: 0, borderColor: '#ffffff', shadow: 'soft', alt: '' }),
+  defaults: () => ({ assetId: '', fit: 'cover', radius: 16, borderWidth: 0, borderColor: '#ffffff', shadow: 'soft', alt: '', edit: null }),
   render(el, { doc, env }) {
     const p = el.props;
     const node = h(doc, 'div', 'ofs-image', {
@@ -35,14 +38,13 @@ export const imageDef: RuntimeElementDef<ImageProps> = {
       boxShadow: SHADOWS[p.shadow] ?? 'none',
       border: num(p.borderWidth, 0) > 0 ? `${num(p.borderWidth, 0)}px solid ${p.borderColor}` : 'none',
     });
-    const url = assetUrl(env.project, p.assetId);
-    if (url) {
-      const img = h(doc, 'img');
-      img.src = url;
-      img.alt = String(p.alt || env.project.assets[p.assetId]?.name || '');
-      img.draggable = false;
-      img.style.objectFit = p.fit === 'contain' ? 'contain' : 'cover';
-      node.appendChild(img);
+    const pic = imageFill(doc, env.project, p.assetId, {
+      fit: p.fit === 'contain' ? 'contain' : 'cover',
+      alt: String(p.alt || env.project.assets[p.assetId]?.name || ''),
+      edit: p.edit,
+    });
+    if (pic) {
+      node.appendChild(pic);
     } else {
       node.appendChild(placeholder(doc, 'Image'));
     }

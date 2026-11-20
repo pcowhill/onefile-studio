@@ -1,5 +1,6 @@
 import type { RuntimeElementDef } from './types';
 import { h, icon, num, SHADOWS } from './types';
+import { imageFill } from './editedImage';
 import { assetUrl } from '../env';
 import { placeholder } from './image';
 
@@ -38,19 +39,16 @@ export const galleryDef: RuntimeElementDef<GalleryProps> = {
       boxShadow: SHADOWS[p.shadow] ?? 'none',
       background: p.background || 'transparent',
     });
-    const urls = (Array.isArray(p.images) ? p.images : []).map((id) => assetUrl(env.project, id)).filter((u): u is string => !!u);
+    const ids = (Array.isArray(p.images) ? p.images : []).filter((id) => !!assetUrl(env.project, id));
+    const urls = ids;
     if (!urls.length) {
       node.appendChild(placeholder(doc, 'Gallery — add images'));
       return { node };
     }
-    const items = urls.map((url, i) => {
+    const items = ids.map((id, i) => {
       const item = h(doc, 'div', 'ofs-gallery-item');
-      const img = h(doc, 'img');
-      img.src = url;
-      img.alt = `Image ${i + 1} of ${urls.length}`;
-      img.draggable = false;
-      img.style.objectFit = p.fit === 'contain' ? 'contain' : 'cover';
-      item.appendChild(img);
+      const img = imageFill(doc, env.project, id, { fit: p.fit === 'contain' ? 'contain' : 'cover', alt: `Image ${i + 1} of ${ids.length}` });
+      if (img) item.appendChild(img);
       node.appendChild(item);
       return item;
     });

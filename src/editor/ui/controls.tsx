@@ -1,3 +1,4 @@
+import { isIdentity, orientationMatrix, orientedSize } from '../../model/mediaEdit';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Asset, AssetKind, Paint } from '../../model/types';
@@ -477,9 +478,7 @@ export function ImageChooser({
   const a = found && assetKind(found.mime) === 'image' ? found : undefined;
   return (
     <div className={`ed-imgchoose ${compact ? 'is-compact' : ''}`}>
-      <div className="ed-imgchoose-thumb" style={a ? { backgroundImage: `url("${a.data}")` } : undefined}>
-        {!a && <Icon name="image" size={22} />}
-      </div>
+      <div className="ed-imgchoose-thumb">{a ? <AssetTile asset={a} className="ed-imgchoose-tile" /> : <Icon name="image" size={22} />}</div>
       <div className="ed-imgchoose-side">
         <div className="ed-imgchoose-name">{a ? a.name : `No ${label.toLowerCase()} yet`}</div>
         <div className="ed-row">
@@ -511,6 +510,25 @@ const KIND_NOUN: Record<AssetKind, string> = { image: 'image', video: 'video', a
 /** Library tile for any asset: picture thumbnail, or an icon with the duration for video/audio. */
 export function AssetTile({ asset, className = '' }: { asset: Asset; className?: string }) {
   const kind = assetKind(asset.mime);
+  if (kind === 'image' && !isIdentity(asset.edit) && asset.width && asset.height) {
+    const e = asset.edit!;
+    const o = orientedSize(asset.width, asset.height, e.rotate);
+    const c = e.crop ?? { x: 0, y: 0, w: 1, h: 1 };
+    return (
+      <span className={`ed-media-tile is-edited ${className}`}>
+        <svg viewBox={`${c.x * o.width} ${c.y * o.height} ${c.w * o.width} ${c.h * o.height}`} preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <image
+            href={asset.data}
+            width={asset.width}
+            height={asset.height}
+            preserveAspectRatio="none"
+            transform={`matrix(${orientationMatrix(asset.width, asset.height, e).join(' ')})`}
+          />
+        </svg>
+        {asset.animated && <span className="ed-media-badge">GIF</span>}
+      </span>
+    );
+  }
   if (kind === 'image')
     return (
       <span className={`ed-media-tile ${className}`} style={{ backgroundImage: `url("${asset.data}")` }}>

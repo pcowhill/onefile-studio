@@ -1,6 +1,6 @@
 import type { RuntimeElementDef } from './types';
 import { h, icon, num, SHADOWS } from './types';
-import { assetUrl } from '../env';
+import { imageFill } from './editedImage';
 import { placeholder } from './image';
 
 export interface BeforeAfterProps {
@@ -43,12 +43,8 @@ export const beforeAfterDef: RuntimeElementDef<BeforeAfterProps> = {
     node.style.setProperty('--ofs-ba-accent', p.accent || '#fff');
     const layer = (assetId: string, cls: string, label: string) => {
       const wrap = h(doc, 'div', `ofs-ba-layer ${cls}`);
-      const url = assetUrl(env.project, assetId);
-      if (url) {
-        const img = h(doc, 'img');
-        img.src = url;
-        img.alt = label;
-        img.draggable = false;
+      const img = imageFill(doc, env.project, assetId, { fit: 'cover', alt: label });
+      if (img) {
         wrap.appendChild(img);
       } else wrap.appendChild(placeholder(doc, label + ' image'));
       return wrap;

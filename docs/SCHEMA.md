@@ -1,11 +1,11 @@
-# Project schema (v2)
+# Project schema (v3)
 
 Projects are plain JSON. TypeScript definitions: `src/model/types.ts`. Validation: `src/model/validate.ts`.
 
 ```jsonc
 {
   "schema": "onefile-studio/project",  // required, identifies the format
-  "version": 2,                         // schema version; newer versions are rejected, older ones migrated
+  "version": 3,                         // schema version; newer versions are rejected, older ones migrated
   "id": "prj_…",
   "kind": "slides" | "page",
   "meta": { "title": "…", "createdAt": "ISO", "updatedAt": "ISO" },
@@ -20,11 +20,11 @@ Projects are plain JSON. TypeScript definitions: `src/model/types.ts`. Validatio
   },
   "pages": [ /* Page */ ],
   "variables": [ { "id": "var_…", "name": "Score", "type": "number", "initial": 0 } ],
-  "assets": { "as_…": { "id", "name", "mime", "data": "data:<mime>;base64,…", "width", "height", "bytes", "hash", "duration"?, "animated"? } }
+  "assets": { "as_…": { "id", "name", "mime", "data": "data:<mime>;base64,…", "width", "height", "bytes", "hash", "duration"?, "animated"?, "edit"? } }
 }
 ```
 
-Assets are always embedded base64 `data:` URLs. Accepted MIME types: images (`png`, `jpeg`, `gif`, `webp`, `svg+xml`, `avif`, `bmp`), video (`video/mp4`, `video/webm`, `video/ogg`) and audio (`audio/mpeg`, `audio/wav`, `audio/ogg`, `audio/mp4`, `audio/aac`, `audio/webm`, `audio/flac`). `duration` (seconds) is set for media, `animated: true` marks animated GIFs (never re-encoded). Asset references are kind-checked on import: an image prop can only point at an image, a video element at a video, and so on.
+Assets are always embedded base64 `data:` URLs. Accepted MIME types: images (`png`, `jpeg`, `gif`, `webp`, `svg+xml`, `avif`, `bmp`), video (`video/mp4`, `video/webm`, `video/ogg`) and audio (`audio/mpeg`, `audio/wav`, `audio/ogg`, `audio/mp4`, `audio/aac`, `audio/webm`, `audio/flac`). `duration` (seconds) is set for media, `animated: true` marks animated GIFs (never re-encoded). `edit` (v3) is the media library's nondestructive edit of the file — see *Media edits* below. Asset references are kind-checked on import: an image prop can only point at an image, a video element at a video, and so on.
 
 ## Page
 
@@ -71,7 +71,7 @@ Element types and their props (defaults in each `src/runtime/elements/*.ts`):
 | type | props |
 | --- | --- |
 | `text` | `text` (supports `{Variable name}` tokens), `font`, `size`, `weight`, `color`, `align`, `valign`, `lineHeight`, `italic`, `letterSpacing`, `background`, `padding`, `radius`, `shadow` |
-| `image` | `assetId`, `fit`, `radius`, `borderWidth`, `borderColor`, `shadow`, `alt` |
+| `image` | `assetId`, `fit`, `radius`, `borderWidth`, `borderColor`, `shadow`, `alt`, `edit` (v3) |
 | `shape` | `shape` (`rect`, `ellipse`, `triangle`, `diamond`, `star`, `heart`, `hexagon`, `blob`), `fill` (Paint), `stroke`, `strokeWidth`, `radius`, `shadow`, `opacity` |
 | `arrow` | `color`, `width`, `start`/`end` (`{x,y}` normalised to the box), `bend` (-1..1), `head`, `tail`, `dashed` |
 | `button` | `label`, `variant`, `color`, `size`, `radius`, `icon`, `iconSide`, `font`, `shadow` |
@@ -80,8 +80,8 @@ Element types and their props (defaults in each `src/runtime/elements/*.ts`):
 | `gallery` | `images` (asset ids), `loop`, `transition`, `advanceOnClick`, `controls`, `fit`, `radius`, `shadow`, `autoplay` (s), `background` |
 | `scrollText` | `title`, `text` (mini-markdown: blank line, `- `, `# `, `**bold**`), `font`, `size`, `color`, `background`, `accent`, `padding`, `radius`, `borderWidth`, `borderColor`, `lineHeight`, `fadeEdges`, `shadow` |
 | `progress` | `source` (`slides`, `scroll`, `variable`), `variableId`, `max`, `style` (`bar`, `ring`), `fill`, `track`, `label`, `labelColor`, `font` (v2) |
-| `video` (v2) | `assetId` (video), `posterId` (image), `fit`, `controls`, `autoplay`, `loop`, `muted`, `frame` (`none`, `border`, `browser`), `radius`, `shadow`, `background`, `accent`, `borderColor`, `alt` |
-| `audio` (v2) | `assetId` (audio), `title`, `style` (`player`, `compact`, `native`), `autoplay`, `loop`, `volume` (0–100), `font`, `accent`, `background`, `color`, `borderColor`, `radius`, `shadow` |
+| `video` (v2) | `assetId` (video), `posterId` (image), `fit`, `controls`, `autoplay`, `loop`, `muted`, `frame` (`none`, `border`, `browser`), `radius`, `shadow`, `background`, `accent`, `borderColor`, `alt`, `edit` (v3: crop/trim) |
+| `audio` (v2) | `assetId` (audio), `title`, `style` (`player`, `compact`, `native`), `autoplay`, `loop`, `volume` (0–100), `font`, `accent`, `background`, `color`, `borderColor`, `radius`, `shadow`, `edit` (v3: trim) |
 | `chart` (v2) | `chartType` (`bar`, `line`), `title`, `labels` (string[]), `series` ([{ `name`, `values`: number[] }]), `palette` (colours), `preset` (`clean`, `soft`, `bold`), `showLegend`, `legendToggle`, `showValues`, `showGrid`, `xLabel`, `yLabel`, `valuePrefix`, `valueSuffix`, `font`, `textColor`, `mutedColor`, `gridColor`, `background`, `radius`, `shadow` |
 | `table` (v2) | `rows` (string[][]; row 0 is the header when `headerRow`), `headerRow`, `columnAlign` (`auto`, `left`, `center`, `right` per column), `preset` (`lined`, `boxed`, `minimal`), `striped`, `hoverHighlight`, `sortable`, `size`, `font`, `textColor`, `headerBg`, `headerText`, `stripe`, `borderColor`, `background`, `accent`, `radius`, `shadow` |
 | `countdown` (v2) | `target` (ISO-8601 UTC instant), `timezone` (IANA), `repeat` (`none`, `daily`, `weekly`), `holdMinutes`, `showDays`/`showHours`/`showMinutes`/`showSeconds`, `style` (`cards`, `digital`, `inline`), `showLabels`, `title`, `doneText`, `font`, `labelFont`, `color`, `accent`, `cardBg`, `cardText`, `labelColor`, `radius`, `shadow` |
@@ -115,14 +115,36 @@ Interactions with the same trigger on one element run in list order; each checks
 | `gallery` | `target`, `direction` (`next`, `prev`, `first`) |
 | `animate` | `target`, `preset` (`pop`, `bounce`, `shake`, `wiggle`, `pulse`, `spin`), optional `duration`, `wait` |
 | `wait` | `seconds` |
-| `mediaPlay`, `mediaPause`, `mediaRestart` (v2) | `target` (a video or audio element) |
+| `mediaPlay`, `mediaPause`, `mediaRestart` (v2), `mediaToggle` (v3: play when paused, pause when playing) | `target` (a video or audio element) |
 | `quizReset` (v2) | `target` (a quiz; works for quizzes on other slides too) |
 
 `countdownDone` fires once per playback session (also when the countdown is already over when it is shown), and once per occurrence for repeating countdowns.
 
+## Media edits (v3)
+
+Edits never change embedded bytes; they describe how to show them (`src/model/mediaEdit.ts`):
+
+```jsonc
+{
+  "crop": { "x": 0.1, "y": 0, "w": 0.5, "h": 0.8 },  // images & videos: normalised 0..1 rectangle of the picture AS DISPLAYED (after rotate/flips)
+  "rotate": 90,                                       // images: 0 | 90 | 180 | 270, clockwise, applied first
+  "flipH": true, "flipV": false,                      // images: mirror the rotated picture
+  "trim": { "start": 1.5, "end": 9.25 }               // videos & sounds: seconds into the original file
+}
+```
+
+- `asset.edit` is the **library version**: every use of the file follows it (image/video/audio elements, gallery images, before/after images, page backgrounds). Absent = the original.
+- `props.edit` on `image`, `video` and `audio` elements is that element's **own edit**: `null` follows the library version; an object overrides it — `{}` means "show the original here". One file can therefore appear several times with different crops/trims while its bytes are stored once.
+- Validation keeps only what a kind supports (images: crop/rotate/flips; videos: crop/trim; sounds: trim), clamps crops into the picture (min 2 % per side), orders trims (min 0.1 s, within the duration) and drops identity edits. Crops are normalised, so "Optimised" exports that downsize images keep them valid.
+- Runtime: edited pictures render as an inline SVG (viewBox = crop, `preserveAspectRatio` = cover/contain, orientation matrix on the original bitmap); cropped videos use a container-query viewport; trimmed media play only their segment (start, end, segment looping, seek clamping, `mediaEnded` at the trim end). Exports embed the whole original.
+
 ## Versioning
 
 `SCHEMA_VERSION` lives in `src/model/types.ts`. When the format changes incompatibly: bump it, add a step to `migrate()` in `validate.ts` that upgrades the previous version, and add a fixture test. Files with a newer version than the editor understands are refused with a clear message.
+
+### v2 → v3
+
+No data changes: v2 files have no edits. Elements get `edit: null` from the registry defaults (follow the library), assets no `edit`. Exports from v0.3 are refused by v0.2 editors with the "newer version" message (they would otherwise drop the edits); the exported files themselves embed their own runtime and play anywhere.
 
 ### v1 → v2
 

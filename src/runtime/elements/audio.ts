@@ -4,7 +4,10 @@ import { mediaUrl } from '../env';
 import { fontStack } from '../fonts';
 import { COMPONENT_EVENTS, emit } from '../triggers';
 import { contrastText, parseHex, withAlpha } from '../../model/paint';
-import { baseName, formatTime, glyph, releaseMedia, safePlay, whenVisible } from './mediaShared';
+import { baseName, formatTime, glyph, playSegment, releaseMedia, safePlay, whenVisible } from './mediaShared';
+import type { Segment } from './mediaShared';
+import type { MediaEdit } from '../../model/mediaEdit';
+import { resolveEdit, trimBounds } from '../../model/mediaEdit';
 
 export interface AudioProps {
   /** Audio asset (MP3 / WAV / OGG / M4A). */
@@ -24,6 +27,8 @@ export interface AudioProps {
   borderColor: string;
   radius: number;
   shadow: string;
+  /** This element's own trim (v3); null follows the media library's version. */
+  edit: MediaEdit | null;
 }
 
 /** Comfortable element height for each player style (logical px). */
@@ -45,6 +50,7 @@ export const audioDef: RuntimeElementDef<AudioProps> = {
     borderColor: '#e4e0f5',
     radius: 24,
     shadow: 'soft',
+    edit: null,
   }),
   render(el, ctx) {
     const { doc, env, onCleanup } = ctx;
@@ -86,7 +92,12 @@ export const audioDef: RuntimeElementDef<AudioProps> = {
       return { node };
     }
     const title = String(p.title || baseName(asset?.name) || 'Sound');
-    const known = Number(asset?.duration) > 0 ? Number(asset!.duration) : 0;
+    const fileDuration = Number(asset?.duration) > 0 ? Number(asset!.duration) : 0;
+    const edit = resolveEdit(env.project, p.assetId, p.edit);
+    const trim = edit.trim ? trimBounds(edit, fileDuration) : null;
+    // What viewers see: the trimmed segment's length.
+    const known = trim ? Math.max(0, trim.end - trim.start) : fileDuration;
+    const segOpts = { start: trim ? trim.start : 0, end: trim ? trim.end : 0, knownDuration: fileDuration };
 
     if (style === 'native') {
       const a = h(doc, 'audio', 'ofs-audio-native-el');
@@ -101,7 +112,7 @@ export const audioDef: RuntimeElementDef<AudioProps> = {
         a.tabIndex = -1;
         return { node };
       }
-      return { node, api: wire(a, node, p, ctx, () => {}) };
+      return { node, api: wire(a, node, p, ctx, () => {}, segOpts).api };
     }
 
     // Custom player: [play] [title · time / seek bar] [volume]
@@ -166,10 +177,11 @@ export const audioDef: RuntimeElementDef<AudioProps> = {
     node.appendChild(a);
     track.tabIndex = 0;
 
-    const total = () => (Number.isFinite(a.duration) && a.duration > 0 ? a.duration : known);
+    let seg: Segment | null = null;
+    const total = () => (seg ? seg.length() : known) || known;
     const paint = () => {
       const d = total();
-      const t = Math.max(0, Math.min(d || 0, a.currentTime || 0));
+      const t = Math.max(0, Math.min(d || 0, seg ? seg.time() : a.currentTime || 0));
       const pct = d > 0 ? `${(t / d) * 100}%` : '0%';
       fill.style.width = pct;
       knob.style.left = pct;
@@ -189,7 +201,9 @@ export const audioDef: RuntimeElementDef<AudioProps> = {
         volBtn.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
       }
     };
-    const api = wire(a, node, p, ctx, paint);
+    const wired = wire(a, node, p, ctx, paint, segOpts);
+    seg = wired.seg;
+    const api = wired.api;
     const on = (target: EventTarget, type: string, fn: (e: Event) => void) => {
       target.addEventListener(type, fn);
       onCleanup(() => target.removeEventListener(type, fn));
@@ -200,11 +214,7 @@ export const audioDef: RuntimeElementDef<AudioProps> = {
     const seekTo = (seconds: number) => {
       const d = total();
       if (!(d > 0)) return;
-      try {
-        a.currentTime = Math.max(0, Math.min(d, seconds));
-      } catch {
-        /* not seekable yet */
-      }
+      seg?.seek(Math.max(0, Math.min(d, seconds)));
       paint();
     };
     const seekAt = (clientX: number) => {
@@ -237,7 +247,7 @@ export const audioDef: RuntimeElementDef<AudioProps> = {
     on(track, 'keydown', (e) => {
       const k = e as KeyboardEvent;
       const d = total();
-      const now = a.currentTime || 0;
+      const now = seg ? seg.time() : a.currentTime || 0;
       const step: Record<string, number> = { ArrowRight: 5, ArrowUp: 5, ArrowLeft: -5, ArrowDown: -5, PageUp: d * 0.1, PageDown: -d * 0.1 };
       if (k.key in step) seekTo(now + step[k.key]);
       else if (k.key === 'Home') seekTo(0);
@@ -308,9 +318,15 @@ export const audioDef: RuntimeElementDef<AudioProps> = {
 };
 
 /** Connects an <audio> element to playback state, honest autoplay and the element API. */
-function wire(a: HTMLAudioElement, node: HTMLElement, p: AudioProps, ctx: RenderCtx, paint: () => void) {
+function wire(
+  a: HTMLAudioElement,
+  node: HTMLElement,
+  p: AudioProps,
+  ctx: RenderCtx,
+  paint: () => void,
+  segOpts: { start: number; end: number; knownDuration: number },
+): { seg: Segment; api: { play(): void; pause(): void; restart(): void; toggle(): void } } {
   const { onCleanup } = ctx;
-  a.loop = !!p.loop;
   a.volume = Math.max(0, Math.min(1, num(p.volume, 80) / 100));
   let blocked = false;
   const sync = () => {
@@ -320,12 +336,22 @@ function wire(a: HTMLAudioElement, node: HTMLElement, p: AudioProps, ctx: Render
     node.dataset.state = blocked && paused ? 'blocked' : paused ? 'paused' : 'playing';
     paint();
   };
-  const doPlay = () =>
+  const seg = playSegment(a, ctx, {
+    ...segOpts,
+    loop: !!p.loop,
+    onEnded: () => {
+      sync();
+      emit(node, COMPONENT_EVENTS.mediaEnded);
+    },
+  });
+  const doPlay = () => {
+    seg.prepare();
     safePlay(a, (outcome) => {
       if (outcome === 'blocked') blocked = true;
       if (outcome === 'playing') blocked = false;
       sync();
     });
+  };
   const on = (type: string, fn: () => void) => {
     a.addEventListener(type, fn);
     onCleanup(() => a.removeEventListener(type, fn));
@@ -336,10 +362,6 @@ function wire(a: HTMLAudioElement, node: HTMLElement, p: AudioProps, ctx: Render
   });
   on('pause', sync);
   on('playing', sync);
-  on('ended', () => {
-    sync();
-    emit(node, COMPONENT_EVENTS.mediaEnded);
-  });
   on('error', () => {
     node.classList.add('ofs-audio-error');
     node.title = "This sound can't be played in this browser.";
@@ -348,15 +370,15 @@ function wire(a: HTMLAudioElement, node: HTMLElement, p: AudioProps, ctx: Render
   onCleanup(() => releaseMedia(a));
   sync();
   return {
-    play: doPlay,
-    pause: () => a.pause(),
-    restart: () => {
-      try {
-        a.currentTime = 0;
-      } catch {
-        /* not seekable yet */
-      }
-      doPlay();
+    seg,
+    api: {
+      play: doPlay,
+      pause: () => a.pause(),
+      restart: () => {
+        seg.restart();
+        doPlay();
+      },
+      toggle: () => (a.paused || a.ended ? doPlay() : a.pause()),
     },
   };
 }

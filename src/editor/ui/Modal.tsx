@@ -20,13 +20,19 @@ export function Modal({
   docked?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  // The latest onClose, so a parent re-rendering (a new callback) never re-runs
+  // the focus handling below and steals focus from a control in the dialog.
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  });
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
     ref.current?.focus();
     const key = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
-        onClose();
+        closeRef.current();
       }
     };
     window.addEventListener('keydown', key, true);
@@ -34,9 +40,9 @@ export function Modal({
       window.removeEventListener('keydown', key, true);
       prev?.focus?.();
     };
-  }, [onClose]);
+  }, []);
   return createPortal(
-    <div className={`ed-modal-backdrop ${docked ? 'is-docked' : ''}`} onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className={`ed-modal-backdrop ${docked ? 'is-docked' : ''}`} onPointerDown={(e) => e.target === e.currentTarget && closeRef.current()}>
       <div ref={ref} className={`ed-modal ${wide ? 'is-wide' : ''} ${className}`} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1}>
         <button className="ed-modal-close" onClick={onClose} aria-label="Close">
           <Icon name="close" size={18} />

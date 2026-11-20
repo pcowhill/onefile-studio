@@ -2,6 +2,8 @@ import type { Asset, AssetKind, Project } from '../model/types';
 import { assetKind } from '../model/types';
 import { ASSET_REFS } from '../model/propSchemas';
 import { buildStandaloneHtml } from './exportHtml';
+import type { MediaEdit } from '../model/mediaEdit';
+import { isIdentity, resolveEdit } from '../model/mediaEdit';
 
 /**
  * Export planning without building the (possibly huge) HTML: exact size
@@ -114,4 +116,41 @@ export function findAssetIssues(project: Project): { problems: AssetIssue[]; emp
     }
   });
   return { problems, empty };
+}
+
+/**
+ * Nondestructive edits keep the whole original file in the export. This
+ * reports how many embedded files are shown edited, and roughly how many of
+ * their bytes lie outside every trim (an honest "your trims don't shrink the
+ * file" figure for the export dialog).
+ */
+export function editRetention(project: Project): { edited: number; outsideTrimBytes: number } {
+  const uses = new Map<string, MediaEdit[]>();
+  const add = (id: unknown, override?: unknown) => {
+    if (typeof id !== 'string' || !id || !Object.prototype.hasOwnProperty.call(project.assets, id)) return;
+    const list = uses.get(id) ?? [];
+    list.push(resolveEdit(project, id, override));
+    uses.set(id, list);
+  };
+  for (const pg of project.pages) {
+    add(pg.background.imageId);
+    for (const el of pg.elements) {
+      const p = el.props as Record<string, unknown>;
+      for (const prop of Object.keys(ASSET_REFS[el.type] ?? {})) add(p[prop], prop === 'assetId' ? p.edit : undefined);
+      if (Array.isArray(p.images)) for (const id of p.images) add(id);
+    }
+  }
+  let edited = 0;
+  let outside = 0;
+  for (const [id, list] of uses) {
+    if (list.some((e) => !isIdentity(e))) edited++;
+    const a = project.assets[id];
+    const d = a.duration ?? 0;
+    if (!(d > 0) || list.some((e) => !e.trim)) continue;
+    // Bytes of the file outside the union of the used segments (approximated by its span).
+    const start = Math.min(...list.map((e) => e.trim!.start));
+    const end = Math.max(...list.map((e) => Math.min(d, e.trim!.end)));
+    outside += a.data.length * Math.max(0, 1 - (end - start) / d);
+  }
+  return { edited, outsideTrimBytes: Math.round(outside) };
 }

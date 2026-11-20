@@ -298,6 +298,15 @@ export const ACTIONS: ActionUi[] = [
     unavailable: needsMedia,
   },
   {
+    id: 'mediaToggle',
+    label: 'Play / pause',
+    description: 'Play when paused, pause when playing',
+    icon: 'play',
+    category: 'media',
+    defaults: mediaDefaults,
+    unavailable: needsMedia,
+  },
+  {
     id: 'mediaRestart',
     label: 'Restart',
     description: 'Play again from the beginning',

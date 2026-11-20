@@ -8,6 +8,8 @@ import { ExportDialog } from './dialogs/ExportDialog';
 import { ThemeDialog } from './theme/ThemePicker';
 import { useShortcuts } from './shortcuts';
 import { Icon } from './ui/Icon';
+import { CaptureHost } from './capture/CaptureDialog';
+import { MediaEditHost } from './media/MediaEditDialog';
 
 export function Editor() {
   const previewOpen = useEditor((s) => s.previewOpen);
@@ -29,6 +31,8 @@ export function Editor() {
       {previewOpen && <Preview />}
       {exportOpen && <ExportDialog />}
       {themeOpen && <ThemeDialog />}
+      <CaptureHost />
+      <MediaEditHost />
     </div>
   );
 }

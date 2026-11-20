@@ -532,9 +532,12 @@ function ActionRow({
     case 'mediaPlay':
     case 'mediaPause':
     case 'mediaRestart':
+    case 'mediaToggle':
       body = (
         <>
-          <span className="ed-w">{action.type === 'mediaPlay' ? 'Play' : action.type === 'mediaPause' ? 'Pause' : 'Restart'}</span>
+          <span className="ed-w">
+            {action.type === 'mediaPlay' ? 'Play' : action.type === 'mediaPause' ? 'Pause' : action.type === 'mediaToggle' ? 'Play / pause' : 'Restart'}
+          </span>
           {target((e) => e.type === 'video' || e.type === 'audio', el.type === 'video' || el.type === 'audio')}
         </>
       );
@@ -723,6 +726,8 @@ export function actionSummary(a: Action, project: Project, selfId: string): stri
       return `pause ${name(p.target)}`;
     case 'mediaRestart':
       return `restart ${name(p.target)}`;
+    case 'mediaToggle':
+      return `play / pause ${name(p.target)}`;
     case 'quizReset':
       return `reset ${name(p.target)}`;
     default:

@@ -101,6 +101,7 @@ const defs: ActionDef[] = [
   { id: 'mediaPlay', execute: (p, c) => c.player.api(target(p, c))?.play?.() },
   { id: 'mediaPause', execute: (p, c) => c.player.api(target(p, c))?.pause?.() },
   { id: 'mediaRestart', execute: (p, c) => c.player.api(target(p, c))?.restart?.() },
+  { id: 'mediaToggle', execute: (p, c) => c.player.api(target(p, c))?.toggle?.() },
   {
     id: 'quizReset',
     execute(p, c) {

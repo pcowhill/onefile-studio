@@ -7,6 +7,7 @@ import { ColorPicker, Field, FontPicker, MediaChooser, Section, Segmented, Slide
 import { Icon } from '../../ui/Icon';
 import { updateElement } from '../../ops';
 import '../../../styles/media.css';
+import { MediaEditRow } from '../../media/MediaEditRow';
 
 const STYLES: Array<{ value: AudioProps['style']; label: string }> = [
   { value: 'player', label: 'Player' },
@@ -57,6 +58,7 @@ export function AudioEditor({ el, set, project }: P<AudioProps>) {
   const choose = (a: Asset) =>
     updateElement(el.id, (d) => {
       (d.props as unknown as AudioProps).assetId = a.id;
+      (d.props as unknown as AudioProps).edit = null;
     });
   const setStyle = (style: AudioProps['style']) =>
     updateElement(el.id, (d) => {
@@ -70,6 +72,7 @@ export function AudioEditor({ el, set, project }: P<AudioProps>) {
     <>
       <Section title="Sound" icon="audio">
         <MediaChooser kind="audio" value={p.assetId} onChange={choose} />
+        {hasSound && <MediaEditRow el={el} asset={asset} />}
         <Field label="Player style">
           <div className="ed-media-opts" role="radiogroup" aria-label="Player style">
             {STYLES.map((s) => (
