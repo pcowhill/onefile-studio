@@ -131,8 +131,7 @@ export function puff(): string {
     <g fill="#2a1840"><ellipse cx="240" cy="300" rx="24" ry="32"/><ellipse cx="360" cy="300" rx="24" ry="32"/></g>
     <g fill="#fff"><circle cx="248" cy="288" r="9"/><circle cx="368" cy="288" r="9"/></g>
     <path d="M262 362 q38 34 76 0" fill="none" stroke="#2a1840" stroke-width="12" stroke-linecap="round"/>
-    <g fill="#ff3d7f" opacity=".55"><ellipse cx="200" cy="350" rx="26" ry="14"/><ellipse cx="400" cy="350" rx="26" ry="14"/></g>
-    <path d="M85 270 C40 300 40 360 90 400" fill="none" stroke="#ffd23f" stroke-width="26" stroke-linecap="round" transform="rotate(-14 300 330)" opacity=".95"/>`,
+    <g fill="#ff3d7f" opacity=".55"><ellipse cx="200" cy="350" rx="26" ry="14"/><ellipse cx="400" cy="350" rx="26" ry="14"/></g>`,
   );
 }
 

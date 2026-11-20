@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import type { Browser, Page } from '@playwright/test';
+import type { Browser, Locator, Page } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -90,4 +90,26 @@ export async function studioProject(page: Page): Promise<Record<string, unknown>
 export function normalise(p: Record<string, unknown>) {
   const meta = p.meta as Record<string, unknown>;
   return { ...p, id: '', meta: { ...meta, updatedAt: '', createdAt: '' } };
+}
+
+/** Pixels of a region that differ clearly from its corner colour (the backdrop), via an in-page canvas. */
+export async function paintedFraction(page: Page, target: Locator): Promise<number> {
+  const shot = (await target.screenshot()).toString('base64');
+  return page.evaluate(async (b64) => {
+    const img = new Image();
+    img.src = `data:image/png;base64,${b64}`;
+    await img.decode();
+    const c = document.createElement('canvas');
+    c.width = img.width;
+    c.height = img.height;
+    const g = c.getContext('2d')!;
+    g.drawImage(img, 0, 0);
+    const { data } = g.getImageData(0, 0, c.width, c.height);
+    // Compare against the colour at the vertical centre of the left edge (backdrop, outside the model).
+    const at = (Math.floor(c.height / 2) * c.width + 3) * 4;
+    const [r0, g0, b0] = [data[at], data[at + 1], data[at + 2]];
+    let n = 0;
+    for (let i = 0; i < data.length; i += 4) if (Math.abs(data[i] - r0) + Math.abs(data[i + 1] - g0) + Math.abs(data[i + 2] - b0) > 60) n++;
+    return n / (data.length / 4);
+  }, shot);
 }
