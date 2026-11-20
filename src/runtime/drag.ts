@@ -1,8 +1,31 @@
 import type { SceneElement } from '../model/types';
 import { Registry } from './registry';
 
+/** Feel settings for the physics-based modes (0..1 each, 0.5 = the polished default). */
+export interface DragFeel {
+  /** Floaty: playfulness (tilt / stretch). Weighted: weight (heavier = more lag and inertia). */
+  amount: number;
+  /** Floaty: how quickly it settles back. Weighted: how quickly it slows down after release. */
+  settle: number;
+}
+
+/** A visual pose for an element during playback (viewer state; never saved into the project). */
+export interface DragPose {
+  /** Logical top-left position. */
+  x: number;
+  y: number;
+  /** Absolute angle in degrees (the authored rotation is the starting value). */
+  angle: number;
+  /** Optional squash & stretch: scale factor along `stretchAngle` (1 = none). */
+  stretch?: number;
+  /** Axis of the stretch, degrees in page space. */
+  stretchAngle?: number;
+}
+
 export interface DragContext {
   el: SceneElement;
+  /** Feel settings (defaults filled in). */
+  feel: DragFeel;
   /** Current stage scale (screen px per logical px). */
   scale(): number;
   /** Logical bounds of the page the element lives on. */
@@ -10,12 +33,22 @@ export interface DragContext {
   /** Current logical position. */
   position(): { x: number; y: number };
   moveTo(x: number, y: number): void;
+  /** Current absolute angle in degrees (starts at el.rotation, or the session's saved angle). */
+  angle(): number;
+  /** Applies a visual pose (position, angle, stretch) and remembers position + angle for the session. */
+  setPose(pose: DragPose): void;
+  /** Converts viewport (client) coordinates to logical page coordinates. */
+  toLocal(clientX: number, clientY: number): { x: number; y: number };
+  /** Window used for requestAnimationFrame / performance.now (the player's window). */
+  win: Window;
 }
 
+export const DEFAULT_FEEL: DragFeel = { amount: 0.5, settle: 0.5 };
+
 /**
- * Drag modes let viewers move elements during playback. "rigid" is the only
- * MVP mode; future modes (e.g. "floaty" spring rotation, "weighted" inertia)
- * register here with the same attach() contract.
+ * Drag modes let viewers move elements during playback: "rigid" (follows the
+ * pointer exactly), "floaty" (springy, tilts while moving, settles back to its
+ * angle) and "weighted" (grab-point physics with momentum; keeps its final angle).
  */
 export interface DragMode {
   id: string;
