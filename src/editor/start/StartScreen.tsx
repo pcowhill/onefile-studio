@@ -233,6 +233,52 @@ function PageArt() {
 }
 
 function ExampleArt({ id }: { id: string }) {
+  if (id === 'explainer')
+    return (
+      <svg viewBox="0 0 160 90" className="st-ex-art" aria-hidden="true">
+        <rect width="160" height="90" rx="8" fill="#0b1220" />
+        {[0, 1, 2, 3].map((i) => (
+          <rect key={i} x={10 + i * 38} y="30" width="28" height="18" rx="4" fill={i === 0 ? '#22d3ee' : '#16233a'} stroke="#22385a" />
+        ))}
+        {[0, 1, 2].map((i) => (
+          <path key={i} d={`M${39 + i * 38} 39h8`} stroke="#22d3ee" strokeWidth="2" strokeLinecap="round" />
+        ))}
+        <rect x="12" y="58" width="44" height="12" rx="6" fill="rgba(34,211,238,.18)" />
+        <rect x="104" y="60" width="16" height="12" rx="3" fill="#e6edf7" />
+        <rect x="124" y="60" width="16" height="12" rx="3" fill="#e6edf7" />
+        <path d="M108 66h8M114 63l3 3-3 3" stroke="#0b1220" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+        <text x="132" y="69.5" textAnchor="middle" fontSize="8" fontWeight="900" fill="#0b1220" fontFamily="system-ui">
+          R
+        </text>
+        <rect x="12" y="12" width="60" height="7" rx="3.5" fill="#e6edf7" />
+      </svg>
+    );
+  if (id === 'explorer')
+    return (
+      <svg viewBox="0 0 160 90" className="st-ex-art" aria-hidden="true">
+        <defs>
+          <radialGradient id="exg" cx="0.65" cy="0.4" r="0.6">
+            <stop offset="0" stopColor="#e0e7ff" />
+            <stop offset="1" stopColor="#f8fafc" />
+          </radialGradient>
+        </defs>
+        <rect width="160" height="90" rx="8" fill="url(#exg)" />
+        <rect x="12" y="16" width="44" height="8" rx="4" fill="#1e293b" />
+        <rect x="12" y="30" width="36" height="4" rx="2" fill="#94a3b8" />
+        {[0, 1, 2].map((i) => (
+          <rect key={i} x="12" y={44 + i * 12} width="34" height="8" rx="4" fill={i === 0 ? '#4f46e5' : '#e0e7ff'} />
+        ))}
+        <ellipse cx="108" cy="72" rx="30" ry="5" fill="#1e293b" opacity=".12" />
+        <rect x="86" y="44" width="46" height="16" rx="4" fill="#f1ede4" />
+        <rect x="84" y="40" width="50" height="6" rx="2" fill="#1b2d6b" />
+        <path d="M96 40V24" stroke="#f1ede4" strokeWidth="3" />
+        <rect x="90" y="18" width="12" height="7" rx="2" fill="#f06a3c" />
+        {[90, 108, 126].map((x) => (
+          <circle key={x} cx={x} cy="64" r="6" fill="#2b2e33" />
+        ))}
+        <path d="M70 30a40 14 0 0 0 76 0" fill="none" stroke="#4f46e5" strokeWidth="2" strokeDasharray="2 4" strokeLinecap="round" />
+      </svg>
+    );
   if (id === 'release')
     return (
       <svg viewBox="0 0 160 90" className="st-ex-art" aria-hidden="true">

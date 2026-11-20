@@ -151,8 +151,8 @@ export function createPlayer(container: HTMLElement, project: Project, opts: Pla
       if (!ix.actions?.length) continue;
       const def = triggerRegistry.get(ix.trigger);
       if (!triggerAllows(def, owner)) continue;
-      // Triggers with options (keys, delays) bind once per interaction; others are grouped.
-      const key = def!.options ? `${ix.trigger}#${ix.id}` : ix.trigger;
+      // Same trigger (and same options, e.g. the same key) → one group that runs in list order.
+      const key = ix.options ? `${ix.trigger}#${JSON.stringify(ix.options)}` : ix.trigger;
       const group = groups.get(key) ?? [];
       group.push(ix);
       groups.set(key, group);

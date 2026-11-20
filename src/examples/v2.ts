@@ -11,7 +11,7 @@ import { confettiGif, dashboardArt, iconArt, rooftopArt, walkthroughVideo } from
 
 type Props = Record<string, unknown>;
 
-function kit(theme: ThemeId) {
+export function kit(theme: ThemeId) {
   const t = getTheme(theme);
   /** Creates an element in theme role `role`; `custom` props become explicit (non-theme) choices. */
   const el = (
@@ -49,14 +49,14 @@ function kit(theme: ThemeId) {
   return { t, el, text, page };
 }
 
-const ix = (id: string, trigger: string, actions: Array<[string, Props]>, conditions: Interaction['conditions'] = []): Interaction => ({
+export const ix = (id: string, trigger: string, actions: Array<[string, Props]>, conditions: Interaction['conditions'] = []): Interaction => ({
   id,
   trigger,
   conditions,
   actions: actions.map(([type, params], i) => ({ id: `${id}_a${i}`, type, params: params as Interaction['actions'][number]['params'] })),
 });
 
-const fadeUp = (delay = 0) => ({ entrance: { preset: 'slideIn', duration: 700, delay, direction: 'up' as const } });
+export const fadeUp = (delay = 0) => ({ entrance: { preset: 'slideIn', duration: 700, delay, direction: 'up' as const } });
 
 // ---------------------------------------------------------------- A: Feature Release Walkthrough
 export function featureRelease(): Project {

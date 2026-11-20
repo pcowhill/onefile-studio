@@ -4,6 +4,7 @@ import { createElement, createProject } from '../model/factory';
 import { linear, solid } from '../model/paint';
 import { bulb, puff, rocket, sampleAssets, SAMPLE_IDS, svgAsset } from './art';
 import { eventAnnouncement, featureRelease, knowledgeCheck } from './v2';
+import { modelExplorer, technicalExplainer } from './v4';
 
 /**
  * Example projects. They are ordinary projects built with the same factories
@@ -567,6 +568,22 @@ function clicker(): Project {
 }
 
 export const EXAMPLES: ExampleDef[] = [
+  {
+    id: 'explainer',
+    title: 'Interactive technical explainer',
+    description: 'Step through an architecture diagram with the keyboard, click boxes for notes, drag the order along.',
+    kind: 'slides',
+    color: '#22d3ee',
+    build: technicalExplainer,
+  },
+  {
+    id: 'explorer',
+    title: 'Interactive 3D explorer',
+    description: 'Turn and zoom a 3D rover, click parts to fly the camera there, then read the spec sheet.',
+    kind: 'slides',
+    color: '#4f46e5',
+    build: modelExplorer,
+  },
   {
     id: 'release',
     title: 'Feature release walkthrough',
