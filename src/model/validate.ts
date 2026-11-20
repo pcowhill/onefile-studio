@@ -1,4 +1,18 @@
-import type { Action, AnimationRef, Asset, Background, Condition, DragBehavior, Interaction, InteractionOwner, Page, Paint, Project, SceneElement, Variable } from './types';
+import type {
+  Action,
+  AnimationRef,
+  Asset,
+  Background,
+  Condition,
+  DragBehavior,
+  Interaction,
+  InteractionOwner,
+  Page,
+  Paint,
+  Project,
+  SceneElement,
+  Variable,
+} from './types';
 import { assetKind, SCHEMA_ID, SCHEMA_VERSION, SELF_TARGET } from './types';
 import { isIdentity, sanitizeEdit } from './mediaEdit';
 import { SAFE_ID, uid } from './ids';

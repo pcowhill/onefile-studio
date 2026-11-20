@@ -531,9 +531,7 @@ function ActionPicker({ project, many, onPick }: { project: Project; many: boole
               </div>
             );
           })}
-          <p className="ed-action-foot">
-            Actions run in order, top to bottom{many ? '. Interactions with the same trigger also run in order.' : '.'}
-          </p>
+          <p className="ed-action-foot">Actions run in order, top to bottom{many ? '. Interactions with the same trigger also run in order.' : '.'}</p>
         </div>
       )}
     </div>
@@ -739,7 +737,11 @@ function ActionRow({
       body = <span className="ed-w">{action.type}</span>;
   }
   return (
-    <li className={`ed-action ${action.type === 'openLink' ? 'is-wide' : ''}`} style={{ ['--c' as string]: cat.color, ['--s' as string]: cat.soft }} data-testid="action-row">
+    <li
+      className={`ed-action ${action.type === 'openLink' ? 'is-wide' : ''}`}
+      style={{ ['--c' as string]: cat.color, ['--s' as string]: cat.soft }}
+      data-testid="action-row"
+    >
       <span className="ed-action-num">{index + 1}</span>
       <div className="ed-action-body">{body}</div>
       <div className="ed-action-tools">

@@ -155,7 +155,9 @@ export const modelDef: RuntimeElementDef<ModelProps> = {
     const data = asset && asset.mime.startsWith('model/') ? asset.data : '';
     node.setAttribute('aria-label', p.alt || asset?.name || '3D model');
     if (!data) {
-      node.appendChild(message(doc, env.mode === 'edit' ? 'Add a 3D model' : '3D model', env.mode === 'edit' ? 'GLB file · choose one on the right' : undefined));
+      node.appendChild(
+        message(doc, env.mode === 'edit' ? 'Add a 3D model' : '3D model', env.mode === 'edit' ? 'GLB file · choose one on the right' : undefined),
+      );
       return { node };
     }
     const view = modelViewOptions(p);

@@ -234,7 +234,12 @@ export const CATALOG: CatalogItem[] = [
     build: () => {
       const element = createElement('button', { w: 240, h: 64, props: { label: 'Learn more', icon: 'arrow-right', iconSide: 'right' } });
       element.interactions = [
-        { id: uid('ix'), trigger: 'click', conditions: [], actions: [{ id: uid('ac'), type: 'openLink', params: { url: 'https://example.com', newTab: true } }] },
+        {
+          id: uid('ix'),
+          trigger: 'click',
+          conditions: [],
+          actions: [{ id: uid('ac'), type: 'openLink', params: { url: 'https://example.com', newTab: true } }],
+        },
       ];
       return { element };
     },

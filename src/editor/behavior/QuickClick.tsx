@@ -82,9 +82,16 @@ export function QuickClick({ el, project }: { el: SceneElement; project: Project
       </div>
       {simple && (
         <div className="ed-quickact-detail">
-          {simple.actions[0].type === 'openLink' && <LinkEditor params={simple.actions[0].params} onParams={(p, m) => setParams(p, m ? `quick:${m}` : undefined)} />}
+          {simple.actions[0].type === 'openLink' && (
+            <LinkEditor params={simple.actions[0].params} onParams={(p, m) => setParams(p, m ? `quick:${m}` : undefined)} />
+          )}
           {simple.actions[0].type === 'navigate' && (
-            <Select value={String(simple.actions[0].params.page ?? 'next')} onChange={(v) => setParams({ page: v })} options={pageTargetOptions(project)} ariaLabel="Destination" />
+            <Select
+              value={String(simple.actions[0].params.page ?? 'next')}
+              onChange={(v) => setParams({ page: v })}
+              options={pageTargetOptions(project)}
+              ariaLabel="Destination"
+            />
           )}
           {simple.actions[0].type === 'show' && (
             <Select
@@ -103,7 +110,9 @@ export function QuickClick({ el, project }: { el: SceneElement; project: Project
         <p className="ed-note">
           {el.interactions
             .slice(0, 2)
-            .map((ix) => `When ${triggerSentence(ix, project.kind)}: ${ix.actions.map((a) => actionSummary(a, project, el.id)).join(', then ') || 'nothing yet'}`)
+            .map(
+              (ix) => `When ${triggerSentence(ix, project.kind)}: ${ix.actions.map((a) => actionSummary(a, project, el.id)).join(', then ') || 'nothing yet'}`,
+            )
             .join(' · ')}
         </p>
       )}

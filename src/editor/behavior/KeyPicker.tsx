@@ -88,7 +88,13 @@ export function KeyPicker({
       ) : (
         <div className="ed-keypick-row">
           {spec.key ? (
-            <button className="ed-keycaps" onClick={() => setCapturing(true)} title="Change the key" aria-label={`Key: ${describeKey(spec)}. Change`} data-testid="key-current">
+            <button
+              className="ed-keycaps"
+              onClick={() => setCapturing(true)}
+              title="Change the key"
+              aria-label={`Key: ${describeKey(spec)}. Change`}
+              data-testid="key-current"
+            >
               {caps.map((c, i) => (
                 <span key={i} className="ed-keycap-wrap">
                   {i > 0 && <span className="ed-keycap-plus">+</span>}
@@ -137,7 +143,9 @@ export function keyConflicts(project: Project, owner: IxOwner, ix: Interaction, 
       `${keyLabel(spec.key)} normally goes to the ${NAV_ROLE[spec.key]} slide. This rule replaces that ${everywhere ? 'on every slide' : 'while this slide is showing'}.`,
     );
   const same = (other: Interaction) =>
-    other.id !== ix.id && other.trigger === 'key' && (() => {
+    other.id !== ix.id &&
+    other.trigger === 'key' &&
+    (() => {
       const o = keySpec(other.options);
       return o.key === spec.key && o.shift === spec.shift && o.alt === spec.alt;
     })();
