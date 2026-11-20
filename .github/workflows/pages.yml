@@ -24,14 +24,15 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # The build uses a relative base path, so it works at /<repo>/ on Pages.
-      - run: npm run build
+      # Relative base paths: the site works at /<repo>/ on Pages.
+      # dist-site/ = landing page + studio/ (the single-file editor) + showcase/ (exported OneFiles) + media/.
+      - run: npm run build:site
       - uses: actions/configure-pages@v5
         with:
           enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: dist-site
 
   deploy:
     needs: build

@@ -1,20 +1,25 @@
 {
   "name": "onefile-studio",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "A friendly offline editor for interactive presentations and webpages that export to a single, self-contained HTML file.",
   "type": "module",
   "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:site": "npm run build && node scripts/build-site.mjs",
     "preview": "vite preview",
+    "preview:site": "vite preview --config vite.site.config.ts",
     "typecheck": "tsc -b",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test --trace off",
-    "check": "npm run typecheck && npm run lint && npm run test && npm run build && npm run test:e2e"
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build:site && npm run test:e2e",
+    "video:capture": "node video/capture.ts",
+    "video:render": "node video/render.ts",
+    "video": "npm run build:site && npm run video:capture && npm run video:render"
   },
   "dependencies": {
     "@fontsource-variable/fraunces": "^5.3.0",

@@ -5,3 +5,5 @@ playwright-report
 .DS_Store
 .vite
 .claude/worktrees
+dist-site
+video/.cache

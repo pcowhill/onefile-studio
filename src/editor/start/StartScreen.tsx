@@ -13,6 +13,7 @@ import { LESSONS } from '../learn/lessons';
 import { TemplateGallery } from './TemplateGallery';
 import { LearnHub } from './LearnHub';
 import { useStartUi } from './startUi';
+import { siteHomeUrl } from '../deepLink';
 
 const THEME_KEY = 'ofs:start-theme';
 function initialTheme(): ThemeId {
@@ -68,6 +69,11 @@ export function StartScreen() {
           </span>
         </div>
         <div className="st-head-actions">
+          {siteHomeUrl() && (
+            <a className="ed-btn ed-btn-ghost" href={siteHomeUrl()!} data-testid="site-home">
+              <Icon name="home" size={18} /> Showcase
+            </a>
+          )}
           <button className="ed-btn ed-btn-ghost" onClick={() => setPanel('learn')} data-testid="open-learn">
             <Icon name="learn" size={18} /> Learn
           </button>

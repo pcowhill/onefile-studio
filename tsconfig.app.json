@@ -19,5 +19,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src", "tests/unit"]
+  "include": ["src", "tests/unit", "site/src", "video/chapters.ts"]
 }
