@@ -59,6 +59,20 @@ Uploading (`io/assets.ts`) normalises MIME types, measures video/audio (with hea
 
 Drafts (`io/storage.ts`, IndexedDB v2) keep asset payloads in a separate store keyed by a SHA-256 computed locally, so autosave rewrites only the small project record; v1 draft records still load and are converted on their next save.
 
+## Media edits (v3)
+
+Edits are data, not pixels (`src/model/mediaEdit.ts`, schema in [SCHEMA.md](SCHEMA.md#media-edits-v3)): `asset.edit` is the library version, `props.edit` on image/video/audio elements an optional per-element override (`null` = follow the library). `resolveEdit(project, assetId, override)` is the single place that decides which applies; the runtime, the editor previews, the export plan and the inspector all go through it.
+
+- **Pictures** — `imageFill()` (`runtime/elements/editedImage.ts`) returns the v0.2 `<img>` for unedited images and otherwise an inline SVG whose viewBox is the crop and whose `<image>` carries the orientation matrix. Image elements, galleries, before/after sliders and page backgrounds all use it, so a library edit applies everywhere. No canvas re-encoding: no quality loss, and the edit stays changeable.
+- **Video crop** — the `<video>` sits in a viewport sized with container-query units (`min()`/`max()` of `cqw`/`cqh` for contain/cover) and is scaled/offset in percentages, so it is correct at any element size and slide scale. Native controls would be clipped and would show the whole file, so edited videos get a small themed control bar.
+- **Trim** — `playSegment()` (`runtime/elements/mediaShared.ts`) wraps a media element: seeks to the start before playing, stops at the end (animation frames, with `timeupdate` as a background-tab fallback), loops the segment manually, clamps seeks, and owns the `mediaEnded` moment for trimmed and untrimmed media alike.
+
+## Capture
+
+`src/io/capture.ts` is framework-free and fully injectable (`CaptureDeps`): capability detection with reasons, MIME selection, `recordStream()` sessions (deferred start for the countdown, pause/resume, stop → `File`, cancel, stream release on every path), screen/webcam/microphone/screen + webcam starters, frame-safe screenshots (`waitForFrames` via `requestVideoFrameCallback`), playback verification and a level meter. Its lifecycle is adapted from the browser video editor (pcowhill/claude-agile-team-demo `src/lib/recording.ts`); `src/io/webmCues.ts` is ported from the same project to add a seek index to recorded WebM. Captured blobs go through `fileToAsset` like uploads — there is no separate downstream path for recorded media.
+
+UI: `src/editor/capture/` (Capture cards in the Media panel, `CaptureDialog`), `src/editor/media/` (`MediaEditor` surfaces, `MediaEditDialog` for library/element scope, `MediaEditRow` for inspectors, `cropMath.ts` pure geometry). Dialog requests live in a tiny zustand store (`mediaUi.ts`), outside undo history; saving an edit is a normal undoable project update.
+
 ## Component events
 
 Interactive components announce events by dispatching bubbling DOM events from their content node (`emit()` in `triggers.ts`); triggers such as `quizCorrect`, `countdownDone` and `mediaEnded` listen on the element wrapper like `click` does, and declare `forTypes` so the editor only offers them where they make sense. Element APIs (`play`, `pause`, `restart`, `reset`…) are reached by actions through `PlayerControl.api()`; `clearState()` resets per-session state (e.g. a quiz answer) even for elements on other slides.

@@ -54,3 +54,11 @@ Register in `src/runtime/animations.ts` with `kind` (`entrance`, `emphasis`, `ex
 ## Add a theme
 
 Add a `ThemeTokens` object to `THEMES` in `src/model/theme/tokens.ts` (and its id to the `ThemeId` union in `src/model/types.ts` and the validator's accepted ids follow automatically). Every mapper derives from tokens, so all components pick it up. `tests/unit/theme.test.ts` checks completeness and WCAG contrast of the key text/background pairs; the theme picker preview is drawn from the tokens.
+
+## Support media edits in a new element
+
+Elements that show an image, video or sound should honour nondestructive edits (`src/model/mediaEdit.ts`). For pictures, render through `imageFill(doc, project, assetId, { fit, alt, edit })` (`src/runtime/elements/editedImage.ts`) instead of a bare `<img>`: it follows the library version, or `edit` when the element has its own. For media playback, wrap the element with `playSegment()` (`mediaShared.ts`) and resolve the trim with `resolveEdit()` + `trimBounds()`. To let authors give the element its own edit, add `edit: null` to its defaults and `edit: mediaEdit(kind)` to `PROP_SANITIZERS`, and show `MediaEditRow` in its inspector.
+
+## Add a capture source
+
+Capture lives in `src/io/capture.ts` (framework-free, injectable `CaptureDeps`). A new source needs: an id in `CaptureSource` with a reason in `captureSupport()`, a starter returning a `RecordingSession` built with `recordStream()` (so release-on-every-path comes for free), a card in `CAPTURE_CARDS` with an illustration (`src/editor/capture/illustrations.tsx`), and its acquire step in `CaptureDialog.start()`. Add a fake-device e2e test in `tests/e2e/capture.spec.ts` that asserts no track is left live.
