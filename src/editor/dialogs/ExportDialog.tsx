@@ -8,7 +8,7 @@ import { Icon } from '../ui/Icon';
 import { buildStandaloneHtml, formatBytes, pruneUnusedAssets } from '../../io/exportHtml';
 import { isOptimizable, optimizeAssets } from '../../io/assets';
 import type { ExportEstimate } from '../../io/exportPlan';
-import { assetBreakdown, estimateExport, findAssetIssues, MAX_EXPORT_CHARS, WARN_EMAIL_BYTES, WARN_LARGE_BYTES } from '../../io/exportPlan';
+import { assetBreakdown, editRetention, estimateExport, findAssetIssues, MAX_EXPORT_CHARS, WARN_EMAIL_BYTES, WARN_LARGE_BYTES } from '../../io/exportPlan';
 import { downloadText } from '../../io/storage';
 import { fileNameFor } from '../../io/escape';
 import { toast } from '../ui/toast';
@@ -76,6 +76,7 @@ export function ExportDialog() {
   const tooBig = plan.estimate.chars > MAX_EXPORT_CHARS;
   const blocked = issues.problems.length > 0 || tooBig;
   const breakdown = useMemo(() => assetBreakdown(plan.project, plan.estimate.bytes), [plan]);
+  const retention = useMemo(() => editRetention(plan.project), [plan]);
   const assetTotal = breakdown.reduce((s, b) => s + b.bytes, 0);
   const top = breakdown.slice(0, 5);
   const restAssets = breakdown.slice(5).reduce((s, b) => s + b.bytes, 0);
@@ -197,6 +198,12 @@ export function ExportDialog() {
       {counts.kept > 0 && (
         <p className="ed-export-note">
           <Icon name="check" size={14} stroke={3} /> GIFs, videos and sounds are always kept exactly as they are — never re-compressed.
+        </p>
+      )}
+      {retention.edited > 0 && (
+        <p className="ed-export-note" data-testid="export-edit-note">
+          <Icon name="info" size={14} /> Cropped and trimmed media keep their full original inside the file, so you can change the edits after re-opening it
+          {retention.outsideTrimBytes > 64 * 1024 ? ` (about ${formatBytes(retention.outsideTrimBytes)} lies outside your trims)` : ''}.
         </p>
       )}
       {quality === 'optimized' && (

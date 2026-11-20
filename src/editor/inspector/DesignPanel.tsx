@@ -22,6 +22,7 @@ import { ThemePreview } from '../theme/ThemePicker';
 import { EDITOR_ELEMENTS } from '../catalog';
 import type { TextProps } from '../../runtime/elements/text';
 import type { ImageProps } from '../../runtime/elements/image';
+import { MediaEditRow } from '../media/MediaEditRow';
 import type { ShapeProps } from '../../runtime/elements/shape';
 import type { ArrowProps } from '../../runtime/elements/arrow';
 import type { ButtonProps, NavButtonProps } from '../../runtime/elements/button';
@@ -298,11 +299,13 @@ function TextEditor({ el, set }: P<TextProps>) {
   );
 }
 
-function ImageEditor({ el, set }: P<ImageProps>) {
+function ImageEditor({ el, set, project }: P<ImageProps>) {
   const p = el.props;
+  const asset = project.assets[p.assetId];
   return (
     <Section title="Image" icon="image">
-      <ImageChooser value={p.assetId} onChange={(id) => set({ assetId: id })} />
+      <ImageChooser value={p.assetId} onChange={(id) => set({ assetId: id, edit: null })} />
+      <MediaEditRow el={el} asset={asset && asset.mime.startsWith('image/') ? asset : undefined} allowScreenshot />
       <Field label="Fit">
         <Segmented
           value={p.fit}

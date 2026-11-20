@@ -12,6 +12,9 @@ import type { Built, CatalogItem, PageTemplate } from './catalog';
 import { nameFor } from './catalog';
 import { acceptAttribute, addAssetDedup, fileToAsset, formatMegabytes, LARGE_FILE_BYTES, normalizeMime } from '../io/assets';
 import { toast } from './ui/toast';
+import { uid } from '../model/ids';
+import type { MediaEdit } from '../model/mediaEdit';
+import { editedAspect, isIdentity, sanitizeEdit } from '../model/mediaEdit';
 import {
   applyThemeToElement,
   defaultRole,
@@ -187,7 +190,7 @@ export function insertImage(asset: Asset): string | undefined {
   const s = editor();
   if (!s.project) return;
   const max = Math.min(520, s.project.settings.width * 0.5);
-  const ratio = asset.width && asset.height ? asset.width / asset.height : 4 / 3;
+  const ratio = editedAspect(asset.width, asset.height, asset.edit ?? {}) || 4 / 3;
   const w = ratio >= 1 ? max : max * ratio;
   const h = w / ratio;
   return insertBuilt({
@@ -198,8 +201,8 @@ export function insertImage(asset: Asset): string | undefined {
 const stripExt = (name: string) => name.replace(/\.[a-z0-9]+$/i, '');
 
 /** Element size that shows a video at its own aspect ratio with the given frame. */
-export function videoSize(asset: Asset | undefined, width: number, frame: VideoProps['frame']): { w: number; h: number } {
-  const ratio = asset && asset.width > 0 && asset.height > 0 ? asset.width / asset.height : 16 / 9;
+export function videoSize(asset: Asset | undefined, width: number, frame: VideoProps['frame'], edit?: MediaEdit | null): { w: number; h: number } {
+  const ratio = (asset && editedAspect(asset.width, asset.height, edit ?? asset.edit ?? {})) || 16 / 9;
   const extra = videoFrameExtra(frame);
   return { w: Math.round(width), h: Math.round((width - extra.w) / ratio + extra.h) };
 }
@@ -212,7 +215,7 @@ export function insertMedia(asset: Asset): string | undefined {
   if (!s.project) return;
   if (kind === 'video') {
     const W = s.project.settings.width;
-    const portrait = asset.height > asset.width;
+    const portrait = editedAspect(asset.width, asset.height, asset.edit ?? {}) < 1;
     const size = videoSize(asset, portrait ? Math.min(320, W * 0.4) : Math.min(640, W * 0.6), 'none');
     return insertBuilt({ element: createElement('video', { ...size, props: { assetId: asset.id, alt: stripExt(asset.name) } }) });
   }
@@ -588,3 +591,141 @@ export function resolveTargetName(project: Project, target: unknown, selfId: str
 }
 
 export const useProject = () => useEditor((s) => s.project);
+
+// ---------------- media edits & captures (v3) ----------------
+
+/** How many elements use an asset, and how many of those have their own edit. */
+export function assetUses(project: Project, assetId: string): { total: number; own: number } {
+  let total = 0;
+  let own = 0;
+  for (const pg of project.pages)
+    for (const el of pg.elements) {
+      const p = el.props as Record<string, unknown>;
+      if (p.assetId !== assetId) {
+        const json = JSON.stringify(p);
+        if (json.includes(`"${assetId}"`)) total++;
+        continue;
+      }
+      total++;
+      if (p.edit && typeof p.edit === 'object') own++;
+    }
+  for (const pg of project.pages) if (pg.background.imageId === assetId) total++;
+  return { total, own };
+}
+
+/** Saves the media library's version of a file (every use without its own edit follows it). */
+export function saveLibraryEdit(assetId: string, edit: MediaEdit) {
+  editor().update((d) => {
+    const a = d.assets[assetId];
+    if (!a) return;
+    const clean = sanitizeEdit(edit, assetKind(a.mime), a.duration);
+    if (isIdentity(clean)) delete a.edit;
+    else a.edit = clean;
+  });
+}
+
+/** Fits an image/video element's height to its (edited) picture, keeping the width. */
+function fitElementToPicture(el: SceneElement, asset: Asset, edit: MediaEdit) {
+  const ratio = editedAspect(asset.width, asset.height, edit);
+  if (!ratio) return;
+  if (el.type === 'image') el.h = Math.max(8, Math.round(el.w / ratio));
+  else if (el.type === 'video') el.h = videoSize(asset, el.w, (el.props as unknown as VideoProps).frame, edit).h;
+}
+
+/**
+ * Saves an element's own edit (`null` = follow the library version again).
+ * Image and video boxes take the new shape so a crop shows without bars.
+ */
+export function saveElementEdit(elementId: string, edit: MediaEdit | null) {
+  editor().update((d) => {
+    const f = findEl(d, elementId);
+    if (!f) return;
+    const p = f.el.props as Record<string, unknown>;
+    const asset = typeof p.assetId === 'string' ? d.assets[p.assetId] : undefined;
+    p.edit = edit && asset ? sanitizeEdit(edit, assetKind(asset.mime), asset.duration) : null;
+    if (asset) fitElementToPicture(f.el, asset, (p.edit as MediaEdit | null) ?? asset.edit ?? {});
+  });
+}
+
+/** Adds a captured (not yet stored) asset, with its edit, to the project. Returns the stored asset. */
+export function addCapturedAsset(asset: Asset, edit: MediaEdit = {}): Asset | undefined {
+  let id = asset.id;
+  editor().update((d) => {
+    id = addAssetDedup(d.assets, { ...asset });
+    const a = d.assets[id];
+    const clean = sanitizeEdit(edit, assetKind(a.mime), a.duration);
+    if (!isIdentity(clean)) a.edit = clean;
+  });
+  return editor().project?.assets[id];
+}
+
+export function renameAsset(id: string, name: string) {
+  const clean = name.trim().slice(0, 120);
+  if (!clean) return;
+  editor().update((d) => {
+    if (d.assets[id]) d.assets[id].name = clean;
+  });
+}
+
+/** Points an image element at another image (e.g. "Replace with screenshot"). */
+export function replaceElementImage(elementId: string, asset: Asset) {
+  editor().update((d) => {
+    const f = findEl(d, elementId);
+    if (!f || f.el.type !== 'image') return;
+    const p = f.el.props as Record<string, unknown>;
+    p.assetId = asset.id;
+    p.edit = null;
+    fitElementToPicture(f.el, asset, asset.edit ?? {});
+  });
+  editor().select([elementId]);
+}
+
+/**
+ * Screen + webcam convenience: the screen recording on the page with the
+ * webcam recording as a round-cornered picture-in-picture in its corner.
+ * Clicking either one plays or pauses both together.
+ */
+export function insertPictureInPicture(screen: Asset, camera: Asset): string[] {
+  const s = editor();
+  if (!s.project) return [];
+  const pg = page(s.project, s.pageId);
+  if (!pg) return [];
+  const W = s.project.settings.width;
+  const H = pageHeight(s.project, pg);
+  const main = createElement('video', {
+    ...videoSize(screen, Math.min(W * 0.72, 900), 'none'),
+    props: { assetId: screen.id, alt: stripExt(screen.name), controls: false },
+  });
+  if (main.h > H * 0.86) {
+    const k = (H * 0.86) / main.h;
+    main.w = Math.round(main.w * k);
+    main.h = Math.round(main.h * k);
+  }
+  main.x = Math.round((W - main.w) / 2);
+  main.y = Math.round((H - main.h) / 2);
+  const camW = Math.round(main.w * 0.26);
+  const cam = createElement('video', {
+    ...videoSize(camera, camW, 'none'),
+    props: { assetId: camera.id, alt: stripExt(camera.name), controls: false, radius: 18, fit: 'cover' },
+  });
+  cam.x = main.x + main.w - cam.w - 16;
+  cam.y = main.y + main.h - cam.h - 16;
+  const both = (other: string) => [
+    { id: uid('ix'), trigger: 'click', conditions: [], actions: [{ id: uid('ac'), type: 'mediaToggle', params: { target: other } }] },
+  ];
+  main.interactions = both(cam.id);
+  cam.interactions = both(main.id);
+  const theme = getTheme(s.project.settings.theme);
+  themeNewElement(main, theme);
+  themeNewElement(cam, theme);
+  s.update((d) => {
+    const p2 = page(d, s.pageId);
+    if (!p2) return;
+    main.name = nameFor(d, 'video');
+    p2.elements.push(main);
+    cam.name = `${nameFor(d, 'video')} (webcam)`;
+    p2.elements.push(cam);
+  });
+  s.select([main.id, cam.id]);
+  return [main.id, cam.id];
+}

@@ -17,6 +17,7 @@ import {
   insertMedia,
   movePage,
   pickMedia,
+  renameAsset,
   renameVariable,
   variableUsage,
 } from '../ops';
@@ -28,6 +29,9 @@ import { formatTime } from '../../runtime/elements/mediaShared';
 import '../../styles/media.css';
 import { formatBytes } from '../../io/exportHtml';
 import { CatalogIllustration, TemplateIllustration } from './illustrations';
+import { CaptureCards } from '../capture/CaptureCards';
+import { openMediaEdit } from '../media/mediaUi';
+import { describeEdit, isIdentity } from '../../model/mediaEdit';
 
 const TABS: Array<{ id: LeftTab; label: string; icon: string }> = [
   { id: 'pages', label: 'Pages', icon: 'slides' },
@@ -261,7 +265,7 @@ function MediaPanel() {
       <PanelHead title="Media" />
       <div className="ed-panel-scroll">
         <div
-          className={`ed-drop ${over ? 'is-over' : ''}`}
+          className={`ed-drop ed-drop-compact ${over ? 'is-over' : ''}`}
           onDragOver={(e) => {
             e.preventDefault();
             setOver(true);
@@ -278,12 +282,13 @@ function MediaPanel() {
             <Icon name="video" size={20} />
             <Icon name="audio" size={20} />
           </span>
-          <strong>Drop files here</strong>
-          <span>Images, animated GIFs, videos (MP4, WebM) and sounds (MP3, WAV, OGG, M4A) — embedded right into your file</span>
+          <strong>Upload</strong>
+          <span>Drop images, GIFs, videos or sounds here — they're embedded right into your file</span>
           <button className="ed-btn ed-btn-primary ed-btn-sm" onClick={() => void pickMedia()} data-testid="upload-images">
             <Icon name="upload" size={15} /> Choose files
           </button>
         </div>
+        <CaptureCards />
         {kinds.size > 1 && (
           <div className="ed-media-filter" role="radiogroup" aria-label="Show">
             {(['all', 'image', 'video', 'audio'] as MediaFilter[])
@@ -295,7 +300,8 @@ function MediaPanel() {
               ))}
           </div>
         )}
-        {assets.length > 0 && <p className="ed-panel-hint">Click to place it on the page. Right-click for options.</p>}
+        {assets.length > 0 && <h3 className="ed-media-lib-title">In this project</h3>}
+        {assets.length > 0 && <p className="ed-panel-hint">Click to place it on the page. Right-click for more options.</p>}
         <div className="ed-assets">
           {shown.map((a) => {
             const used = usage(a.id);
@@ -306,37 +312,57 @@ function MediaPanel() {
               a.duration ? formatTime(a.duration) : '',
               formatBytes(a.bytes),
             ].filter(Boolean);
+            const edited = !isIdentity(a.edit);
+            const editLabel = kind === 'image' ? 'Crop & rotate…' : kind === 'video' ? 'Trim & crop…' : 'Trim…';
+            const rename = () => {
+              const name = window.prompt('Rename this file', a.name);
+              if (name != null) renameAsset(a.id, name);
+            };
             return (
-              <button
-                key={a.id}
-                className="ed-asset"
-                data-testid="media-asset"
-                data-kind={kind}
-                onClick={() => insertMedia(a)}
-                title={`${a.name} · ${details.join(' · ')}${a.animated ? ' · animated' : ''}`}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  openContextMenu(
-                    e.clientX,
-                    e.clientY,
-                    [
-                      { label: 'Place on page', icon: 'plus', onClick: () => insertMedia(a) },
-                      { label: used ? `Remove (used ${used}×)` : 'Remove from project', icon: 'trash', danger: true, onClick: () => deleteAsset(a.id) },
-                    ],
-                    a.name,
-                  );
-                }}
-              >
-                <AssetTile asset={a} className="ed-asset-img" />
-                {a.animated && <span className="ed-media-animated">Animated</span>}
-                <span className="ed-asset-meta">
-                  <span>{a.name}</span>
-                  <small>
-                    {formatBytes(a.bytes)}
-                    {used ? ` · used ${used}×` : ' · unused'}
-                  </small>
-                </span>
-              </button>
+              <div key={a.id} className="ed-asset-wrap">
+                <button
+                  className="ed-asset"
+                  data-testid="media-asset"
+                  data-kind={kind}
+                  onClick={() => insertMedia(a)}
+                  title={`${a.name} · ${details.join(' · ')}${a.animated ? ' · animated' : ''}${edited ? ` · ${describeEdit(a.edit!, formatTime)}` : ''}`}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    openContextMenu(
+                      e.clientX,
+                      e.clientY,
+                      [
+                        { label: 'Place on page', icon: 'plus', onClick: () => insertMedia(a) },
+                        { label: editLabel, icon: kind === 'image' ? 'crop' : 'scissors', onClick: () => openMediaEdit({ assetId: a.id }) },
+                        { label: 'Rename…', icon: 'edit', onClick: rename },
+                        { divider: true },
+                        { label: used ? `Remove (used ${used}×)` : 'Remove from project', icon: 'trash', danger: true, onClick: () => deleteAsset(a.id) },
+                      ],
+                      a.name,
+                    );
+                  }}
+                >
+                  <AssetTile asset={a} className="ed-asset-img" />
+                  {a.animated && <span className="ed-media-animated">Animated</span>}
+                  {edited && <span className="ed-media-edited">Edited</span>}
+                  <span className="ed-asset-meta">
+                    <span>{a.name}</span>
+                    <small>
+                      {formatBytes(a.bytes)}
+                      {used ? ` · used ${used}×` : ' · unused'}
+                    </small>
+                  </span>
+                </button>
+                <button
+                  className="ed-asset-edit"
+                  onClick={() => openMediaEdit({ assetId: a.id })}
+                  aria-label={`${editLabel.replace('…', '')} ${a.name}`}
+                  title={editLabel.replace('…', '')}
+                  data-testid="media-asset-edit"
+                >
+                  <Icon name={kind === 'image' ? 'crop' : 'scissors'} size={15} />
+                </button>
+              </div>
             );
           })}
         </div>

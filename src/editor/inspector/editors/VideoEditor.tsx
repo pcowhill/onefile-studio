@@ -6,6 +6,7 @@ import { ColorPicker, Field, ImageChooser, MediaChooser, Section, Segmented, Sli
 import { Icon } from '../../ui/Icon';
 import { updateElement, videoSize } from '../../ops';
 import '../../../styles/media.css';
+import { MediaEditRow } from '../../media/MediaEditRow';
 
 const stripExt = (name: string) => name.replace(/\.[a-z0-9]{1,5}$/i, '');
 
@@ -52,6 +53,7 @@ export function VideoEditor({ el, set, project }: P<VideoProps>) {
     updateElement(el.id, (d) => {
       const props = d.props as unknown as VideoProps;
       props.assetId = a.id;
+      props.edit = null;
       if (!props.alt) props.alt = stripExt(a.name);
       // Fit the box to the video's own shape (keeping the width), so there are no black bars.
       if (a.width > 0 && a.height > 0) d.h = videoSize(a, d.w, props.frame).h;
@@ -60,7 +62,7 @@ export function VideoEditor({ el, set, project }: P<VideoProps>) {
     updateElement(el.id, (d) => {
       const props = d.props as unknown as VideoProps;
       props.frame = frame;
-      if (hasVideo && asset.width > 0 && asset.height > 0) d.h = videoSize(asset, d.w, frame).h;
+      if (hasVideo && asset.width > 0 && asset.height > 0) d.h = videoSize(asset, d.w, frame, props.edit).h;
     });
 
   return (
@@ -69,6 +71,7 @@ export function VideoEditor({ el, set, project }: P<VideoProps>) {
         <MediaChooser kind="video" value={p.assetId} onChange={choose} />
         {hasVideo && (
           <>
+            <MediaEditRow el={el} asset={asset} />
             <Field label="Frame">
               <div className="ed-media-opts" role="radiogroup" aria-label="Frame">
                 {FRAMES.map((f) => (
