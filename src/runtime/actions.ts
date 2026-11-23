@@ -1,10 +1,11 @@
-import type { Interaction, ParamValue } from '../model/types';
+import type { Action, Interaction, ParamValue } from '../model/types';
 import { SELF_TARGET } from '../model/types';
 import type { VarStore } from './env';
 import type { ElementApi } from './elements/types';
 import { Registry } from './registry';
 import { evaluateCondition } from './conditions';
 import { normalizeLink } from '../model/links';
+import { toSteps } from '../model/actionSteps';
 
 /** The player capabilities actions are allowed to use. */
 export interface PlayerControl {
@@ -18,6 +19,8 @@ export interface PlayerControl {
   animate(id: string, preset: string, opts: { duration?: number; direction?: string }): Promise<void>;
   /** Opens an already-validated http(s)/mailto/tel URL (v4). */
   openLink?(href: string, newTab: boolean): void;
+  /** False once the player is destroyed (Preview closed, project closed): remaining steps are skipped (v5). */
+  alive?(): boolean;
 }
 
 export interface ActionContext {
@@ -137,17 +140,50 @@ const defs: ActionDef[] = [
 ];
 defs.forEach((d) => actionRegistry.register(d));
 
-/** Runs one interaction: checks every condition, then executes actions in order. */
+/**
+ * Starts one action and returns a promise that settles when it has finished.
+ * The action's `execute` is called synchronously, so actions started one after
+ * another in the same loop really start at the same moment. Failures are
+ * logged and never reject: one broken action never stops its neighbours.
+ */
+function startAction(a: Action, ctx: ActionContext): Promise<void> {
+  const def = actionRegistry.get(a.type);
+  if (!def) return Promise.resolve();
+  try {
+    return Promise.resolve(def.execute(a.params ?? {}, ctx)).then(
+      () => undefined,
+      (err) => console.warn('[OneFile] action failed', a.type, err),
+    );
+  } catch (err) {
+    console.warn('[OneFile] action failed', a.type, err);
+    return Promise.resolve();
+  }
+}
+
+/**
+ * Runs one interaction: checks every condition, then runs the actions step by
+ * step (v5, see src/model/actionSteps.ts):
+ *
+ * - Steps run in order: a step starts once every action of the previous step
+ *   has finished ("Then").
+ * - The actions of a "Together" step are all started at once, in list order,
+ *   without waiting for each other; the step finishes when all have settled.
+ * - "Finished" means: Show/Hide with an effect → when the effect ends; Wait →
+ *   when the time is up; Play animation → at once, unless its (older) "wait"
+ *   setting is on; everything else → immediately.
+ * - A failing action is logged and skipped; the rest of its step and the
+ *   following steps still run (the same policy as before v5).
+ * - If the player is destroyed while a step is running, later steps are skipped.
+ *
+ * Projects without `together` flags have one action per step: exactly the
+ * pre-v5 "one after another" behaviour.
+ */
 export async function runInteraction(ix: Interaction, ctx: ActionContext): Promise<boolean> {
   if (!ix.conditions.every((c) => evaluateCondition(c, ctx.player.vars))) return false;
-  for (const a of ix.actions) {
-    const def = actionRegistry.get(a.type);
-    if (!def) continue;
-    try {
-      await def.execute(a.params ?? {}, ctx);
-    } catch (err) {
-      console.warn('[OneFile] action failed', a.type, err);
-    }
+  for (const step of toSteps(ix.actions)) {
+    if (ctx.player.alive && !ctx.player.alive()) break;
+    if (step.length === 1) await startAction(step[0], ctx);
+    else await Promise.allSettled(step.map((a) => startAction(a, ctx)));
   }
   return true;
 }

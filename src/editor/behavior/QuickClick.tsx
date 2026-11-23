@@ -5,7 +5,7 @@ import { updateElement } from '../ops';
 import { Icon } from '../ui/Icon';
 import { Select } from '../ui/controls';
 import { pageTargetOptions } from '../inspector/DesignPanel';
-import { actionSummary, LinkEditor } from './BehaviorPanel';
+import { actionsSummary, LinkEditor } from './BehaviorPanel';
 import { triggerSentence } from './catalog';
 import '../../styles/behavior.css';
 
@@ -111,7 +111,7 @@ export function QuickClick({ el, project }: { el: SceneElement; project: Project
           {el.interactions
             .slice(0, 2)
             .map(
-              (ix) => `When ${triggerSentence(ix, project.kind)}: ${ix.actions.map((a) => actionSummary(a, project, el.id)).join(', then ') || 'nothing yet'}`,
+              (ix) => `When ${triggerSentence(ix, project.kind)}: ${actionsSummary(ix.actions, project, el.id)}`,
             )
             .join(' · ')}
         </p>

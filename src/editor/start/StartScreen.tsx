@@ -314,6 +314,18 @@ function PageArt() {
 }
 
 function ExampleArt({ id }: { id: string }) {
+  if (id === 'together')
+    return (
+      <svg viewBox="0 0 160 90" className="st-ex-art" aria-hidden="true">
+        <rect width="160" height="90" rx="8" fill="#f3efff" />
+        <circle cx="42" cy="40" r="15" fill="#ff6f9c" />
+        <path d="M80 23l5 10.5 11.5 1.2-8.6 7.6 2.5 11.2L80 48l-10.4 5.5 2.5-11.2-8.6-7.6 11.5-1.2z" fill="#ffb53d" />
+        <path d="M118 55c-9-6-15-11-15-18 0-5 4-9 8.5-9 3 0 5 2 6.5 4 1.5-2 3.5-4 6.5-4 4.5 0 8.5 4 8.5 9 0 7-6 12-15 18z" fill="#2fc28b" />
+        <path d="M27 63h106" stroke="#cfc2fa" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M42 60v6M80 60v6M118 60v6" stroke="#cfc2fa" strokeWidth="2.5" strokeLinecap="round" />
+        <rect x="55" y="71" width="50" height="11" rx="5.5" fill="#6d4aff" />
+      </svg>
+    );
   if (id === 'explainer')
     return (
       <svg viewBox="0 0 160 90" className="st-ex-art" aria-hidden="true">

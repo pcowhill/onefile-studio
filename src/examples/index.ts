@@ -5,6 +5,7 @@ import { linear, solid } from '../model/paint';
 import { bulb, puff, rocket, sampleAssets, SAMPLE_IDS, svgAsset } from './art';
 import { eventAnnouncement, featureRelease, knowledgeCheck } from './v2';
 import { modelExplorer, technicalExplainer } from './v4';
+import { threeShapes } from './together';
 
 /**
  * Example projects. They are ordinary projects built with the same factories
@@ -631,5 +632,13 @@ export const EXAMPLES: ExampleDef[] = [
     kind: 'slides',
     color: '#ff4d8d',
     build: clicker,
+  },
+  {
+    id: 'together',
+    title: 'Three shapes, together',
+    description: 'One click pops three shapes at the same time, then a label appears once they finish.',
+    kind: 'slides',
+    color: '#7b5cf0',
+    build: threeShapes,
   },
 ];
