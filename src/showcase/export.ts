@@ -11,5 +11,12 @@ import { buildShowcase } from './index';
 export function exportShowcase(id: string, runtime: ExportRuntime): string {
   const project = buildShowcase(id);
   if (!project) throw new Error(`Unknown showcase: ${id}`);
-  return buildStandaloneHtml(pruneUnusedAssets(project), runtime);
+  // Fixed dates (v0.7): the committed site in dist-site/ must be byte-for-byte
+  // reproducible, so CI can check it is up to date.
+  project.meta.createdAt = SHOWCASE_DATE;
+  project.meta.updatedAt = SHOWCASE_DATE;
+  return buildStandaloneHtml(pruneUnusedAssets(project), runtime, { updatedAt: SHOWCASE_DATE });
 }
+
+/** The date stamped into every exported showcase (it only appears in the project data). */
+export const SHOWCASE_DATE = '2026-01-01T00:00:00.000Z';

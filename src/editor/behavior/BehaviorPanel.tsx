@@ -7,6 +7,7 @@ import { DragModePicker } from './DragModes';
 import { linkDisplay, linkProblem } from '../../model/links';
 import { SELF_TARGET } from '../../model/types';
 import { uid } from '../../model/ids';
+import { editSteps, stepOps, toSteps } from '../../model/actionSteps';
 import { useEditor, editor, findEl } from '../store/store';
 import { Icon } from '../ui/Icon';
 import { Field, NumberInput, Section, Segmented, Select, Slider, TextInput, Toggle } from '../ui/controls';
@@ -313,7 +314,7 @@ function InteractionCard({
 }) {
   const t = triggerUi(ix.trigger);
   const cat = TRIGGER_CATEGORIES[t?.category ?? 'mouse'];
-  const summary = ix.actions.length ? ix.actions.map((a) => actionSummary(a, project, owner.selfId)).join(', then ') : 'nothing yet';
+  const summary = actionsSummary(ix.actions, project, owner.selfId);
   const setOptions = (patch: Record<string, ParamValue | undefined>, merge?: string) =>
     onChange((d) => {
       const o = { ...(d.options ?? {}) };
@@ -401,27 +402,7 @@ function InteractionCard({
           <div className="ed-ix-do">
             <div className="ed-ix-do-label">Do</div>
             {ix.actions.length === 0 && <div className="ed-ix-noaction">Add the first action ↓</div>}
-            <ol className="ed-actions">
-              {ix.actions.map((a, i) => (
-                <ActionRow
-                  key={a.id}
-                  action={a}
-                  index={i}
-                  count={ix.actions.length}
-                  owner={owner}
-                  project={project}
-                  onParams={(patch, merge) => onChange((d) => Object.assign(d.actions[i].params, patch), merge ? `${a.id}:${merge}` : undefined)}
-                  onDelete={() => onChange((d) => void d.actions.splice(i, 1))}
-                  onMove={(dir) =>
-                    onChange((d) => {
-                      const j = i + dir;
-                      if (j < 0 || j >= d.actions.length) return;
-                      [d.actions[i], d.actions[j]] = [d.actions[j], d.actions[i]];
-                    })
-                  }
-                />
-              ))}
-            </ol>
+            <StepsEditor actions={ix.actions} owner={owner} project={project} onChange={onChange} />
             <ActionPicker
               project={project}
               many={count > 1}
@@ -432,6 +413,185 @@ function InteractionCard({
       )}
     </div>
   );
+}
+
+/**
+ * The DO list as steps (v0.7): a step is one action, or a "Together" group
+ * whose actions start at the same time. Steps run one after another ("Then").
+ * Edits go through src/model/actionSteps.ts, so they are ordinary undoable
+ * changes of the interaction's flat `actions` list.
+ */
+function StepsEditor({
+  actions,
+  owner,
+  project,
+  onChange,
+}: {
+  actions: Action[];
+  owner: IxOwner;
+  project: Project;
+  onChange(fn: (ix: Interaction) => void, merge?: string): void;
+}) {
+  const steps = toSteps(actions);
+  const edit = (fn: (steps: Action[][]) => Action[][]) => onChange((d) => editSteps(d.actions, fn));
+  const params = (a: Action) => (patch: Record<string, ParamValue>, merge?: string) =>
+    onChange(
+      (d) => {
+        const t = d.actions.find((x) => x.id === a.id);
+        if (t) Object.assign(t.params, patch);
+      },
+      merge ? `${a.id}:${merge}` : undefined,
+    );
+  if (!steps.length) return null;
+  return (
+    <ol className="ed-actions ed-steps">
+      {steps.map((step, si) => {
+        const then =
+          si > 0 ? (
+            <div className="ed-step-then" aria-hidden={false}>
+              <span className="ed-step-then-label">
+                <Icon name="down" size={12} stroke={3} /> {steps[si - 1].length > 1 ? 'After these finish' : 'Then'}
+              </span>
+              <button
+                className="ed-step-join"
+                onClick={() => edit((x) => stepOps.joinNext(x, si - 1))}
+                aria-label={`Run step ${si + 1} together with step ${si}`}
+                title="Start this at the same time as the step above"
+                data-testid="join-step"
+              >
+                <Icon name="link" size={12} /> Together
+              </button>
+            </div>
+          ) : null;
+        if (step.length === 1) {
+          const a = step[0];
+          return (
+            <li key={a.id} className="ed-step" data-testid="step">
+              {then}
+              <ActionRow
+                action={a}
+                badge={si + 1}
+                owner={owner}
+                project={project}
+                count={steps.length}
+                canUp={si > 0}
+                canDown={si < steps.length - 1}
+                onParams={params(a)}
+                onDelete={() => edit((x) => stepOps.remove(x, a.id))}
+                onMove={(dir) => edit((x) => stepOps.moveStep(x, si, dir))}
+              />
+            </li>
+          );
+        }
+        const hint = groupHint(step, project, owner.selfId);
+        return (
+          <li key={step[0].id} className="ed-step" data-testid="step">
+            {then}
+            <div className="ed-group" role="group" aria-label={`Step ${si + 1}: ${step.length} actions together`} data-testid="action-group">
+              <div className="ed-group-head">
+                <span className="ed-group-num">{si + 1}</span>
+                <span className="ed-group-title" title="These actions start at the same time">
+                  <Icon name="layers" size={14} /> Together
+                </span>
+
+                <span className="ed-spacer" />
+                {steps.length > 1 && (
+                  <>
+                    <button
+                      className="ed-icon-btn is-xs"
+                      aria-label="Move group up"
+                      disabled={si === 0}
+                      onClick={() => edit((x) => stepOps.moveStep(x, si, -1))}
+                    >
+                      <Icon name="up" size={13} />
+                    </button>
+                    <button
+                      className="ed-icon-btn is-xs"
+                      aria-label="Move group down"
+                      disabled={si === steps.length - 1}
+                      onClick={() => edit((x) => stepOps.moveStep(x, si, 1))}
+                    >
+                      <Icon name="down" size={13} />
+                    </button>
+                  </>
+                )}
+                <button
+                  className="ed-group-split"
+                  aria-label="Run these one after another"
+                  title="Run these one after another"
+                  onClick={() => edit((x) => stepOps.split(x, si))}
+                  data-testid="split-group"
+                >
+                  Split
+                </button>
+                <button className="ed-icon-btn is-xs is-danger" aria-label="Remove group" onClick={() => edit((x) => stepOps.removeStep(x, si))}>
+                  <Icon name="trash" size={13} />
+                </button>
+              </div>
+              <ol className="ed-group-list">
+                {step.map((a, ai) => (
+                  <li key={a.id}>
+                    <ActionRow
+                      action={a}
+                      badge={null}
+                      owner={owner}
+                      project={project}
+                      count={step.length}
+                      canUp={ai > 0}
+                      canDown={ai < step.length - 1}
+                      onParams={params(a)}
+                      onDelete={() => edit((x) => stepOps.remove(x, a.id))}
+                      onMove={(dir) => edit((x) => stepOps.moveInStep(x, a.id, dir))}
+                      onTakeOut={() => edit((x) => stepOps.takeOut(x, a.id))}
+                    />
+                  </li>
+                ))}
+              </ol>
+              {hint && (
+                <p className="ed-group-hint" role="note">
+                  <Icon name="info" size={13} /> {hint}
+                </p>
+              )}
+              <ActionPicker
+                project={project}
+                compact
+                onPick={(type) => edit((x) => stepOps.addTo(x, si, { id: uid('ac'), type, params: actionUi(type)!.defaults(project, owner.selfId) }))}
+              />
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/** A friendly note when actions in one Together group work against each other. */
+export function groupHint(step: Action[], project: Project, selfId: string): string | null {
+  const isSlides = project.kind === 'slides';
+  if (step.some((a) => a.type === 'navigate'))
+    return `“${isSlides ? 'Go to slide' : 'Scroll to section'}” happens right away. To let the other actions finish first, run it as its own step after this group.`;
+  const name = (id: unknown) =>
+    (id === SELF_TARGET || id === selfId) && selfId ? 'this element' : (typeof id === 'string' && findEl(project, id)?.el.name) || 'an element';
+  const seen = new Map<string, number>();
+  for (const a of step) {
+    if (a.type !== 'show' && a.type !== 'hide' && a.type !== 'toggle') continue;
+    const t = String(a.params.target ?? '') === SELF_TARGET ? selfId : String(a.params.target ?? '');
+    if (!t) continue;
+    seen.set(t, (seen.get(t) ?? 0) + 1);
+    if (seen.get(t)! > 1) return `Two actions here show or hide ${name(t)} at the same time — the lower one wins.`;
+  }
+  const vars = new Map<string, string[]>();
+  for (const a of step) {
+    if (!a.type.startsWith('var') || typeof a.params.variable !== 'string' || !a.params.variable) continue;
+    vars.set(a.params.variable, [...(vars.get(a.params.variable) ?? []), a.type]);
+  }
+  for (const [id, types] of vars) {
+    if (types.length > 1 && types.some((t) => t === 'varSet' || t === 'varReset')) {
+      const v = id === '@all' ? 'the variables' : (project.variables.find((x) => x.id === id)?.name ?? 'a variable');
+      return `Several actions here change ${v}. They apply top to bottom, so the lower one has the last word.`;
+    }
+  }
+  return null;
 }
 
 function ConditionsEditor({ ix, project, onChange }: { ix: Interaction; project: Project; onChange(fn: (ix: Interaction) => void, merge?: string): void }) {
@@ -477,7 +637,7 @@ function ConditionsEditor({ ix, project, onChange }: { ix: Interaction; project:
 
 // ---------------- actions ----------------
 
-function ActionPicker({ project, many, onPick }: { project: Project; many: boolean; onPick(type: string): void }) {
+function ActionPicker({ project, many, compact, onPick }: { project: Project; many?: boolean; compact?: boolean; onPick(type: string): void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -490,9 +650,20 @@ function ActionPicker({ project, many, onPick }: { project: Project; many: boole
   const isSlides = project.kind === 'slides';
   return (
     <div className="ed-action-picker" ref={ref}>
-      <button className={`ed-btn ed-btn-soft ed-btn-block ${open ? 'is-on' : ''}`} onClick={() => setOpen(!open)} data-testid="add-action">
-        <Icon name="plus" size={16} /> Add action
-      </button>
+      {compact ? (
+        <button className={`ed-group-add ${open ? 'is-on' : ''}`} onClick={() => setOpen(!open)} aria-expanded={open} data-testid="add-to-group">
+          <Icon name="plus" size={14} /> Add to this group
+        </button>
+      ) : (
+        <button
+          className={`ed-btn ed-btn-soft ed-btn-block ${open ? 'is-on' : ''}`}
+          onClick={() => setOpen(!open)}
+          aria-expanded={open}
+          data-testid="add-action"
+        >
+          <Icon name="plus" size={16} /> Add action
+        </button>
+      )}
       {open && (
         <div className="ed-action-menu">
           {cats.map((c) => {
@@ -531,7 +702,11 @@ function ActionPicker({ project, many, onPick }: { project: Project; many: boole
               </div>
             );
           })}
-          <p className="ed-action-foot">Actions run in order, top to bottom{many ? '. Interactions with the same trigger also run in order.' : '.'}</p>
+          <p className="ed-action-foot">
+            {compact
+              ? 'Everything in this group starts at the same time.'
+              : `Actions run in order, top to bottom. To start two at the same time, press “Together” between them.${many ? ' Interactions with the same trigger also run in order.' : ''}`}
+          </p>
         </div>
       )}
     </div>
@@ -540,22 +715,31 @@ function ActionPicker({ project, many, onPick }: { project: Project; many: boole
 
 function ActionRow({
   action,
-  index,
+  badge,
   count,
+  canUp,
+  canDown,
   owner,
   project,
   onParams,
   onDelete,
   onMove,
+  onTakeOut,
 }: {
   action: Action;
-  index: number;
+  /** Step number, or null inside a Together group. */
+  badge: number | null;
+  /** Number of siblings it can be moved among (no arrows when alone). */
   count: number;
+  canUp: boolean;
+  canDown: boolean;
   owner: IxOwner;
   project: Project;
   onParams(patch: Record<string, ParamValue>, merge?: string): void;
   onDelete(): void;
   onMove(d: number): void;
+  /** Inside a group: move this action out into its own step after the group. */
+  onTakeOut?(): void;
 }) {
   const ui = actionUi(action.type);
   const cat = ACTION_CATEGORIES[ui?.category ?? 'visibility'];
@@ -683,6 +867,15 @@ function ActionRow({
           <Select value={String(p.preset ?? 'pop')} onChange={(v) => onParams({ preset: v })} options={EMPHASIS_PRESETS} ariaLabel="Animation" />
           <span className="ed-w">on</span>
           {target()}
+          <Select
+            value={p.wait ? 'wait' : 'go'}
+            onChange={(v) => onParams({ wait: v === 'wait' })}
+            ariaLabel="Before the next step"
+            options={[
+              { value: 'go', label: 'and carry on at once' },
+              { value: 'wait', label: 'and wait until it ends' },
+            ]}
+          />
         </>
       );
       break;
@@ -737,29 +930,40 @@ function ActionRow({
       body = <span className="ed-w">{action.type}</span>;
   }
   return (
-    <li
-      className={`ed-action ${action.type === 'openLink' ? 'is-wide' : ''}`}
+    <div
+      className={`ed-action ${action.type === 'openLink' ? 'is-wide' : ''} ${badge === null ? 'is-member' : ''}`}
       style={{ ['--c' as string]: cat.color, ['--s' as string]: cat.soft }}
       data-testid="action-row"
     >
-      <span className="ed-action-num">{index + 1}</span>
+      {badge !== null ? <span className="ed-action-num">{badge}</span> : <span className="ed-action-dot" aria-hidden="true" />}
       <div className="ed-action-body">{body}</div>
       <div className="ed-action-tools">
         {count > 1 && (
           <>
-            <button className="ed-icon-btn is-xs" aria-label="Move action up" disabled={index === 0} onClick={() => onMove(-1)}>
+            <button className="ed-icon-btn is-xs" aria-label="Move action up" disabled={!canUp} onClick={() => onMove(-1)}>
               <Icon name="up" size={13} />
             </button>
-            <button className="ed-icon-btn is-xs" aria-label="Move action down" disabled={index === count - 1} onClick={() => onMove(1)}>
+            <button className="ed-icon-btn is-xs" aria-label="Move action down" disabled={!canDown} onClick={() => onMove(1)}>
               <Icon name="down" size={13} />
             </button>
           </>
+        )}
+        {onTakeOut && (
+          <button
+            className="ed-icon-btn is-xs"
+            aria-label="Take out of the group"
+            title="Run it after the group instead"
+            onClick={onTakeOut}
+            data-testid="take-out"
+          >
+            <Icon name="external" size={13} />
+          </button>
         )}
         <button className="ed-icon-btn is-xs is-danger" aria-label="Remove action" onClick={onDelete}>
           <Icon name="close" size={13} />
         </button>
       </div>
-    </li>
+    </div>
   );
 }
 
@@ -897,15 +1101,35 @@ function ElementPicker({
   );
 }
 
+const SHARED_VERBS = ['fade in', 'fade out', 'show/hide', 'pop', 'show', 'hide', 'play / pause', 'play', 'pause', 'restart'];
+
+/**
+ * "show A, then pop B, C and D together, then wait 0.5s" — the one-line
+ * summary of a DO list, Together groups included.
+ */
+export function actionsSummary(actions: Action[], project: Project, selfId: string): string {
+  if (!actions.length) return 'nothing yet';
+  return toSteps(actions)
+    .map((step) => {
+      if (step.length === 1) return actionSummary(step[0], project, selfId);
+      const parts = step.map((a) => actionSummary(a, project, selfId));
+      const list = (xs: string[]) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
+      // The same verb for everything? "pop Shape A, Shape B and Shape C together".
+      const verb = SHARED_VERBS.find((v) => parts.every((p) => p.startsWith(`${v} `)));
+      return verb ? `${verb} ${list(parts.map((p) => p.slice(verb.length + 1)))} together` : `${list(parts)} together`;
+    })
+    .join(', then ');
+}
+
 export function actionSummary(a: Action, project: Project, selfId: string): string {
   const p = a.params;
   const name = (id: unknown) => ((id === SELF_TARGET || id === selfId) && selfId ? 'this' : (typeof id === 'string' && findEl(project, id)?.el.name) || '…');
   const v = (id: unknown) => (id === '@all' ? 'all variables' : (project.variables.find((x) => x.id === id)?.name ?? '…'));
   switch (a.type) {
     case 'show':
-      return `show ${name(p.target)}`;
+      return p.effect === 'pop' ? `pop ${name(p.target)}` : p.effect === 'fade' ? `fade in ${name(p.target)}` : `show ${name(p.target)}`;
     case 'hide':
-      return `hide ${name(p.target)}`;
+      return p.effect === 'fade' ? `fade out ${name(p.target)}` : `hide ${name(p.target)}`;
     case 'toggle':
       return `show/hide ${name(p.target)}`;
     case 'navigate':

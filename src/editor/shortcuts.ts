@@ -87,6 +87,10 @@ export function useShortcuts() {
         if (s.editingTextId) s.set({ editingTextId: null });
         else s.select([]);
       } else if (e.key === 'Enter') {
+        // Enter on a focused control (an inspector button, a link…) activates
+        // that control; it only starts text editing from the canvas.
+        const t = e.target as HTMLElement | null;
+        if (t?.closest?.('button, a[href], [role=button], [role=option], [role=menuitem]') && !t.closest('.ed-canvas')) return;
         const els = selectedElements(s);
         if (els.length === 1 && EDITOR_ELEMENTS[els[0].type]?.inlineText && !els[0].locked) {
           e.preventDefault();

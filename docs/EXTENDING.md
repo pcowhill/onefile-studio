@@ -6,7 +6,10 @@ Every extensible concept is a pair: a **runtime definition** (behaviour, bundled
 
 1. **Runtime** — create `src/runtime/elements/myThing.ts`:
    ```ts
-   export interface MyThingProps { color: string; count: number }
+   export interface MyThingProps {
+     color: string;
+     count: number;
+   }
    export const myThingDef: RuntimeElementDef<MyThingProps> = {
      id: 'myThing',
      defaults: () => ({ color: '#6d4aff', count: 3 }),
@@ -28,7 +31,14 @@ Every extensible concept is a pair: a **runtime definition** (behaviour, bundled
 
 1. Register a `TriggerDef` in `src/runtime/triggers.ts`:
    ```ts
-   triggerRegistry.register({ id: 'longpress', bind(node, fire, ctx) { /* add listeners */ return () => { /* remove */ }; } });
+   triggerRegistry.register({
+     id: 'longpress',
+     bind(node, fire, ctx) {
+       /* add listeners */ return () => {
+         /* remove */
+       };
+     },
+   });
    ```
    Triggers bound to elements receive the element wrapper node (pages: the slide/section node; project: the player root). For component events, have the element call `emit(node, 'ofs-my-event', detail)` and register a trigger that listens for it with `forTypes: ['myThing']`.
    - `owners` (default `['element']`) says who may own it: add `'page'` / `'project'` for slide-level or project-wide triggers. The validator and the editor read it.
@@ -38,9 +48,9 @@ Every extensible concept is a pair: a **runtime definition** (behaviour, bundled
 
 ## Add an action
 
-1. Register an `ActionDef` in `src/runtime/actions.ts`. `execute(params, ctx)` gets the `PlayerControl` (vars, visibility, navigation, element APIs, animation) and may return a Promise to delay the next action.
+1. Register an `ActionDef` in `src/runtime/actions.ts`. `execute(params, ctx)` gets the `PlayerControl` (vars, visibility, navigation, element APIs, animation) and may return a Promise to delay the next step. Start the work synchronously and return a Promise only for the part that should hold the step up (v0.7: actions in a Together group are started one after another in the same task and the group waits for all their Promises), and never rely on the order in which a group's Promises settle.
 2. Add an `ActionUi` to `ACTIONS` in `src/editor/behavior/catalog.tsx` (category, icon, default params, optional `unavailable()` reason) and a sentence editor case in `ActionRow` (`BehaviorPanel.tsx`), plus a summary in `actionSummary`.
-3. If params reference elements or variables, name them `target` / `variable` so validation clears dangling references. Params that need stricter checks (like `openLink`'s `url`, see `src/model/links.ts`) are validated in `validate.ts → interactions()` *and* again in the action itself.
+3. If params reference elements or variables, name them `target` / `variable` so validation clears dangling references. Params that need stricter checks (like `openLink`'s `url`, see `src/model/links.ts`) are validated in `validate.ts → interactions()` _and_ again in the action itself.
 
 ## Add an animation preset
 
@@ -78,4 +88,4 @@ Capture lives in `src/io/capture.ts` (framework-free, injectable `CaptureDeps`).
 
 ## Add a lesson
 
-Add a `Lesson` to `LESSONS` in `src/editor/learn/lessons.ts`: `level`, `title`, a one-line `summary`, `minutes`, a `setup()` that builds a practice project (title starting with *Practice —*) and four to seven `steps`. Keep each instruction to one or two sentences that name the control the way the UI labels it, point at it with `control` (a stable `data-testid`) or `element`, and give a semantic `done` check where one exists (`added(type)`, `hasAction(...)`, `stepEvent('preview')`…). End with a `finale`. Add a small illustration in `LessonArt` (`src/editor/start/LearnHub.tsx`) and check the step logic in `tests/unit/lessons.test.ts`.
+Add a `Lesson` to `LESSONS` in `src/editor/learn/lessons.ts`: `level`, `title`, a one-line `summary`, `minutes`, a `setup()` that builds a practice project (title starting with _Practice —_) and four to seven `steps`. Keep each instruction to one or two sentences that name the control the way the UI labels it, point at it with `control` (a stable `data-testid`) or `element`, and give a semantic `done` check where one exists (`added(type)`, `hasAction(...)`, `stepEvent('preview')`…). End with a `finale`. Add a small illustration in `LessonArt` (`src/editor/start/LearnHub.tsx`) and check the step logic in `tests/unit/lessons.test.ts`.

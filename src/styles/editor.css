@@ -23,16 +23,37 @@
 * {
   box-sizing: border-box;
 }
-html,
-body,
-#root {
+/*
+ * Page and mounting root (v0.7). The editor fills whatever box its mounting
+ * root (#root) is given; on its own page that box is the whole viewport.
+ * These rules use :where() (zero specificity), so a host page that embeds the
+ * editor between its own header and footer can size #root with any ordinary
+ * rule — see docs/EMBEDDING.md. Nothing here uses viewport units.
+ */
+:where(html, body) {
   height: 100%;
   margin: 0;
 }
-body {
+:where(body) {
+  background: var(--bg);
+}
+:where(#root) {
+  height: 100%;
+}
+/* Typography belongs to the editor's own surfaces (including the dialogs, menus
+   and previews rendered into <body>), not to a host page's content. */
+:where(body),
+.ed-app,
+.st,
+.ed-modal-backdrop,
+.ed-preview,
+.ed-menu,
+.ed-dg-menu,
+.ed-toasts,
+.co-card,
+.co-pill {
   font-family: var(--font);
   color: var(--ink);
-  background: var(--bg);
   -webkit-font-smoothing: antialiased;
   font-size: 14px;
 }
@@ -237,8 +258,11 @@ a.ed-btn {
 }
 
 /* ---------- app shell ---------- */
+/* Fills its mounting root (not the viewport), so it also fits between a host
+   page's header and footer. The minimum keeps it usable in an undersized box. */
 .ed-app {
-  height: 100vh;
+  height: 100%;
+  min-height: 360px;
   display: flex;
   flex-direction: column;
   overflow: hidden;

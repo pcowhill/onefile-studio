@@ -1,5 +1,5 @@
 /**
- * OneFile Studio project model (schema version 4).
+ * OneFile Studio project model (schema version 5).
  *
  * Everything an experience needs — pages, elements, interactions, variables and
  * embedded assets — lives in a single JSON-serialisable `Project` object. The
@@ -10,7 +10,7 @@
 import type { MediaEdit } from './mediaEdit';
 
 export const SCHEMA_ID = 'onefile-studio/project';
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 /** Built-in project themes (see src/model/theme). */
 export type ThemeId = 'playful' | 'professional' | 'technical' | 'editorial';
@@ -139,7 +139,10 @@ export interface SceneElement<P = Record<string, unknown>> {
   themed?: string[];
 }
 
-/** WHEN trigger → IF conditions (all must pass) → DO actions (in order). */
+/**
+ * WHEN trigger → IF conditions (all must pass) → DO actions (in order; v5:
+ * actions flagged `together` start at the same time as the one before them).
+ */
 export interface Interaction {
   id: string;
   trigger: string;
@@ -171,6 +174,12 @@ export interface Action {
   id: string;
   type: string;
   params: Record<string, ParamValue>;
+  /**
+   * v5: true = this action starts together with the action before it (they
+   * form one "Together" step; see src/model/actionSteps.ts). Absent = it starts
+   * after the previous step has finished — the only behaviour before v5.
+   */
+  together?: boolean;
 }
 
 export interface Variable {

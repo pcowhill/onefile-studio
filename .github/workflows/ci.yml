@@ -36,9 +36,21 @@ jobs:
         run: git diff --exit-code --stat dist/ || (echo "::error::dist/ is out of date. Run 'npm run build' and commit dist/." && exit 1)
       - name: Build the public site (landing page, studio/, exported showcases)
         run: node scripts/build-site.mjs
+      # The complete website is committed (v0.7) so it can be hosted from a
+      # download without building. It must be exactly what the source produces:
+      # no changed tracked files and no new untracked ones.
+      - name: Committed dist-site/ matches the source
+        run: |
+          git diff --exit-code --stat -- dist-site/ || (echo "::error::dist-site/ is out of date. Run 'npm run build:site' and commit dist-site/." && exit 1)
+          untracked="$(git ls-files --others --exclude-standard -- dist dist-site)"
+          if [ -n "$untracked" ]; then
+            echo "$untracked"
+            echo "::error::The build produced files that are not committed. Run 'npm run build:site' and commit dist-site/."
+            exit 1
+          fi
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
-      - name: End-to-end tests (editor, exported files via file://, landing page and showcases)
+      - name: End-to-end tests (editor, exported files via file://, landing page, showcases, hosted dist-site/)
         run: npm run test:e2e
       - name: Upload exported test files and report
         if: always()

@@ -99,6 +99,7 @@ export function createPlayer(container: HTMLElement, project: Project, opts: Pla
 
   const control: PlayerControl = {
     vars,
+    alive: () => !destroyed,
     isVisible: (id) => visibility.get(id) ?? false,
     async setVisible(id, visible, effect) {
       visibility.set(id, visible);

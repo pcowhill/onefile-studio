@@ -4,7 +4,7 @@ import { fontCssForProject } from './fonts';
 import { isSafeColor } from '../model/paint';
 
 export const GENERATOR = 'OneFile Studio';
-export const APP_VERSION = '0.6.0';
+export const APP_VERSION = '0.7.0';
 
 /**
  * Restrictive Content-Security-Policy for exported files: scripts and styles
@@ -45,10 +45,10 @@ export function pruneUnusedAssets(project: Project): Project {
  * `runtime` is the minified IIFE produced from src/runtime/standalone.ts (and,
  * for projects with 3D models, the 3D add-on, which must run first).
  */
-export function buildStandaloneHtml(project: Project, runtime: string | ExportRuntime): string {
+export function buildStandaloneHtml(project: Project, runtime: string | ExportRuntime, opts: { updatedAt?: string } = {}): string {
   const code = typeof runtime === 'string' ? { core: runtime } : runtime;
   const addon = code.model3d && usesModels(project) ? `<script>${code.model3d}</script>\n` : '';
-  const data: Project = { ...project, meta: { ...project.meta, updatedAt: new Date().toISOString() } };
+  const data: Project = { ...project, meta: { ...project.meta, updatedAt: opts.updatedAt ?? new Date().toISOString() } };
   const title = escapeHtml(project.meta.title || 'Untitled');
   const backdrop = isSafeColor(project.settings.backdrop) ? project.settings.backdrop : '#ffffff';
   const fontCss = fontCssForProject(project);

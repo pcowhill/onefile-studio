@@ -126,7 +126,7 @@ describe('schema v4', () => {
     const r = validateProject(v3);
     if (!r.ok) throw new Error(r.errors.join());
     expect(r.project.version).toBe(SCHEMA_VERSION);
-    expect(SCHEMA_VERSION).toBe(4);
+    expect(SCHEMA_VERSION).toBeGreaterThanOrEqual(4); // v5 (Together steps) builds on v4
     expect(r.project.pages[0].interactions).toBeUndefined();
     expect(r.project.interactions).toBeUndefined();
     expect(r.warnings).toEqual([]);

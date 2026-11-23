@@ -205,21 +205,21 @@ export function validateProject(raw: unknown): ValidationResult {
     if (!project.pages.length) throw new ProjectError('The project has no valid pages.');
 
     // Second pass: interactions (need complete id sets).
-    const allElIds = elIds;
+    const refs: Refs = { elIds, varIds, pageIds, steps: version >= 5 };
     const rawPages = migrated.pages as unknown[];
     project.pages.forEach((page, pi) => {
       const rp = rawPages[pi] as Record<string, unknown>;
       const rawEls = Array.isArray(rp?.elements) ? (rp.elements as unknown[]) : [];
       for (const el of page.elements) {
         const re = rawEls.find((x) => isObj(x) && x.id === el.id) as Record<string, unknown> | undefined;
-        el.interactions = interactions(re?.interactions, 'element', { elIds: allElIds, varIds, pageIds }, warnings);
+        el.interactions = interactions(re?.interactions, 'element', refs, warnings);
       }
       // v4: page-level interactions (keys, "slide opens", delays).
-      const pageIx = interactions(rp?.interactions, 'page', { elIds: allElIds, varIds, pageIds }, warnings);
+      const pageIx = interactions(rp?.interactions, 'page', refs, warnings);
       if (pageIx.length) page.interactions = pageIx;
     });
     // v4: project-wide interactions (keyboard shortcuts on every page).
-    const projectIx = interactions(migrated.interactions, 'project', { elIds: allElIds, varIds, pageIds }, warnings);
+    const projectIx = interactions(migrated.interactions, 'project', refs, warnings);
     if (projectIx.length) project.interactions = projectIx;
     return { ok: true, project, warnings };
   } catch (err) {
@@ -243,6 +243,11 @@ export function validateProject(raw: unknown): ValidationResult {
  * v3 → v4: adds page/project interactions, trigger options (keys, delays), the
  * "Open link" action, floaty/weighted drag modes with feel settings, GLB model
  * assets and the 3D model element. All additive: v3 files need no changes.
+ *
+ * v4 → v5: adds Together steps (`action.together`). Older files have no flags,
+ * so every action stays its own step and runs one after another, as before.
+ * A stray `together` key in a pre-v5 file is ignored (see `interactions()`),
+ * so an older project can never silently start running actions in parallel.
  */
 export function migrate(raw: Record<string, unknown>, version: number): Record<string, unknown> {
   let out = raw;
@@ -252,6 +257,7 @@ export function migrate(raw: Record<string, unknown>, version: number): Record<s
   }
   if (Number(out.version) < 3) out = { ...out, version: 3 };
   if (Number(out.version) < 4) out = { ...out, version: 4 };
+  if (Number(out.version) < 5) out = { ...out, version: 5 };
   return out;
 }
 
@@ -398,6 +404,8 @@ interface Refs {
   elIds: Set<string>;
   varIds: Set<string>;
   pageIds: Set<string>;
+  /** v5+: honour `together` flags (Together steps). */
+  steps: boolean;
 }
 
 function interactions(v: unknown, owner: InteractionOwner, refs: Refs, warnings: string[]): Interaction[] {
@@ -446,7 +454,11 @@ function interactions(v: unknown, owner: InteractionOwner, refs: Refs, warnings:
             params.url = '';
           }
         }
-        actions.push({ id: safeId(ra.id, 'ac'), type: ra.type, params });
+        const action: Action = { id: safeId(ra.id, 'ac'), type: ra.type, params };
+        // v5: "starts together with the previous action". Only a real boolean
+        // true counts, and never on the first kept action (nothing to join).
+        if (refs.steps && ra.together === true && actions.length > 0) action.together = true;
+        actions.push(action);
       }
     }
     const ix: Interaction = { id: safeId(ri.id, 'ix'), trigger, conditions, actions };
