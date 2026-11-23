@@ -4,6 +4,12 @@ import { defineConfig, devices } from '@playwright/test';
 const PORT = Number(process.env.PW_PORT ?? 4173);
 /** The public site (dist-site/: landing page, studio/, showcase/) — needs `npm run build:site`. */
 const SITE_PORT = Number(process.env.PW_SITE_PORT ?? PORT + 1);
+/**
+ * v0.7: the COMMITTED dist-site/, copied to a temporary folder and served by a
+ * plain static server from a sub-directory (/onefile-studio/) — no Vite, no
+ * source tree. This is how someone hosting the downloaded site would run it.
+ */
+const HOST_PORT = Number(process.env.PW_HOST_PORT ?? PORT + 2);
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -19,11 +25,16 @@ export default defineConfig({
     trace: 'off',
   },
   projects: [
-    { name: 'chromium', testIgnore: 'site/**', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
+    { name: 'chromium', testIgnore: ['site/**', 'hosting/**'], use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
     {
       name: 'site',
       testMatch: 'site/**/*.spec.ts',
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, baseURL: `http://localhost:${SITE_PORT}/` },
+    },
+    {
+      name: 'hosting',
+      testMatch: 'hosting/**/*.spec.ts',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, baseURL: `http://localhost:${HOST_PORT}/onefile-studio/` },
     },
   ],
   webServer: [
@@ -36,6 +47,12 @@ export default defineConfig({
     {
       command: `npx vite preview --config vite.site.config.ts --port ${SITE_PORT} --strictPort`,
       url: `http://localhost:${SITE_PORT}/`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    },
+    {
+      command: `node scripts/serve-static.mjs dist-site --copy --base /onefile-studio/ --host localhost --port ${HOST_PORT}`,
+      url: `http://localhost:${HOST_PORT}/onefile-studio/`,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
     },

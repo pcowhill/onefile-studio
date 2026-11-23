@@ -26,7 +26,11 @@ jobs:
       - run: npm ci
       # Relative base paths: the site works at /<repo>/ on Pages.
       # dist-site/ = landing page + studio/ (the single-file editor) + showcase/ (exported OneFiles) + media/.
+      # It is committed too (v0.7); rebuilding here and checking it matches
+      # guarantees Pages serves exactly the files in the repository.
       - run: npm run build:site
+      - name: Deployed site equals the committed dist-site/
+        run: git diff --exit-code --stat -- dist-site/ && test -z "$(git ls-files --others --exclude-standard -- dist-site)"
       - uses: actions/configure-pages@v5
         with:
           enablement: true
