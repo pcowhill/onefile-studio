@@ -35,13 +35,13 @@ OneFile Studio is a static, client-only React + TypeScript app. Its defining fea
 
 ## One engine everywhere
 
-| Surface | How it renders |
-| --- | --- |
-| Editor canvas | `renderContent()` from the runtime for each element (mode `edit`: no behaviour), wrapped in React-managed positioning + selection overlay |
-| Thumbnails | `renderPageStatic()` (mode `thumb`) |
-| Preview | `createPlayer()` imported directly (mode `play`) |
-| Exported file | the same `src/runtime/standalone.ts` bundled by esbuild into a string (`virtual:ofs-runtime`, see `build/plugins.ts`) and inlined |
-| 3D models | `src/runtime/model3d/addon.ts` bundled into a second string (`virtual:ofs-runtime-3d`): exports include it only when a model is shown; the editor injects the same string on first use (see *3D models* below) |
+| Surface       | How it renders                                                                                                                                                                                                 |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Editor canvas | `renderContent()` from the runtime for each element (mode `edit`: no behaviour), wrapped in React-managed positioning + selection overlay                                                                      |
+| Thumbnails    | `renderPageStatic()` (mode `thumb`)                                                                                                                                                                            |
+| Preview       | `createPlayer()` imported directly (mode `play`)                                                                                                                                                               |
+| Exported file | the same `src/runtime/standalone.ts` bundled by esbuild into a string (`virtual:ofs-runtime`, see `build/plugins.ts`) and inlined                                                                              |
+| 3D models     | `src/runtime/model3d/addon.ts` bundled into a second string (`virtual:ofs-runtime-3d`): exports include it only when a model is shown; the editor injects the same string on first use (see _3D models_ below) |
 
 Because Preview and exports execute identical source, behaviour cannot drift between them. The e2e suite verifies this by testing both.
 
@@ -83,7 +83,7 @@ Interactive components announce events by dispatching bubbling DOM events from t
 
 Interactions belong to an **owner**: an element, a page (`page.interactions`) or the project (`project.interactions`). Each trigger definition lists the owners it allows (`owners`), so the editor's trigger picker, the validator and the player agree. The player binds every owner through one function (`bindInteractions`) and gives triggers a `TriggerContext`: their options, `onKey()` and the owner page's `onEnter()`/`onLeave()`.
 
-- **Page activity** — each page view is *active* while it is the current slide (or, on webpages, the current section by scroll position). `pageStart` runs on activation, `pageTimer` starts a timer there and cancels it on deactivation; outgoing slides are deactivated before transitions start, so nothing fires twice.
+- **Page activity** — each page view is _active_ while it is the current slide (or, on webpages, the current section by scroll position). `pageStart` runs on activation, `pageTimer` starts a timer there and cancels it on deactivation; outgoing slides are deactivated before transitions start, so nothing fires twice.
 - **Keyboard** — one `keydown` listener per player. Bindings from active owners whose key matches run, and the event is then consumed (`preventDefault`), which is how a slide's own → rule takes precedence over built-in navigation. Typing targets (fields, sliders, listboxes…), Ctrl/⌘ combinations, IME composition and auto-repeat (unless asked for) are ignored; Enter/Space on a keyboard-focused button keep activating it. Interactions with the same trigger and options on one owner run in list order. Everything is removed on `destroy()`.
 - **Links** — `openLink` re-validates the URL at the moment it runs (`model/links.ts`: http, https, mailto, tel only) and calls `PlayerControl.openLink`. Exports open new tabs with `noopener,noreferrer` (or navigate the same tab); Preview passes its own `openLink` that always uses a new tab so the editor is never navigated away. The export CSP does not restrict navigation, and the file never depends on the link target to render.
 
@@ -112,9 +112,13 @@ The **coach** (`src/editor/learn/`) is editor-only UI; nothing in it is imported
 
 - `coach.ts` — a small zustand store with the active run (`guide` for a template checklist, `lesson` for a lesson): steps, current index, the project when the run and the current step started, editor events (`preview` from the store, `theme`, `export` from the Export dialog, `import` from `importFile`) and steps confirmed by the user. `watchEditor()` turns store changes into events; guides close when their project is closed or replaced.
 - Steps are **declarative** (`CoachStep` in `src/templates/index.ts`): `title`, a short `body`, an optional `element` ("Show me" selects it and switches to its slide), an optional `control` (a CSS selector of a stable `data-testid` to spotlight) and an optional `done(ctx)` check. Checks are **semantic**: they compare the live project with the project when the run/step started (element counts by type, changed props, interactions with a given action, conditions, variables) or look for events. A failing or throwing check only means "not done yet"; every step can be skipped ("Skip step", "Mark as done"), so nobody is trapped.
-- `lessons.ts` — eight lessons (`setup()` builds a separate *Practice — …* project; `steps`). `session.ts` opens templates/lessons, restarts a lesson in a fresh practice project and returns to the Learn hub. User drafts are never opened, changed or overwritten by a lesson.
+- `lessons.ts` — eight lessons (`setup()` builds a separate _Practice — …_ project; `steps`). `session.ts` opens templates/lessons, restarts a lesson in a fresh practice project and returns to the Learn hub. User drafts are never opened, changed or overwritten by a lesson.
 - `progress.ts` — completed lesson ids in `localStorage` (`ofs:lessons-done`), falling back to memory when storage is unavailable.
 - `Coach.tsx` — in the editor the card is **docked** along the bottom of the canvas area: `.ed-center.is-coach-open` shortens the canvas by the dock height, so the slide is re-fitted instead of covered (16:9 slides usually keep their size); on the start screen it floats. The spotlight is a fixed-position outline that follows its target's bounding box.
+
+## Interaction steps (v0.7)
+
+An interaction's `actions` stay one flat list; `action.together` marks an action that starts with the previous one. `src/model/actionSteps.ts` turns the list into steps (`toSteps`) and back (`fromSteps`), and holds the step edits the inspector uses (`stepOps`: join, split, take out, move, add, remove — applied through `editSteps`, so every edit is one ordinary undoable change of the list and flags can't dangle). `runInteraction()` (`src/runtime/actions.ts`) awaits each step; a multi-action step starts every action synchronously and awaits `Promise.allSettled`. Timing and error rules are in [SCHEMA.md](SCHEMA.md#steps-and-together-groups-v5). In the Behavior inspector (`StepsEditor` in `BehaviorPanel.tsx`) single steps look exactly as before; a “Together” button between two steps joins them into a bracketed group with its own _Add to this group_, _Split_ and _Remove group_, and `groupHint()` explains conflicting members.
 
 ## Public site and routing (v0.6)
 
@@ -122,7 +126,7 @@ The public website is built **separately** from the editor so each stays simple:
 
 ```
 dist/index.html            the editor — one self-contained file (committed; the offline distribution)
-dist-site/                 the public site (built by `npm run build:site`, deployed to GitHub Pages)
+dist-site/                 the complete public site (built by `npm run build:site`; committed since v0.7, deployed to GitHub Pages)
   index.html, assets/      the landing page (site/ → vite.site.config.ts): static HTML + ~8 KB of JS
   media/                   videos, posters, captions, template pictures (site/public/media, committed)
   studio/index.html        a copy of dist/index.html — the editor, unchanged
@@ -134,7 +138,7 @@ dist-site/                 the public site (built by `npm run build:site`, deplo
 - **The landing page is custom-built** (HTML/CSS + a small TypeScript module in `site/src/`), not a OneFile. It never loads the editor, the runtime or three.js: videos are `preload="none"`/`metadata` with posters and play on demand, and “Try it” embeds the exported file in an iframe only when opened. Showcase cards are generated at build time from the registry (`site/src/cards.ts` via a `transformIndexHtml` hook), so the page works without JavaScript and can't list a showcase that doesn't exist.
 - **Showcases** (`src/showcase/`): `meta.ts` is plain data (id, title, copy, chips, accent, file name) that the landing page imports; each entry points at an ordinary example project (`src/examples`). `buildShowcase(id)` calls the example's own factory. `scripts/export-showcases.mjs` loads `exportShowcase()` through Vite's SSR loader — the same `pruneUnusedAssets` + `buildStandaloneHtml` and the same `virtual:ofs-runtime`/3D add-on bundles as the Export dialog — and writes `showcase/<id>.html`. So “Try it” plays exactly what a user would get by exporting the project.
 - **Editor entry links** (`src/editor/deepLink.ts`, read once in `App.tsx`): `?open=<showcase>` opens an independent copy (fresh project id, like opening an example) and then removes the parameter with `history.replaceState`, so a refresh keeps editing that copy instead of making another; `?panel=templates|learn` opens the start screen with the gallery or the Learn hub; `?home` is unchanged. Without parameters the editor re-opens the last draft, as before. On the site the start screen shows a “Showcase” link back to the landing page (only when served from a `/studio/` folder over http(s), never in the offline file).
-- **Drafts are untouched**: the landing page and `studio/` share an origin, so the editor's IndexedDB drafts and `localStorage` keys (`ofs:*`) are the same ones as before. The landing page only *reads* `ofs:` keys to greet returning users (“Open the studio”); old bookmarks of the editor at the site root (`/?home`) are redirected to `studio/?home`.
+- **Drafts are untouched**: the landing page and `studio/` share an origin, so the editor's IndexedDB drafts and `localStorage` keys (`ofs:*`) are the same ones as before. The landing page only _reads_ `ofs:` keys to greet returning users (“Open the studio”); old bookmarks of the editor at the site root (`/?home`) are redirected to `studio/?home`.
 - **Videos** are produced by the scripts in `video/` from the real app (see [VIDEO.md](VIDEO.md)).
 
 ## Export pipeline
@@ -157,4 +161,9 @@ The file never references remote URLs; the CSP makes network access impossible e
 
 - `vite build` produces `dist/index.html` with all JS/CSS/fonts inlined (`singleFilePlugin`), using a relative base so it works from GitHub Pages sub-paths and from disk. This file is the offline editor: copy it anywhere (including an isolated network) and open it — it depends on nothing else.
 - The output is deterministic; CI fails if the committed `dist/` differs from a fresh build.
-- `npm run build:site` (= `npm run build` + `scripts/build-site.mjs`) builds the public site into `dist-site/` (not committed): the landing page, `studio/` (a byte-for-byte copy of `dist/index.html`) and the exported showcases. GitHub Pages deploys `dist-site/`.
+- `npm run build:site` (= `npm run build` + `scripts/build-site.mjs`) builds the complete public site into `dist-site/`: the landing page, `studio/` (a byte-for-byte copy of `dist/index.html`), the media and the exported showcases. **Since v0.7 `dist-site/` is committed**, so the repository holds a ready-to-host website (see the README's _Host the website_). It is reproducible: showcase exports carry fixed dates (`SHOWCASE_DATE` in `src/showcase/export.ts`), asset names are content hashes, and the media are copied unchanged from `site/public/` (git stores identical files once, so the copies cost no repository space; likewise `studio/index.html` = `dist/index.html`). CI rebuilds the site and fails if any tracked file differs or the build produced an untracked file; the Pages workflow checks the same before deploying. Videos are _not_ regenerated in CI — the committed final MP4s are used.
+- `tests/e2e/hosting/` serves a temporary **copy** of the committed `dist-site/` with `scripts/serve-static.mjs` from a sub-directory (`/onefile-studio/`) and blocks every other request: all local links and assets resolve, and the landing page, editor (templates, lessons, a Together interaction) and every showcase work with no network. The `site` project serves the same folder at the domain root.
+
+## Editor layout and embedding (v0.7)
+
+The editor sizes itself to its **mounting root** (`#root`), not to the viewport: `.ed-app` and the start screen (`.st`) are `height: 100%` of `#root`, and the page-level defaults (`html, body, #root { height: 100% }`, body margin and background) are written with `:where()` so they have zero specificity and any host rule wins. On its own page that box is the window; embedded between a host header and footer, the host gives `#root` the remaining space (e.g. a flex column with `#root { flex: 1 1 auto; min-height: 0 }`) — see [EMBEDDING.md](EMBEDDING.md). Inside, the toolbar is fixed-height, `.ed-main` is a `min-height: 0` flex row, panels scroll internally, and the canvas re-fits its zoom from a `ResizeObserver` on its own scroll container, so any change of the root's size (window resize, a host header growing) re-lays out the editor without a reload. Typography is set on the editor's own surfaces (`.ed-app`, `.st`, dialogs, menus, previews, toasts, the coach) rather than relying on `body`. Deliberately full-window overlays — Preview, template preview, modal dialogs, menus, toasts and the drop zone — stay `position: fixed`. The exported player's own layout (`#ofs-root { position: fixed; inset: 0 }` in exported files) is unchanged.

@@ -1,11 +1,11 @@
-# Project schema (v4)
+# Project schema (v5)
 
 Projects are plain JSON. TypeScript definitions: `src/model/types.ts`. Validation: `src/model/validate.ts`.
 
 ```jsonc
 {
   "schema": "onefile-studio/project",  // required, identifies the format
-  "version": 4,                         // schema version; newer versions are rejected, older ones migrated
+  "version": 5,                         // schema version; newer versions are rejected, older ones migrated
   "id": "prj_…",
   "kind": "slides" | "page",
   "meta": { "title": "…", "createdAt": "ISO", "updatedAt": "ISO" },
@@ -25,7 +25,7 @@ Projects are plain JSON. TypeScript definitions: `src/model/types.ts`. Validatio
 }
 ```
 
-Assets are always embedded base64 `data:` URLs. Accepted MIME types: images (`png`, `jpeg`, `gif`, `webp`, `svg+xml`, `avif`, `bmp`), video (`video/mp4`, `video/webm`, `video/ogg`), audio (`audio/mpeg`, `audio/wav`, `audio/ogg`, `audio/mp4`, `audio/aac`, `audio/webm`, `audio/flac`) and, from v4, 3D models (`model/gltf-binary`, i.e. GLB; the header is checked on import, the full structure on upload — see *3D models* below). `duration` (seconds) is set for media, `animated: true` marks animated GIFs (never re-encoded). `edit` (v3) is the media library's nondestructive edit of the file — see *Media edits* below. Asset references are kind-checked on import: an image prop can only point at an image, a video element at a video, and so on.
+Assets are always embedded base64 `data:` URLs. Accepted MIME types: images (`png`, `jpeg`, `gif`, `webp`, `svg+xml`, `avif`, `bmp`), video (`video/mp4`, `video/webm`, `video/ogg`), audio (`audio/mpeg`, `audio/wav`, `audio/ogg`, `audio/mp4`, `audio/aac`, `audio/webm`, `audio/flac`) and, from v4, 3D models (`model/gltf-binary`, i.e. GLB; the header is checked on import, the full structure on upload — see _3D models_ below). `duration` (seconds) is set for media, `animated: true` marks animated GIFs (never re-encoded). `edit` (v3) is the media library's nondestructive edit of the file — see _Media edits_ below. Asset references are kind-checked on import: an image prop can only point at an image, a video element at a video, and so on.
 
 ## Page
 
@@ -64,31 +64,31 @@ Assets are always embedded base64 `data:` URLs. Accepted MIME types: images (`pn
 
 ### Themes and provenance (v2)
 
-Props always hold **resolved values** — the runtime and exported files never look anything up in a theme, so a file can never change appearance on its own. `themed` lists the prop keys that *follow* the project theme; every key not listed is an explicit author choice. When the theme changes, the editor rewrites only the themed keys (with the values `src/model/theme/mappers.ts` derives from the theme tokens for the element's `type` + `role`). Editing a prop in the inspector removes it from `themed`; "Reset to theme" adds it back. Customisation is never inferred by comparing values with a theme.
+Props always hold **resolved values** — the runtime and exported files never look anything up in a theme, so a file can never change appearance on its own. `themed` lists the prop keys that _follow_ the project theme; every key not listed is an explicit author choice. When the theme changes, the editor rewrites only the themed keys (with the values `src/model/theme/mappers.ts` derives from the theme tokens for the element's `type` + `role`). Editing a prop in the inspector removes it from `themed`; "Reset to theme" adds it back. Customisation is never inferred by comparing values with a theme.
 
 Roles: text `heading`, `subheading`, `body`, `caption`, `kicker`, `label`, `display`, `displaySub`, `score`, `quote`; shape `tone0`–`tone5`, `accent`, `card`, `soft`, `line`; button/navButton `primary`, `secondary`, `hero`, `heroGhost`; progress `onHero`. Other types have one implicit role.
 
 Element types and their props (defaults in each `src/runtime/elements/*.ts`):
 
-| type | props |
-| --- | --- |
-| `text` | `text` (supports `{Variable name}` tokens), `font`, `size`, `weight`, `color`, `align`, `valign`, `lineHeight`, `italic`, `letterSpacing`, `background`, `padding`, `radius`, `shadow` |
-| `image` | `assetId`, `fit`, `radius`, `borderWidth`, `borderColor`, `shadow`, `alt`, `edit` (v3) |
-| `shape` | `shape` (`rect`, `ellipse`, `triangle`, `diamond`, `star`, `heart`, `hexagon`, `blob`), `fill` (Paint), `stroke`, `strokeWidth`, `radius`, `shadow`, `opacity` |
-| `arrow` | `color`, `width`, `start`/`end` (`{x,y}` normalised to the box), `bend` (-1..1), `head`, `tail`, `dashed` |
-| `button` | `label`, `variant`, `color`, `size`, `radius`, `icon`, `iconSide`, `font`, `shadow` |
-| `navButton` | button props + `target` (`next`, `prev`, `first`, `last` or a page id) |
-| `beforeAfter` | `before`, `after` (asset ids), `position`, `orientation`, `handle`, `accent`, `showLabels`, `beforeLabel`, `afterLabel`, `radius`, `shadow` |
-| `gallery` | `images` (asset ids), `loop`, `transition`, `advanceOnClick`, `controls`, `fit`, `radius`, `shadow`, `autoplay` (s), `background` |
-| `scrollText` | `title`, `text` (mini-markdown: blank line, `- `, `# `, `**bold**`), `font`, `size`, `color`, `background`, `accent`, `padding`, `radius`, `borderWidth`, `borderColor`, `lineHeight`, `fadeEdges`, `shadow` |
-| `progress` | `source` (`slides`, `scroll`, `variable`), `variableId`, `max`, `style` (`bar`, `ring`), `fill`, `track`, `label`, `labelColor`, `font` (v2) |
-| `video` (v2) | `assetId` (video), `posterId` (image), `fit`, `controls`, `autoplay`, `loop`, `muted`, `frame` (`none`, `border`, `browser`), `radius`, `shadow`, `background`, `accent`, `borderColor`, `alt`, `edit` (v3: crop/trim) |
-| `audio` (v2) | `assetId` (audio), `title`, `style` (`player`, `compact`, `native`), `autoplay`, `loop`, `volume` (0–100), `font`, `accent`, `background`, `color`, `borderColor`, `radius`, `shadow`, `edit` (v3: trim) |
-| `chart` (v2) | `chartType` (`bar`, `line`), `title`, `labels` (string[]), `series` ([{ `name`, `values`: number[] }]), `palette` (colours), `preset` (`clean`, `soft`, `bold`), `showLegend`, `legendToggle`, `showValues`, `showGrid`, `xLabel`, `yLabel`, `valuePrefix`, `valueSuffix`, `font`, `textColor`, `mutedColor`, `gridColor`, `background`, `radius`, `shadow` |
-| `table` (v2) | `rows` (string[][]; row 0 is the header when `headerRow`), `headerRow`, `columnAlign` (`auto`, `left`, `center`, `right` per column), `preset` (`lined`, `boxed`, `minimal`), `striped`, `hoverHighlight`, `sortable`, `size`, `font`, `textColor`, `headerBg`, `headerText`, `stripe`, `borderColor`, `background`, `accent`, `radius`, `shadow` |
-| `countdown` (v2) | `target` (ISO-8601 UTC instant), `timezone` (IANA), `repeat` (`none`, `daily`, `weekly`), `holdMinutes`, `showDays`/`showHours`/`showMinutes`/`showSeconds`, `style` (`cards`, `digital`, `inline`), `showLabels`, `title`, `doneText`, `font`, `labelFont`, `color`, `accent`, `cardBg`, `cardText`, `labelColor`, `radius`, `shadow` |
-| `model` (v4) | `assetId` (GLB model), `alt`, `lighting` (`studio`, `soft`, `dramatic`), `backdrop` (`gradient`, `solid`, `none`), `background`, `accent`, `autoRotate`, `rotateSpeed` (0.2–3), `allowRotate`, `allowZoom`, `allowPan`, `controls` (reset/zoom/fullscreen overlay), `groundShadow`, `yaw`/`pitch` (starting view, degrees), `zoom` (0.4–2.5), `radius`, `shadow` |
-| `quiz` (v2) | `question`, `choices` (2–10 strings), `correct` (index), `layout` (`list`, `grid`, `pills`), `showLetters`, `feedbackCorrect`, `feedbackIncorrect`, `allowRetry`, `revealAnswer`, `scoreVariable` (variable id), `points`, `firstTryOnly`, `font`, `headingFont`, `color`, `background`, `accent`, `choiceBg`, `borderColor`, `success`, `danger`, `radius`, `shadow` |
+| type             | props                                                                                                                                                                                                                                                                                                                                                                 |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `text`           | `text` (supports `{Variable name}` tokens), `font`, `size`, `weight`, `color`, `align`, `valign`, `lineHeight`, `italic`, `letterSpacing`, `background`, `padding`, `radius`, `shadow`                                                                                                                                                                                |
+| `image`          | `assetId`, `fit`, `radius`, `borderWidth`, `borderColor`, `shadow`, `alt`, `edit` (v3)                                                                                                                                                                                                                                                                                |
+| `shape`          | `shape` (`rect`, `ellipse`, `triangle`, `diamond`, `star`, `heart`, `hexagon`, `blob`), `fill` (Paint), `stroke`, `strokeWidth`, `radius`, `shadow`, `opacity`                                                                                                                                                                                                        |
+| `arrow`          | `color`, `width`, `start`/`end` (`{x,y}` normalised to the box), `bend` (-1..1), `head`, `tail`, `dashed`                                                                                                                                                                                                                                                             |
+| `button`         | `label`, `variant`, `color`, `size`, `radius`, `icon`, `iconSide`, `font`, `shadow`                                                                                                                                                                                                                                                                                   |
+| `navButton`      | button props + `target` (`next`, `prev`, `first`, `last` or a page id)                                                                                                                                                                                                                                                                                                |
+| `beforeAfter`    | `before`, `after` (asset ids), `position`, `orientation`, `handle`, `accent`, `showLabels`, `beforeLabel`, `afterLabel`, `radius`, `shadow`                                                                                                                                                                                                                           |
+| `gallery`        | `images` (asset ids), `loop`, `transition`, `advanceOnClick`, `controls`, `fit`, `radius`, `shadow`, `autoplay` (s), `background`                                                                                                                                                                                                                                     |
+| `scrollText`     | `title`, `text` (mini-markdown: blank line, `- `, `# `, `**bold**`), `font`, `size`, `color`, `background`, `accent`, `padding`, `radius`, `borderWidth`, `borderColor`, `lineHeight`, `fadeEdges`, `shadow`                                                                                                                                                          |
+| `progress`       | `source` (`slides`, `scroll`, `variable`), `variableId`, `max`, `style` (`bar`, `ring`), `fill`, `track`, `label`, `labelColor`, `font` (v2)                                                                                                                                                                                                                          |
+| `video` (v2)     | `assetId` (video), `posterId` (image), `fit`, `controls`, `autoplay`, `loop`, `muted`, `frame` (`none`, `border`, `browser`), `radius`, `shadow`, `background`, `accent`, `borderColor`, `alt`, `edit` (v3: crop/trim)                                                                                                                                                |
+| `audio` (v2)     | `assetId` (audio), `title`, `style` (`player`, `compact`, `native`), `autoplay`, `loop`, `volume` (0–100), `font`, `accent`, `background`, `color`, `borderColor`, `radius`, `shadow`, `edit` (v3: trim)                                                                                                                                                              |
+| `chart` (v2)     | `chartType` (`bar`, `line`), `title`, `labels` (string[]), `series` ([{ `name`, `values`: number[] }]), `palette` (colours), `preset` (`clean`, `soft`, `bold`), `showLegend`, `legendToggle`, `showValues`, `showGrid`, `xLabel`, `yLabel`, `valuePrefix`, `valueSuffix`, `font`, `textColor`, `mutedColor`, `gridColor`, `background`, `radius`, `shadow`           |
+| `table` (v2)     | `rows` (string[][]; row 0 is the header when `headerRow`), `headerRow`, `columnAlign` (`auto`, `left`, `center`, `right` per column), `preset` (`lined`, `boxed`, `minimal`), `striped`, `hoverHighlight`, `sortable`, `size`, `font`, `textColor`, `headerBg`, `headerText`, `stripe`, `borderColor`, `background`, `accent`, `radius`, `shadow`                     |
+| `countdown` (v2) | `target` (ISO-8601 UTC instant), `timezone` (IANA), `repeat` (`none`, `daily`, `weekly`), `holdMinutes`, `showDays`/`showHours`/`showMinutes`/`showSeconds`, `style` (`cards`, `digital`, `inline`), `showLabels`, `title`, `doneText`, `font`, `labelFont`, `color`, `accent`, `cardBg`, `cardText`, `labelColor`, `radius`, `shadow`                                |
+| `model` (v4)     | `assetId` (GLB model), `alt`, `lighting` (`studio`, `soft`, `dramatic`), `backdrop` (`gradient`, `solid`, `none`), `background`, `accent`, `autoRotate`, `rotateSpeed` (0.2–3), `allowRotate`, `allowZoom`, `allowPan`, `controls` (reset/zoom/fullscreen overlay), `groundShadow`, `yaw`/`pitch` (starting view, degrees), `zoom` (0.4–2.5), `radius`, `shadow`      |
+| `quiz` (v2)      | `question`, `choices` (2–10 strings), `correct` (index), `layout` (`list`, `grid`, `pills`), `showLetters`, `feedbackCorrect`, `feedbackIncorrect`, `allowRetry`, `revealAnswer`, `scoreVariable` (variable id), `points`, `firstTryOnly`, `font`, `headingFont`, `color`, `background`, `accent`, `choiceBg`, `borderColor`, `success`, `danger`, `radius`, `shadow` |
 
 Shadows: `none`, `subtle`, `soft`, `lifted`, `glow`. Fonts: `rounded` (Nunito), `modern` (Inter), `grotesk` (Space Grotesk), `elegant` (Fraunces) — embedded, OFL — plus system stacks `sans`, `serif`, `mono`, `hand`.
 
@@ -105,27 +105,53 @@ Shadows: `none`, `subtle`, `soft`, `lifted`, `glow`. Fonts: `rounded` (Nunito), 
            | "pageStart" | "pageTimer",                         // v4: pages only
   "options": { "key": "Space", "shift": true, "alt": false, "repeat": false } | { "seconds": 3 },   // v4, trigger settings
   "conditions": [ { "id", "type": "variable", "variableId": "var_…", "op": "eq|neq|lt|lte|gt|gte", "value": 10 } ],  // all must pass
-  "actions": [ { "id", "type": "…", "params": { … } } ]   // run in order
+  "actions": [ { "id", "type": "…", "params": { … }, "together"?: true } ]   // steps, in order (v5: see below)
 }
 ```
 
 Interactions with the same trigger on one element run in list order; each checks its conditions when it starts.
 
-| action `type` | params |
-| --- | --- |
-| `show`, `hide`, `toggle` | `target` (element id or `@self`), `effect` (`none`, `fade`, `pop`, `slide`) |
-| `navigate` | `page` (`next`, `prev`, `first`, `last` or page id) |
-| `varAdd`, `varSubtract` | `variable`, `amount` |
-| `varSet` | `variable`, `value` |
-| `varReset` | `variable` (or `@all`) |
-| `gallery` | `target`, `direction` (`next`, `prev`, `first`) |
-| `animate` | `target`, `preset` (`pop`, `bounce`, `shake`, `wiggle`, `pulse`, `spin`), optional `duration`, `wait` |
-| `wait` | `seconds` |
-| `mediaPlay`, `mediaPause`, `mediaRestart` (v2), `mediaToggle` (v3: play when paused, pause when playing) | `target` (a video or audio element) |
-| `quizReset` (v2) | `target` (a quiz; works for quizzes on other slides too) |
-| `openLink` (v4) | `url` (http, https, mailto or tel — anything else is removed on import and refused at playback), `newTab` (default true; opens with `noopener,noreferrer`), optional `label` (accessible name) |
-| `modelView` (v4) | `target` (a 3D model), `view` (`reset`, `front`, `back`, `left`, `right`, `top`) |
-| `modelSpin` (v4) | `target` (a 3D model), `mode` (`toggle`, `start`, `stop`) |
+### Steps and Together groups (v5)
+
+`actions` is one flat, ordered list. An action with `"together": true` **starts together with the action before it**, so the list reads as a sequence of _steps_ (`toSteps()` in `src/model/actionSteps.ts`):
+
+```jsonc
+"actions": [
+  { "id": "ac_1", "type": "show", "params": { "target": "el_a", "effect": "pop" } },
+  { "id": "ac_2", "type": "show", "params": { "target": "el_b", "effect": "pop" }, "together": true },
+  { "id": "ac_3", "type": "show", "params": { "target": "el_c", "effect": "pop" }, "together": true },
+  { "id": "ac_4", "type": "wait", "params": { "seconds": 0.5 } },
+  { "id": "ac_5", "type": "show", "params": { "target": "el_done", "effect": "fade" } }
+]
+// → steps: [ac_1 + ac_2 + ac_3] → [ac_4] → [ac_5]
+```
+
+Semantics (`runInteraction()` in `src/runtime/actions.ts`):
+
+- Steps run one after another: a step starts when **every** action of the previous step has finished ("Then" / "After these finish").
+- The actions of one step are all **started at once, in list order, in the same task** (nothing is awaited while starting them), so their animations begin in the same frame and a link in the group still counts as opened by the viewer's click.
+- When an action counts as _finished_: `show`/`hide`/`toggle` with an effect — when the effect ends (instantly without one); `wait` — when the time is up (so a Wait inside a group makes the group last at least that long); `animate` — immediately, unless its `wait` param is true (then when the animation ends; the editor calls this “and wait until it ends”); every other action — immediately.
+- Errors: a failing action is logged and skipped; the rest of its group and the following steps still run (the same policy as before v5).
+- Conflicts are deterministic: actions in a group start top to bottom, so synchronous effects apply in list order and **the lower action has the last word** (e.g. `varSet` after `varAdd`; `hide` after `show` of the same element ends hidden). The editor points such groups out. `navigate` happens as soon as it starts; to let the rest of a group finish first, put it in its own step after the group.
+- Re-triggering while a run is in progress starts another, independent run (as before). When the player is destroyed (Preview closed, project closed), the remaining steps of running interactions are skipped; actions on elements of a slide that was left simply have nothing to act on.
+
+Validation keeps `together` only when it is the boolean `true`, never on the first kept action (nothing to join; e.g. after an unsupported first action was dropped), and **only in v5+ files**: a `together` key in an older file is ignored, so an older project never starts running actions in parallel.
+
+| action `type`                                                                                            | params                                                                                                                                                                                         |
+| -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `show`, `hide`, `toggle`                                                                                 | `target` (element id or `@self`), `effect` (`none`, `fade`, `pop`, `slide`)                                                                                                                    |
+| `navigate`                                                                                               | `page` (`next`, `prev`, `first`, `last` or page id)                                                                                                                                            |
+| `varAdd`, `varSubtract`                                                                                  | `variable`, `amount`                                                                                                                                                                           |
+| `varSet`                                                                                                 | `variable`, `value`                                                                                                                                                                            |
+| `varReset`                                                                                               | `variable` (or `@all`)                                                                                                                                                                         |
+| `gallery`                                                                                                | `target`, `direction` (`next`, `prev`, `first`)                                                                                                                                                |
+| `animate`                                                                                                | `target`, `preset` (`pop`, `bounce`, `shake`, `wiggle`, `pulse`, `spin`), optional `duration`, `wait`                                                                                          |
+| `wait`                                                                                                   | `seconds`                                                                                                                                                                                      |
+| `mediaPlay`, `mediaPause`, `mediaRestart` (v2), `mediaToggle` (v3: play when paused, pause when playing) | `target` (a video or audio element)                                                                                                                                                            |
+| `quizReset` (v2)                                                                                         | `target` (a quiz; works for quizzes on other slides too)                                                                                                                                       |
+| `openLink` (v4)                                                                                          | `url` (http, https, mailto or tel — anything else is removed on import and refused at playback), `newTab` (default true; opens with `noopener,noreferrer`), optional `label` (accessible name) |
+| `modelView` (v4)                                                                                         | `target` (a 3D model), `view` (`reset`, `front`, `back`, `left`, `right`, `top`)                                                                                                               |
+| `modelSpin` (v4)                                                                                         | `target` (a 3D model), `mode` (`toggle`, `start`, `stop`)                                                                                                                                      |
 
 ### Triggers with options and owners (v4)
 
@@ -135,7 +161,7 @@ Interactions live on elements (`element.interactions`), on a page (`page.interac
 - **`pageStart`** — each time the slide is shown / the section becomes the current one.
 - **`pageTimer`** — `options.seconds` (0–600) after the page becomes current; cancelled when leaving, restarted on the next visit.
 
-Interactions on one owner with the same trigger *and the same options* (e.g. two rules for →) run in list order, each checking its conditions when it starts.
+Interactions on one owner with the same trigger _and the same options_ (e.g. two rules for →) run in list order, each checking its conditions when it starts.
 
 `countdownDone` fires once per playback session (also when the countdown is already over when it is shown), and once per occurrence for repeating countdowns.
 
@@ -145,10 +171,11 @@ Edits never change embedded bytes; they describe how to show them (`src/model/me
 
 ```jsonc
 {
-  "crop": { "x": 0.1, "y": 0, "w": 0.5, "h": 0.8 },  // images & videos: normalised 0..1 rectangle of the picture AS DISPLAYED (after rotate/flips)
-  "rotate": 90,                                       // images: 0 | 90 | 180 | 270, clockwise, applied first
-  "flipH": true, "flipV": false,                      // images: mirror the rotated picture
-  "trim": { "start": 1.5, "end": 9.25 }               // videos & sounds: seconds into the original file
+  "crop": { "x": 0.1, "y": 0, "w": 0.5, "h": 0.8 }, // images & videos: normalised 0..1 rectangle of the picture AS DISPLAYED (after rotate/flips)
+  "rotate": 90, // images: 0 | 90 | 180 | 270, clockwise, applied first
+  "flipH": true,
+  "flipV": false, // images: mirror the rotated picture
+  "trim": { "start": 1.5, "end": 9.25 }, // videos & sounds: seconds into the original file
 }
 ```
 
@@ -165,9 +192,13 @@ A model asset is a binary glTF 2.0 file embedded as `data:model/gltf-binary;base
 
 `SCHEMA_VERSION` lives in `src/model/types.ts`. When the format changes incompatibly: bump it, add a step to `migrate()` in `validate.ts` that upgrades the previous version, and add a fixture test. Files with a newer version than the editor understands are refused with a clear message.
 
+### v4 → v5 (v0.7)
+
+Additive only: `action.together` (Together steps, above). v4 and older files have no such flags, so every action stays its own step and runs exactly as before; `migrate()` only bumps the version (and the validator ignores stray `together` keys in pre-v5 files). The Play-animation `wait` param keeps its meaning. v0.6 editors refuse v5 exports with the "newer version" message (they would otherwise run the groups one after another); the exported files themselves embed their own runtime and play anywhere.
+
 ### v0.5 (no schema change)
 
-v0.5 adds templates and lessons without changing the format: templates are ordinary v4 projects (see *Templates* in [ARCHITECTURE.md](ARCHITECTURE.md)), and the quick-start guide and lesson state live only in the editor (lesson progress in `localStorage`), never in project files. v0.4 editors open v0.5 exports, and every older file opens unchanged.
+v0.5 adds templates and lessons without changing the format: templates are ordinary v4 projects (see _Templates_ in [ARCHITECTURE.md](ARCHITECTURE.md)), and the quick-start guide and lesson state live only in the editor (lesson progress in `localStorage`), never in project files. v0.4 editors open v0.5 exports, and every older file opens unchanged.
 
 ### v3 → v4
 
